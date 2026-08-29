@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>VSIM ADMIN PANEL PWA</title>
+  <meta name="theme-color" content="#080c16" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="css/admin.css" />
+</head>
+<body>
+  <!-- Admin Login Overlay -->
+  <div id="adminLoginScreen" style="position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#080c16,#0f172a); z-index:500;">
+    <form id="adminLoginForm" style="width:min(420px,90vw); background:#0f1523; border:1px solid rgba(255,255,255,0.08); border-radius:20px; padding:30px; box-shadow:0 24px 60px rgba(0,0,0,.6);">
+      <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:6px;">
+        <span style="font-size:1.6rem; font-weight:900; letter-spacing:.08em; color:#fff;">VSIM</span>
+        <span style="background:#6366f1; color:#fff; font-size:0.65rem; font-weight:800; padding:2px 6px; border-radius:4px;">PWA</span>
+      </div>
+      <div style="text-align:center; color:#94a3b8; margin-bottom:22px; font-size:0.75rem; letter-spacing:.15em; text-transform:uppercase;">Admin Panel Access</div>
+      <label style="display:block; margin-bottom:6px; color:#cbd5e1; font-size:0.8rem; font-weight:600;">Admin Email</label>
+      <input id="adminEmailInput" type="email" value="admin@vsim.com" style="width:100%; background:#101625; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 14px; color:#fff; margin-bottom:14px; outline:none;" />
+      <label style="display:block; margin-bottom:6px; color:#cbd5e1; font-size:0.8rem; font-weight:600;">Password</label>
+      <input id="adminPasswordInput" type="password" value="admin123" style="width:100%; background:#101625; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 14px; color:#fff; margin-bottom:18px; outline:none;" />
+      <button type="submit" style="width:100%; background:linear-gradient(135deg,#6366f1,#8b5cf6); border:none; border-radius:10px; padding:12px 14px; color:#fff; font-weight:700; cursor:pointer; font-size:0.88rem;">Enter Admin Panel</button>
+      <div id="adminLoginError" style="color:#fca5a5; min-height:18px; margin-top:10px; text-align:center; font-size:0.75rem;"></div>
+    </form>
+  </div>
+
+  <div id="adminAppShell" style="display:none;">
+  <!-- Master Admin App Shell Layout -->
+  <div class="admin-app-layout">
+
+    <!-- Global Toast Notification Hub -->
+    <div class="admin-toast-hub" id="adminToastHub"></div>
+
+    <!-- ==================================================================
+         1. LEFT SIDEBAR NAVIGATION
+         ================================================================== -->
+    <aside class="admin-sidebar" id="adminSidebar">
+      <!-- Sidebar Brand Header -->
+      <div class="sidebar-brand-header">
+        <div class="brand-v-badge">
+          <span>VSIM</span>
+        </div>
+        <span style="font-size: 0.78rem; font-weight: 800; color: var(--text-gray); margin-left: 2px;">ADMIN PANEL</span>
+        <span class="pwa-chip">PWA</span>
+      </div>
+
+      <!-- Super Admin User Profile Card -->
+      <div class="sidebar-user-card">
+        <div class="user-avatar-circle">VS</div>
+        <div class="user-meta-info">
+          <span class="user-name-title">Super Admin</span>
+          <div class="user-status-row">
+            <span class="status-dot-pulse"></span>
+            <span>Online</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Links Scroll Area -->
+      <div class="sidebar-nav-scroll">
+        <a class="nav-menu-link active" data-view="view-dashboard" onclick="navigateToView('view-dashboard')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span>Dashboard</span>
+        </a>
+
+        <a class="nav-menu-link" data-view="view-users" onclick="navigateToView('view-users')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          <span>Users</span>
+        </a>
+
+        <a class="nav-menu-link" data-view="view-withdrawals" onclick="navigateToView('view-withdrawals')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="19" x2="12" y2="5"></line>
+            <polyline points="5 12 12 5 19 12"></polyline>
+          </svg>
+          <span>Withdrawals (Payouts)</span>
+          <span class="nav-badge-count">3</span>
+        </a>
+
+        <a class="nav-menu-link" data-view="view-packages" onclick="navigateToView('view-packages')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="5" y="2" width="14" height="20" rx="2"></rect>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+          </svg>
+          <span>eSIM Packages</span>
+        </a>
+
+        <a class="nav-menu-link" data-view="view-merchants" onclick="navigateToView('view-merchants')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+            <line x1="2" y1="10" x2="22" y2="10"></line>
+          </svg>
+          <span>Mobile Money Merchants</span>
+        </a>
+
+        <a class="nav-menu-link" data-view="view-investments" onclick="navigateToView('view-investments')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+            <polyline points="16 7 22 7 22 13"></polyline>
+          </svg>
+          <span>Investments</span>
+        </a>
+
+        <a class="nav-menu-link" data-view="view-transactions" onclick="navigateToView('view-transactions')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+            <line x1="2" y1="10" x2="22" y2="10"></line>
+          </svg>
+          <span>Transactions</span>
+        </a>
+
+        <a class="nav-menu-link" data-view="view-earnings" onclick="navigateToView('view-earnings')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 14 14"></polyline>
+          </svg>
+          <span>Earnings (Daily)</span>
+        </a>
+
+        <a class="nav-menu-link" data-view="view-bridge" onclick="navigateToView('view-bridge')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle>
+          </svg>
+          <span>Bridge Devices</span>
+        </a>
+
+        <a class="nav-menu-link" data-view="view-referrals" onclick="navigateToView('view-referrals')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <polyline points="16 11 18 13 22 9"></polyline>
+          </svg>
+          <span>Referrals</span>
+        </a>
+
+        <a class="nav-menu-link" data-view="view-tickets" onclick="navigateToView('view-tickets')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span>Support Tickets</span>
+        </a>
+
+        <a class="nav-menu-link" data-view="view-notifications" onclick="navigateToView('view-notifications')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span>Notifications</span>
+        </a>
+
+        <a class="nav-menu-link" data-view="view-logs" onclick="navigateToView('view-logs')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line>
+          </svg>
+          <span>System Logs</span>
+        </a>
+
+        <a class="nav-menu-link" data-view="view-settings" onclick="navigateToView('view-settings')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span>Settings</span>
+        </a>
+
+        <a class="nav-menu-link" data-view="view-admins" onclick="navigateToView('view-admins')">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          <span>Admins & Roles</span>
+        </a>
+      </div>
+
+      <!-- System Status Widget at Sidebar Bottom -->
+      <div class="sidebar-system-status">
+        <div class="system-status-title">System Status</div>
+        <div class="status-metric-row">
+          <span>Bridge Devices</span>
+          <span class="val-green" id="sidebarBridgeStatus">5 Online</span>
+        </div>
+        <div class="status-metric-row">
+          <span>API Server</span>
+          <span class="val-green">Running</span>
+        </div>
+        <div class="status-metric-row">
+          <span>Database</span>
+          <span class="val-green">Healthy</span>
+        </div>
+        <div class="status-metric-row">
+          <span>Storage</span>
+          <span class="val-green">68% Used</span>
+        </div>
+      </div>
+    </aside>
+
+
+    <!-- ==================================================================
+         2. MAIN CONTENT WRAPPER & TOPBAR
+         ================================================================== -->
+    <div class="admin-main-wrapper">
+
+      <!-- Top Header Navigation Bar -->
+      <header class="admin-topbar">
+        <div class="topbar-left">
+          <button class="btn-sidebar-toggle" onclick="toggleMobileSidebar()" title="Toggle Sidebar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <span class="topbar-view-title" id="topbarViewTitle">Dashboard</span>
+
+          <!-- Global Omnibox Search -->
+          <div class="global-search-container">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="globalSearchInput" placeholder="Search by phone number, user, merchant, transaction ID..." />
+          </div>
+        </div>
+
+        <div class="topbar-right-controls">
+          <!-- Theme Switcher Button -->
+          <div class="icon-action-btn" id="themeToggleIcon" onclick="toggleTheme()" title="Toggle Theme">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </div>
+
+          <!-- Notifications Bell -->
+          <div class="icon-action-btn" onclick="navigateToView('view-notifications')" title="Notifications">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <span class="badge-dot-num" style="display:none;">0</span>
+          </div>
+
+          <!-- Admin Avatar & Profile -->
+          <div class="topbar-admin-profile" onclick="navigateToView('view-admins')">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Super Admin" class="admin-avatar-img" />
+            <div class="admin-profile-text">
+              <span class="admin-profile-name">Super Admin</span>
+              <span class="admin-profile-role">Administrator</span>
+            </div>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="margin-left: 2px;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
+        </div>
+      </header>
+
+
+      <!-- ==================================================================
+           3. MAIN VIEWS VIEWPORT
+           ================================================================== -->
+      <main class="admin-views-scrollport">
+
+        <!-- ================================================================
+             VIEW: DASHBOARD (Exact Replica of Reference UI Screenshot)
+             ================================================================ -->
+        <section class="admin-view-screen active" id="view-dashboard">
+
+          <!-- Dashboard Greeting & Header Actions -->
+          <div class="dashboard-greeting-bar">
+            <div>
+              <h2 class="dashboard-greeting-title">Dashboard <span class="dashboard-greeting-sub" style="font-weight:400; margin-left:6px;">Welcome back, Super Admin! Here's what's happening with VSIM today.</span></h2>
+            </div>
+            <div class="dashboard-greeting-actions">
+              <!-- Date Filter Pill -->
+              <div class="date-badge-pill">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                <span id="dashboardDate">-</span>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </div>
+
+              <!-- Export Reports Button -->
+              <button class="btn-export-reports" onclick="exportSystemReports()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>Export Reports</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ROW 1: 4 HERO METRIC CARDS + DECORATIVE ACCENT -->
+          <div class="hero-metrics-row">
+            <!-- Card 1: Total Users -->
+            <div class="hero-metric-card">
+              <div class="metric-icon-square purple">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+              </div>
+              <div class="metric-body-data">
+                <div class="metric-label-title">Total Users</div>
+                <div class="metric-large-value" id="metricTotalUsers">-</div>
+                <div class="metric-trend-pill positive">
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 4 4 20 20 20"></polygon></svg>
+                  <span>+12.5% from last 7 days</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2: Total Invested -->
+            <div class="hero-metric-card">
+              <div class="metric-icon-square green">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="1" x2="12" y2="23"></line>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+              </div>
+              <div class="metric-body-data">
+                <div class="metric-label-title">Total Invested</div>
+                <div class="metric-large-value" id="metricTotalInvested">UGX 0</div>
+                <div class="metric-trend-pill positive">
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 4 4 20 20 20"></polygon></svg>
+                  <span>+15.3% from last 7 days</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 3: Total Earnings (Paid) -->
+            <div class="hero-metric-card">
+              <div class="metric-icon-square blue">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                </svg>
+              </div>
+              <div class="metric-body-data">
+                <div class="metric-label-title">Total Earnings (Paid)</div>
+                <div class="metric-large-value" id="metricTotalEarnings">UGX 0</div>
+                <div class="metric-trend-pill positive">
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 4 4 20 20 20"></polygon></svg>
+                  <span>+11.8% from last 7 days</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 4: Total Withdrawn -->
+            <div class="hero-metric-card">
+              <div class="metric-icon-square orange">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                  <line x1="2" y1="10" x2="22" y2="10"></line>
+                </svg>
+              </div>
+              <div class="metric-body-data">
+                <div class="metric-label-title">Total Withdrawn</div>
+                <div class="metric-large-value" id="metricTotalWithdrawn">UGX 0</div>
+                <div class="metric-trend-pill positive">
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 4 4 20 20 20"></polygon></svg>
+                  <span>+10.2% from last 7 days</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Decorative Card Accent -->
+            <div class="hero-metric-accent-card">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                <line x1="2" y1="10" x2="22" y2="10"></line>
+                <circle cx="16" cy="14" r="1.5" fill="currentColor"></circle>
+              </svg>
+            </div>
+          </div>
+
+          <!-- ROW 2: RECENT DEPOSITS, WITHDRAWAL REQUESTS & EARNINGS OVERVIEW (3 COLUMNS) -->
+          <div class="dashboard-row-3col">
+            <!-- Widget 1: Recent Deposits (Automatic) -->
+            <div class="dashboard-widget-card">
+              <div class="widget-card-header">
+                <div class="widget-header-title-box">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--primary-purple)" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline>
+                  </svg>
+                  <span class="widget-header-title">Recent Deposits (Automatic)</span>
+                </div>
+              </div>
+              <div class="widget-card-subtitle">Deposits are credited automatically after bridge confirmation.</div>
+              <div class="widget-card-body" style="padding: 6px 0 0 0;">
+                <div class="table-responsive-wrapper">
+                  <table class="admin-data-table">
+                    <thead>
+                      <tr>
+                        <th>Phone Number</th>
+                        <th>Amount</th>
+                        <th>Merchant</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="recentDepositsTbody">
+                      <!-- Populated immediately by JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="widget-card-footer-stats">
+                <span>Total Today: <strong id="depositsTodayTotal">UGX 0</strong></span>
+                <span>Total This Month: <strong id="depositsMonthTotal">UGX 0</strong></span>
+              </div>
+            </div>
+
+            <!-- Widget 2: Withdrawal Requests (Payouts) -->
+            <div class="dashboard-widget-card">
+              <div class="widget-card-header">
+                <div class="widget-header-title-box">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--primary-purple)" stroke-width="2">
+                    <line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline>
+                  </svg>
+                  <span class="widget-header-title">Withdrawal Requests (Payouts)</span>
+                </div>
+                <span class="widget-action-link" onclick="navigateToView('view-withdrawals')">View All</span>
+              </div>
+              <div class="widget-card-subtitle">Users request withdrawals. Admin processes payouts manually.</div>
+              <div class="widget-card-body" style="padding: 6px 0 0 0;">
+                <div class="table-responsive-wrapper">
+                  <table class="admin-data-table">
+                    <thead>
+                      <tr>
+                        <th>Phone Number</th>
+                        <th>Amount</th>
+                        <th>Method</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="recentWithdrawalsTbody">
+                      <!-- Populated immediately by JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="widget-card-footer-stats">
+                <span>Total Pending: <strong style="color: var(--accent-orange);">UGX 280,000</strong></span>
+                <span>Total Today Paid: <strong style="color: var(--accent-green);">UGX 120,000</strong></span>
+              </div>
+            </div>
+
+            <!-- Widget 3: Earnings Overview (Last 7 Days) -->
+            <div class="dashboard-widget-card">
+              <div class="widget-card-header">
+                <div class="widget-header-title-box">
+                  <span class="widget-header-title">Earnings Overview <span style="font-size:0.75rem; font-weight:500; color:var(--text-muted);">(Last 7 Days)</span></span>
+                </div>
+                <span class="widget-action-link" onclick="navigateToView('view-earnings')">View Full Report</span>
+              </div>
+              <div class="widget-card-body">
+                <!-- SVG Chart Area with Y/X Axes -->
+                <div class="earnings-chart-container">
+                  <svg id="earningsChartSvg" width="100%" height="100%" viewBox="0 0 360 140" preserveAspectRatio="none">
+                    <!-- Smooth Wave Path rendered by JS -->
+                  </svg>
+                </div>
+                <!-- 3 Breakdown Stats Below Chart -->
+                <div class="earnings-breakdown-row">
+                  <div class="breakdown-stat-box">
+                    <div class="title">Today</div>
+                    <div class="val">UGX 2,456,000</div>
+                    <div class="growth">+11.2%</div>
+                  </div>
+                  <div class="breakdown-stat-box">
+                    <div class="title">This Week</div>
+                    <div class="val">UGX 13,245,600</div>
+                    <div class="growth">+12.5%</div>
+                  </div>
+                  <div class="breakdown-stat-box">
+                    <div class="title">This Month</div>
+                    <div class="val">UGX 24,685,750</div>
+                    <div class="growth">+15.3%</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ROW 3: TOP ESIM PACKAGES, INVESTMENT SUMMARY, BRIDGE STATUS, SYSTEM LOGS (4 COLUMNS) -->
+          <div class="dashboard-row-4col">
+            <!-- Widget 1: Top eSIM Packages -->
+            <div class="dashboard-widget-card">
+              <div class="widget-card-header">
+                <div class="widget-header-title-box">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--primary-purple)" stroke-width="2">
+                    <rect x="5" y="2" width="14" height="20" rx="2"></rect>
+                  </svg>
+                  <span class="widget-header-title">Top eSIM Packages</span>
+                </div>
+                <span class="widget-action-link" onclick="navigateToView('view-packages')">View All</span>
+              </div>
+              <div class="widget-card-body" style="padding: 6px 0 0 0;">
+                <div class="table-responsive-wrapper">
+                  <table class="admin-data-table">
+                    <thead>
+                      <tr>
+                        <th>Package</th>
+                        <th>Price (UGX)</th>
+                        <th>Sold</th>
+                        <th>Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody id="topPackagesTbody">
+                      <!-- Populated immediately by JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Widget 2: Investment Summary Donut Chart -->
+            <div class="dashboard-widget-card">
+              <div class="widget-card-header">
+                <div class="widget-header-title-box">
+                  <span class="widget-header-title">Investment Summary</span>
+                </div>
+              </div>
+              <div class="widget-card-body">
+                <div class="investment-summary-wrap">
+                  <div class="donut-chart-box">
+                    <svg id="donutChartSvg" width="130" height="130" viewBox="0 0 130 130"></svg>
+                    <div class="donut-center-label">
+                      <div class="small-tag">Total Invested</div>
+                      <div class="small-tag">UGX</div>
+                      <div class="amount-tag">0</div>
+                    </div>
+                  </div>
+
+                  <div class="investment-legend-list">
+                    <div class="legend-item-row">
+                      <div class="legend-dot-label">
+                        <span class="legend-color-dot" style="background: #6366f1;"></span>
+                        <span>Active</span>
+                      </div>
+                      <span class="legend-item-val">UGX 56,245,300 (64.1%)</span>
+                    </div>
+
+                    <div class="legend-item-row">
+                      <div class="legend-dot-label">
+                        <span class="legend-color-dot" style="background: #10b981;"></span>
+                        <span>Completed</span>
+                      </div>
+                      <span class="legend-item-val">UGX 18,456,700 (21.1%)</span>
+                    </div>
+
+                    <div class="legend-item-row">
+                      <div class="legend-dot-label">
+                        <span class="legend-color-dot" style="background: #ef4444;"></span>
+                        <span>Cancelled</span>
+                      </div>
+                      <span class="legend-item-val">UGX 7,654,300 (8.7%)</span>
+                    </div>
+
+                    <div class="legend-item-row">
+                      <div class="legend-dot-label">
+                        <span class="legend-color-dot" style="background: #3b82f6;"></span>
+                        <span>Expired</span>
+                      </div>
+                      <span class="legend-item-val">UGX 5,298,000 (6.1%)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Widget 3: Bridge Devices Status -->
+            <div class="dashboard-widget-card">
+              <div class="widget-card-header">
+                <div class="widget-header-title-box">
+                  <span class="widget-header-title">Bridge Devices Status</span>
+                </div>
+                <span class="widget-action-link" onclick="navigateToView('view-bridge')">View All</span>
+              </div>
+              <div class="widget-card-body">
+                <div class="bridge-devices-list" id="bridgeDevicesList">
+                  <!-- Populated immediately by JS -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Widget 4: System Activity Logs -->
+            <div class="dashboard-widget-card">
+              <div class="widget-card-header">
+                <div class="widget-header-title-box">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--primary-purple)" stroke-width="2">
+                    <polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line>
+                  </svg>
+                  <span class="widget-header-title">System Activity Logs</span>
+                </div>
+                <span class="widget-action-link" onclick="navigateToView('view-logs')">View All</span>
+              </div>
+              <div class="widget-card-body">
+                <div class="activity-logs-stream" id="activityLogsStream">
+                  <!-- Populated immediately by JS -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ROW 4: PWA MOBILE PREVIEW (ADMIN PANEL) SHOWCASE -->
+          <div class="pwa-mobile-showcase-section" hidden>
+            <div class="pwa-showcase-title">PWA Mobile Preview <span style="font-size: 0.8rem; font-weight: 500; color: var(--text-gray);">(Admin Panel)</span></div>
+            <div class="pwa-mockups-container">
+              <!-- Scrollable Phone Mockup Frames -->
+              <div class="pwa-devices-scroll">
+                
+                <!-- Phone 1: Dashboard -->
+                <div class="phone-mockup-wrap">
+                  <div class="phone-mockup-frame">
+                    <div class="phone-notch"></div>
+                    <div class="phone-screen-content">
+                      <div class="phone-mini-header">
+                        <span>VSIM</span>
+                        <span>🔍</span>
+                      </div>
+                      <div class="phone-mini-card">
+                        <div style="color:var(--text-muted); font-size:0.52rem;">Total Users</div>
+                        <div style="font-weight:900; color:#fff; font-size:0.68rem;">12,458 <span style="color:var(--accent-green); font-size:0.5rem;">+12.5%</span></div>
+                      </div>
+                      <div class="phone-mini-card">
+                        <div style="color:var(--text-muted); font-size:0.52rem;">Total Invested</div>
+                        <div style="font-weight:900; color:#fff; font-size:0.62rem;">UGX 87,654,300 <span style="color:var(--accent-green); font-size:0.5rem;">+15.3%</span></div>
+                      </div>
+                      <div class="phone-mini-card">
+                        <div style="color:var(--text-muted); font-size:0.52rem;">Total Earnings (Paid)</div>
+                        <div style="font-weight:900; color:#fff; font-size:0.62rem;">UGX 24,685,750 <span style="color:var(--accent-green); font-size:0.5rem;">+11.8%</span></div>
+                      </div>
+                      <div class="phone-mini-bottom-nav">
+                        <span style="color:var(--primary-purple); font-weight:bold;">Dashboard</span>
+                        <span>Users</span>
+                        <span>More</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span class="phone-label-text">Dashboard</span>
+                </div>
+
+                <!-- Phone 2: Deposits (Automatic) -->
+                <div class="phone-mockup-wrap">
+                  <div class="phone-mockup-frame">
+                    <div class="phone-notch"></div>
+                    <div class="phone-screen-content">
+                      <div class="phone-mini-header">
+                        <span>‹ Deposits (Automatic)</span>
+                        <span>🔄</span>
+                      </div>
+                      <div class="phone-mini-card">
+                        <div style="display:flex; justify-content:space-between;">
+                          <span style="color:#fff; font-weight:bold;">+256 784 567 890</span>
+                          <span style="color:var(--text-muted);">2m ago</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-top:2px;">
+                          <span style="color:#fff; font-weight:800;">UGX 50,000</span>
+                          <span class="status-pill completed" style="font-size:0.48rem; padding:1px 4px;">Completed</span>
+                        </div>
+                      </div>
+                      <div class="phone-mini-card">
+                        <div style="display:flex; justify-content:space-between;">
+                          <span style="color:#fff; font-weight:bold;">+256 702 345 678</span>
+                          <span style="color:var(--text-muted);">5m ago</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-top:2px;">
+                          <span style="color:#fff; font-weight:800;">UGX 120,000</span>
+                          <span class="status-pill completed" style="font-size:0.48rem; padding:1px 4px;">Completed</span>
+                        </div>
+                      </div>
+                      <div class="phone-mini-card">
+                        <div style="display:flex; justify-content:space-between;">
+                          <span style="color:#fff; font-weight:bold;">+256 775 123 456</span>
+                          <span style="color:var(--text-muted);">8m ago</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-top:2px;">
+                          <span style="color:#fff; font-weight:800;">UGX 20,000</span>
+                          <span class="status-pill completed" style="font-size:0.48rem; padding:1px 4px;">Completed</span>
+                        </div>
+                      </div>
+                      <div class="phone-mini-bottom-nav">
+                        <span>Dashboard</span>
+                        <span style="color:var(--primary-purple); font-weight:bold;">Deposits</span>
+                        <span>More</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span class="phone-label-text">Deposits (Automatic)</span>
+                </div>
+
+                <!-- Phone 3: Withdrawals (Payouts) -->
+                <div class="phone-mockup-wrap">
+                  <div class="phone-mockup-frame">
+                    <div class="phone-notch"></div>
+                    <div class="phone-screen-content">
+                      <div class="phone-mini-header">
+                        <span>‹ Withdrawals</span>
+                        <span>🔄</span>
+                      </div>
+                      <div style="display:flex; gap:4px; margin-bottom:4px;">
+                        <span style="background:var(--primary-purple); color:#fff; padding:1px 6px; border-radius:4px; font-size:0.52rem; font-weight:bold;">Pending</span>
+                        <span style="background:#111827; color:var(--text-muted); padding:1px 6px; border-radius:4px; font-size:0.52rem;">Paid</span>
+                      </div>
+                      <div class="phone-mini-card">
+                        <div style="color:#fff; font-weight:bold;">+256 784 567 890</div>
+                        <div style="color:var(--text-white); font-weight:800; margin:2px 0;">UGX 60,000 <span class="status-pill pending" style="font-size:0.45rem; padding:1px 3px;">Pending</span></div>
+                        <button style="background:var(--primary-purple); color:#fff; border:none; border-radius:3px; padding:2px 8px; font-size:0.5rem; font-weight:bold; width:100%;">Pay Now</button>
+                      </div>
+                      <div class="phone-mini-card">
+                        <div style="color:#fff; font-weight:bold;">+256 702 345 678</div>
+                        <div style="color:var(--text-white); font-weight:800; margin:2px 0;">UGX 120,000 <span class="status-pill pending" style="font-size:0.45rem; padding:1px 3px;">Pending</span></div>
+                        <button style="background:var(--primary-purple); color:#fff; border:none; border-radius:3px; padding:2px 8px; font-size:0.5rem; font-weight:bold; width:100%;">Pay Now</button>
+                      </div>
+                      <div class="phone-mini-bottom-nav">
+                        <span>Dashboard</span>
+                        <span style="color:var(--primary-purple); font-weight:bold;">Payouts</span>
+                        <span>More</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span class="phone-label-text">Withdrawals (Payouts)</span>
+                </div>
+
+                <!-- Phone 4: Users -->
+                <div class="phone-mockup-wrap">
+                  <div class="phone-mockup-frame">
+                    <div class="phone-notch"></div>
+                    <div class="phone-screen-content">
+                      <div class="phone-mini-header">
+                        <span>Users</span>
+                        <span>🔍</span>
+                      </div>
+                      <div style="background:#111827; padding:2px 4px; border-radius:4px; margin-bottom:4px; color:var(--text-muted); font-size:0.5rem;">Search users...</div>
+                      <div class="phone-mini-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                          <div>
+                            <div style="font-weight:bold; color:#fff;">John Doe</div>
+                            <div style="color:var(--text-muted); font-size:0.48rem;">+256 784 567 890</div>
+                          </div>
+                          <span class="status-pill active" style="font-size:0.45rem; padding:1px 4px;">Active</span>
+                        </div>
+                      </div>
+                      <div class="phone-mini-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                          <div>
+                            <div style="font-weight:bold; color:#fff;">Jane Smith</div>
+                            <div style="color:var(--text-muted); font-size:0.48rem;">+256 702 345 678</div>
+                          </div>
+                          <span class="status-pill active" style="font-size:0.45rem; padding:1px 4px;">Active</span>
+                        </div>
+                      </div>
+                      <div class="phone-mini-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                          <div>
+                            <div style="font-weight:bold; color:#fff;">Mark Johnson</div>
+                            <div style="color:var(--text-muted); font-size:0.48rem;">+256 775 123 456</div>
+                          </div>
+                          <span class="status-pill active" style="font-size:0.45rem; padding:1px 4px;">Active</span>
+                        </div>
+                      </div>
+                      <div class="phone-mini-bottom-nav">
+                        <span>Dashboard</span>
+                        <span style="color:var(--primary-purple); font-weight:bold;">Users</span>
+                        <span>More</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span class="phone-label-text">Users</span>
+                </div>
+
+                <!-- Phone 5: eSIM Packages -->
+                <div class="phone-mockup-wrap">
+                  <div class="phone-mockup-frame">
+                    <div class="phone-notch"></div>
+                    <div class="phone-screen-content">
+                      <div class="phone-mini-header">
+                        <span>‹ eSIM Packages</span>
+                        <span>🔄</span>
+                      </div>
+                      <div class="phone-mini-card">
+                        <div style="display:flex; justify-content:space-between;">
+                          <span style="color:#fff; font-weight:bold;">10GB - 30 Days</span>
+                          <span class="status-pill active" style="font-size:0.45rem;">Active</span>
+                        </div>
+                        <div style="color:var(--accent-green); font-weight:bold; margin-top:2px;">UGX 20,000</div>
+                      </div>
+                      <div class="phone-mini-card">
+                        <div style="display:flex; justify-content:space-between;">
+                          <span style="color:#fff; font-weight:bold;">20GB - 30 Days</span>
+                          <span class="status-pill active" style="font-size:0.45rem;">Active</span>
+                        </div>
+                        <div style="color:var(--accent-green); font-weight:bold; margin-top:2px;">UGX 35,000</div>
+                      </div>
+                      <div class="phone-mini-card">
+                        <div style="display:flex; justify-content:space-between;">
+                          <span style="color:#fff; font-weight:bold;">50GB - 30 Days</span>
+                          <span class="status-pill active" style="font-size:0.45rem;">Active</span>
+                        </div>
+                        <div style="color:var(--accent-green); font-weight:bold; margin-top:2px;">UGX 70,000</div>
+                      </div>
+                      <div class="phone-mini-bottom-nav">
+                        <span>Dashboard</span>
+                        <span style="color:var(--primary-purple); font-weight:bold;">eSIMs</span>
+                        <span>More</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span class="phone-label-text">eSIM Packages</span>
+                </div>
+
+                <!-- Phone 6: Bridge Devices -->
+                <div class="phone-mockup-wrap">
+                  <div class="phone-mockup-frame">
+                    <div class="phone-notch"></div>
+                    <div class="phone-screen-content">
+                      <div class="phone-mini-header">
+                        <span>‹ Bridge Devices</span>
+                        <span>🔄</span>
+                      </div>
+                      <div class="phone-mini-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                          <span style="color:#fff; font-weight:bold;">VSIM-BRIDGE-01 (MTN)</span>
+                          <span class="status-pill online" style="font-size:0.45rem;">Online</span>
+                        </div>
+                      </div>
+                      <div class="phone-mini-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                          <span style="color:#fff; font-weight:bold;">VSIM-BRIDGE-02 (Airtel)</span>
+                          <span class="status-pill online" style="font-size:0.45rem;">Active</span>
+                        </div>
+                      </div>
+                      <div class="phone-mini-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                          <span style="color:#fff; font-weight:bold;">VSIM-BRIDGE-03 (MTN)</span>
+                          <span class="status-pill online" style="font-size:0.45rem;">Online</span>
+                        </div>
+                      </div>
+                      <div class="phone-mini-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                          <span style="color:#fff; font-weight:bold;">VSIM-BRIDGE-04 (Airtel)</span>
+                          <span class="status-pill offline" style="font-size:0.45rem;">Offline</span>
+                        </div>
+                      </div>
+                      <div class="phone-mini-bottom-nav">
+                        <span>Dashboard</span>
+                        <span style="color:var(--primary-purple); font-weight:bold;">Bridge</span>
+                        <span>More</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span class="phone-label-text">Bridge Devices</span>
+                </div>
+
+                <!-- Phone 7: More Menu -->
+                <div class="phone-mockup-wrap">
+                  <div class="phone-mockup-frame">
+                    <div class="phone-notch"></div>
+                    <div class="phone-screen-content">
+                      <div class="phone-mini-header">
+                        <span>☰</span>
+                        <span>🔍</span>
+                      </div>
+                      <div style="display:flex; flex-direction:column; gap:3px;">
+                        <div class="phone-mini-card" style="display:flex; align-items:center; gap:4px; color:#fff; font-weight:600;">📊 Investments</div>
+                        <div class="phone-mini-card" style="display:flex; align-items:center; gap:4px; color:#fff; font-weight:600;">💳 Transactions</div>
+                        <div class="phone-mini-card" style="display:flex; align-items:center; gap:4px; color:#fff; font-weight:600;">📈 Earnings (Daily)</div>
+                        <div class="phone-mini-card" style="display:flex; align-items:center; gap:4px; color:#fff; font-weight:600;">👥 Referrals</div>
+                        <div class="phone-mini-card" style="display:flex; align-items:center; gap:4px; color:#fff; font-weight:600;">💬 Support Tickets</div>
+                        <div class="phone-mini-card" style="display:flex; align-items:center; gap:4px; color:#fff; font-weight:600;">📋 System Logs</div>
+                        <div class="phone-mini-card" style="display:flex; align-items:center; gap:4px; color:#fff; font-weight:600;">⚙ Settings</div>
+                      </div>
+                      <div class="phone-mini-bottom-nav">
+                        <span>Dashboard</span>
+                        <span>Users</span>
+                        <span style="color:var(--primary-purple); font-weight:bold;">More</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span class="phone-label-text">More Menu</span>
+                </div>
+
+              </div>
+
+              <!-- PWA Ready Feature Card -->
+              <div class="pwa-ready-card">
+                <div class="pwa-ready-header">
+                  <div class="pwa-ready-check-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="pwa-ready-title">PWA Ready</div>
+                    <div class="pwa-ready-sub">Install on any device</div>
+                  </div>
+                </div>
+
+                <div class="pwa-features-list">
+                  <span>Android (Add to Home Screen)</span>
+                  <span>iOS (Add to Home Screen)</span>
+                  <span>Windows / Mac / Linux</span>
+                  <span>Works Offline (cached pages)</span>
+                  <span>Secure • Fast • Responsive</span>
+                </div>
+
+                <div class="pwa-browsers-row">
+                  <div class="browser-icon-pill" title="Chrome">🌐</div>
+                  <div class="browser-icon-pill" title="Edge">🧭</div>
+                  <div class="browser-icon-pill" title="Firefox">🦊</div>
+                  <div class="browser-icon-pill" title="Safari">🧭</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </section>
+
+
+        <!-- ================================================================
+             VIEW: USERS DIRECTORY
+             ================================================================ -->
+        <section class="admin-view-screen" id="view-users">
+          <div class="dashboard-greeting-bar">
+            <div>
+              <h2 class="dashboard-greeting-title">User Directory</h2>
+              <p class="dashboard-greeting-sub">Manage registered customers, wallet balances, and KYC tier limits.</p>
+            </div>
+          </div>
+
+          <div class="dashboard-widget-card">
+            <div class="widget-card-body" style="padding: 0;">
+              <div class="table-responsive-wrapper">
+                <table class="admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Phone Number</th>
+                      <th>Wallet Balance</th>
+                      <th>KYC Tier</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="fullUsersTbody">
+                    <!-- Rendered by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ================================================================
+             VIEW: WITHDRAWALS (PAYOUTS)
+             ================================================================ -->
+        <section class="admin-view-screen" id="view-withdrawals">
+          <div class="dashboard-greeting-bar">
+            <div>
+              <h2 class="dashboard-greeting-title">Withdrawal Requests & Payouts</h2>
+              <p class="dashboard-greeting-sub">Disburse instant Mobile Money payouts directly to customer phone numbers.</p>
+            </div>
+          </div>
+
+          <div class="dashboard-widget-card">
+            <div class="widget-card-body" style="padding: 0;">
+              <div class="table-responsive-wrapper">
+                <table class="admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Phone Number</th>
+                      <th>Amount</th>
+                      <th>Method</th>
+                      <th>Requested At</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="fullWithdrawalsTbody">
+                    <!-- Rendered by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ================================================================
+             VIEW: ESIM PACKAGES
+             ================================================================ -->
+        <section class="admin-view-screen" id="view-packages">
+          <div class="dashboard-greeting-bar">
+            <div>
+              <h2 class="dashboard-greeting-title">eSIM Packages & Inventory</h2>
+              <p class="dashboard-greeting-sub">Configure global data quotas, pricing, and daily investment yields.</p>
+            </div>
+            <button class="btn-primary" onclick="openAddPackageModal()">+ Add New Package</button>
+          </div>
+
+          <div class="dashboard-row-4col" id="fullPackagesGrid">
+            <!-- Rendered by JS -->
+          </div>
+        </section>
+
+        <section class="admin-view-screen" id="view-merchants">
+          <div class="dashboard-greeting-bar">
+            <div>
+              <h2 class="dashboard-greeting-title">Mobile Money Merchants</h2>
+              <p class="dashboard-greeting-sub">Manage dynamic merchant lines assigned to customer checkout popups in real time.</p>
+            </div>
+            <button class="btn-primary" onclick="openMerchantModal()">+ Add New Merchant</button>
+          </div>
+
+          <!-- Merchant Overview Metric Cards -->
+          <div class="hero-metrics-row" style="margin-bottom: 20px;">
+            <div class="hero-metric-card">
+              <div class="metric-icon-square green">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 14 14"></polyline>
+                </svg>
+              </div>
+              <div class="metric-body-data">
+                <div class="metric-label-title">Active Merchants</div>
+                <div class="metric-large-value" id="merchantActiveCount" style="color: var(--accent-green);">0</div>
+                <div class="metric-trend-pill positive" id="merchantTotalSub">0 configured</div>
+              </div>
+            </div>
+
+            <div class="hero-metric-card">
+              <div class="metric-icon-square purple">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                  <line x1="2" y1="10" x2="22" y2="10"></line>
+                </svg>
+              </div>
+              <div class="metric-body-data">
+                <div class="metric-label-title">Total Volume Processed</div>
+                <div class="metric-large-value" id="merchantTotalVolume">UGX 0</div>
+                <div class="metric-trend-pill positive">Realtime aggregate</div>
+              </div>
+            </div>
+
+            <div class="hero-metric-card">
+              <div class="metric-icon-square blue">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+              </div>
+              <div class="metric-body-data">
+                <div class="metric-label-title">Total Transactions</div>
+                <div class="metric-large-value" id="merchantTotalTx">0</div>
+                <div class="metric-trend-pill positive">Inbound MoMo</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Merchant Filter Bar -->
+          <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
+            <div style="flex: 1; min-width: 200px;">
+              <input type="text" id="merchantFilterInput" class="modal-form-input" placeholder="Search by name, merchant code, account..." oninput="filterMerchantsTable()" />
+            </div>
+            <select id="merchantNetworkFilter" class="modal-form-input" style="width: 140px;" onchange="filterMerchantsTable()">
+              <option value="all">All Networks</option>
+              <option value="MTN">MTN Uganda</option>
+              <option value="AIRTEL">Airtel Money</option>
+            </select>
+            <select id="merchantStatusFilter" class="modal-form-input" style="width: 130px;" onchange="filterMerchantsTable()">
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+
+          <!-- Merchants Data Table -->
+          <div class="dashboard-widget-card">
+            <div class="widget-card-body" style="padding: 0;">
+              <div class="table-responsive-wrapper">
+                <table class="admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>Priority</th>
+                      <th>Merchant Name</th>
+                      <th>Network</th>
+                      <th>Merchant Code</th>
+                      <th>Account Name / Phone</th>
+                      <th>Transactions</th>
+                      <th>Total Volume</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="merchantsTbody">
+                    <!-- Rendered by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ================================================================
+             VIEW: BRIDGE DEVICES
+             ================================================================ -->
+        <section class="admin-view-screen" id="view-bridge">
+          <div class="dashboard-greeting-bar">
+            <div>
+              <h2 class="dashboard-greeting-title">Bridge Hardware Monitors</h2>
+              <p class="dashboard-greeting-sub">SMS & USSD automation gateways connected to MTN Uganda & Airtel SIMs.</p>
+            </div>
+          </div>
+
+          <div class="dashboard-row-4col" id="fullBridgeGrid">
+            <!-- Rendered by JS -->
+          </div>
+        </section>
+
+
+        <!-- ================================================================
+             VIEW: INVESTMENTS
+             ================================================================ -->
+        <section class="admin-view-screen" id="view-investments">
+          <div class="dashboard-greeting-bar">
+            <div>
+              <h2 class="dashboard-greeting-title">User Investments & Daily Yields</h2>
+              <p class="dashboard-greeting-sub">Manage active portfolios, interest rates, and automated payouts.</p>
+            </div>
+            <button class="btn-primary" onclick="AdminAPI.triggerManualSettlement().then(() => showToast('Settled daily yields!', 'success'))">
+              Run Daily Settlement Now
+            </button>
+          </div>
+
+          <div class="hero-metrics-row">
+            <div class="hero-metric-card">
+              <div class="metric-body-data">
+                <div class="metric-label-title">Active Investment Value</div>
+                <div class="metric-large-value" id="investmentActiveValue">UGX 0</div>
+                <div class="metric-trend-pill positive" id="investmentActiveMeta">0 active lines</div>
+              </div>
+            </div>
+            <div class="hero-metric-card">
+              <div class="metric-body-data">
+                <div class="metric-label-title">Completed Maturities</div>
+                <div class="metric-large-value" id="investmentCompletedValue">UGX 0</div>
+                <div class="metric-trend-pill positive" id="investmentCompletedMeta">0 completed lines</div>
+              </div>
+            </div>
+            <div class="hero-metric-card">
+              <div class="metric-body-data">
+                <div class="metric-label-title">Avg Daily ROI</div>
+                <div class="metric-large-value" id="investmentAverageYield">UGX 0 / Day</div>
+                <div class="metric-trend-pill positive" id="investmentAverageMeta">0 UGX across active lines</div>
+              </div>
+            </div>
+            <div class="hero-metric-card">
+              <div class="metric-body-data">
+                <div class="metric-label-title">Total Yield Disbursed</div>
+                <div class="metric-large-value" id="investmentDisbursedValue">UGX 0</div>
+                <div class="metric-trend-pill positive" id="investmentDisbursedMeta">0 completed yield entries</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ================================================================
+             VIEW: NOTIFICATIONS & BROADCASTS
+             ================================================================ -->
+        <section class="admin-view-screen" id="view-notifications">
+          <div class="dashboard-greeting-bar">
+            <div>
+              <h2 class="dashboard-greeting-title">Push Notification Broadcast Center</h2>
+              <p class="dashboard-greeting-sub">Send real-time system alerts and promotional notifications to all app users.</p>
+            </div>
+            <button class="btn-primary" onclick="openBroadcastModal()">+ New Broadcast Message</button>
+          </div>
+
+          <div class="dashboard-widget-card" style="max-width: 600px;">
+            <div class="widget-card-header">
+              <span class="widget-header-title">Send Broadcast Announcement</span>
+            </div>
+            <div class="widget-card-body">
+              <form onsubmit="handleSendBroadcastSubmit(event)">
+                <div class="modal-form-group" style="margin-bottom: 12px;">
+                  <label>Notification Headline / Title</label>
+                  <input type="text" id="broadcastTitleInput" class="modal-form-input" placeholder="e.g. Special Weekend Bonus: 15% Extra Yield!" required />
+                </div>
+                <div class="modal-form-group" style="margin-bottom: 14px;">
+                  <label>Message Content</label>
+                  <textarea id="broadcastMessageInput" class="modal-form-input" style="height: 90px; resize: none;" placeholder="Enter message for all users..." required></textarea>
+                </div>
+                <div class="modal-form-group" style="margin-bottom: 14px;">
+                  <label>Category</label>
+                  <select id="broadcastCategoryInput" class="modal-form-input">
+                    <option value="promo">Promotion</option>
+                    <option value="system">System</option>
+                    <option value="alert">Alert</option>
+                  </select>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Dispatch Broadcast Notification</button>
+              </form>
+            </div>
+          </div>
+          <div class="dashboard-widget-card" style="max-width: 760px; margin-top: 16px;"><div class="widget-card-header"><span class="widget-header-title">Backend Notifications</span><button class="btn-action-small view" onclick="markAllAdminNotificationsRead()">Mark All Read</button></div><div class="widget-card-body"><div id="adminNotificationsList"></div></div></div>
+        </section>
+
+
+        <!-- ================================================================
+             VIEW: SYSTEM LOGS
+             ================================================================ -->
+        <section class="admin-view-screen" id="view-logs">
+          <div class="dashboard-greeting-bar">
+            <div>
+              <h2 class="dashboard-greeting-title">System Activity Logs</h2>
+              <p class="dashboard-greeting-sub">Complete audit trail of deposits, payouts, API triggers, and device events.</p>
+            </div>
+          </div>
+
+          <div class="dashboard-widget-card">
+            <div class="widget-card-body">
+              <div class="activity-logs-stream" id="fullLogsStream">
+                <!-- Rendered by JS -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="admin-view-screen" id="view-settings">
+          <div class="dashboard-greeting-bar">
+            <div><h2 class="dashboard-greeting-title">System Settings</h2><p class="dashboard-greeting-sub">Settings are loaded and saved through the backend.</p></div>
+            <button class="btn-secondary" type="button" onclick="logoutAdmin()">Log Out</button>
+          </div>
+          <div class="dashboard-widget-card" style="max-width: 640px;"><div class="widget-card-header"><span class="widget-header-title">Account & Platform Settings</span></div><div class="widget-card-body">
+            <p id="settingsAdminIdentity" style="color: var(--text-gray); margin-bottom: 16px;"></p>
+            <form id="adminSettingsForm" onsubmit="handleSettingsSubmit(event)">
+              <div class="modal-form-group"><label>Admin Name</label><input name="admin_name" class="modal-form-input" required /></div>
+              <div class="modal-form-group"><label>Profile Picture URL</label><input name="profile_photo" type="url" class="modal-form-input" placeholder="https://example.com/profile.jpg" /></div>
+              <div class="modal-form-group"><label>Platform Name</label><input name="platform_name" class="modal-form-input" value="VSIM" /></div>
+              <div class="modal-form-group"><label>Support Email</label><input name="support_email" type="email" class="modal-form-input" /></div>
+              <div class="modal-form-group"><label>Maintenance Mode</label><select name="maintenance_mode" class="modal-form-input"><option value="false">Disabled</option><option value="true">Enabled</option></select></div>
+              <div style="display:flex; gap:10px; margin-top:16px;"><button class="btn-primary" type="submit">Save Settings</button><button class="btn-secondary" type="button" onclick="logoutAdmin()">Log Out</button></div>
+            </form>
+          </div></div>
+        </section>
+
+
+        <!-- ================================================================
+             VIEW: ADMINS & ROLES
+             ================================================================ -->
+        <section class="admin-view-screen" id="view-admins">
+          <div class="dashboard-greeting-bar">
+            <div>
+              <h2 class="dashboard-greeting-title">Admins & Roles</h2>
+              <p class="dashboard-greeting-sub">Create and manage sub-admin accounts for the main admin.</p>
+            </div>
+            <button class="btn-primary" onclick="openCreateAdminModal()">+ Add Sub-Admin</button>
+          </div>
+
+          <div class="dashboard-widget-card" style="padding: 0; overflow: hidden;">
+            <div class="widget-card-header" style="padding: 14px 18px;">
+              <div class="widget-header-title-box">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary-purple)" stroke-width="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle>
+                </svg>
+                <span class="widget-header-title">Admin Accounts</span>
+              </div>
+            </div>
+            <div class="widget-card-body" style="padding: 0 18px 18px;">
+              <div class="table-responsive-wrapper">
+                <table class="admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>Admin</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                      <th>Created</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminsTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+
+
+    <!-- ==================================================================
+         4. MOBILE BOTTOM NAVIGATION BAR (PWA SHELL)
+         ================================================================== -->
+    <nav class="admin-bottom-nav">
+      <button class="bottom-tab-btn active" data-view="view-dashboard" onclick="navigateToView('view-dashboard')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        <span>Dashboard</span>
+      </button>
+
+      <button class="bottom-tab-btn" data-view="view-withdrawals" onclick="navigateToView('view-withdrawals')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline>
+        </svg>
+        <span>Payouts</span>
+      </button>
+
+      <button class="bottom-tab-btn" data-view="view-users" onclick="navigateToView('view-users')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle>
+        </svg>
+        <span>Users</span>
+      </button>
+
+      <button class="bottom-tab-btn" data-view="view-packages" onclick="navigateToView('view-packages')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="5" y="2" width="14" height="20" rx="2"></rect>
+        </svg>
+        <span>eSIMs</span>
+      </button>
+
+      <button class="bottom-tab-btn" onclick="openMoreDrawer()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle>
+        </svg>
+        <span>More</span>
+      </button>
+    </nav>
+
+
+    <!-- ==================================================================
+         5. MOBILE "MORE" SLIDE-UP DRAWER
+         ================================================================== -->
+    <div class="mobile-more-drawer" id="mobileMoreDrawer">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <h3 style="font-size: 1rem; font-weight: 800; color: var(--text-white);">Admin Sections</h3>
+        <button class="modal-close-btn" onclick="closeMoreDrawer()">✕</button>
+      </div>
+
+      <div class="mobile-more-grid">
+        <div class="mobile-drawer-btn" onclick="navigateToView('view-investments')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary-purple)" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline></svg>
+          <span>Investments</span>
+        </div>
+        <div class="mobile-drawer-btn" onclick="navigateToView('view-bridge')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" stroke-width="2"><path d="M4 11a9 9 0 0 1 9 9"></path></svg>
+          <span>Bridge Devices</span>
+        </div>
+        <div class="mobile-drawer-btn" onclick="navigateToView('view-notifications')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-blue)" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path></svg>
+          <span>Broadcast</span>
+        </div>
+        <div class="mobile-drawer-btn" onclick="navigateToView('view-logs')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-orange)" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline></svg>
+          <span>System Logs</span>
+        </div>
+        <div class="mobile-drawer-btn" onclick="navigateToView('view-settings')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-gray)" stroke-width="2"><circle cx="12" cy="12" r="3"></circle></svg>
+          <span>Settings</span>
+        </div>
+        <div class="mobile-drawer-btn" onclick="exportSystemReports()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-red)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path></svg>
+          <span>Export CSV</span>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ==================================================================
+         6. INTERACTIVE MODAL DIALOGS
+         ================================================================== -->
+
+    <!-- Modal 1: Process Instant Momo Payout -->
+    <div class="modal-overlay-backdrop" id="payoutModalOverlay">
+      <div class="modal-dialog-box">
+        <div class="modal-dialog-header">
+          <span class="modal-dialog-title">Process Mobile Money Payout</span>
+          <button class="modal-close-btn" onclick="closePayoutModal()">✕</button>
+        </div>
+        <div class="modal-dialog-body">
+          <p style="font-size: 0.82rem; color: var(--text-gray);">
+            Send instant automated Mobile Money payout via the active Bridge Gateway SIM.
+          </p>
+          <div style="background: var(--bg-card-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.82rem;">
+              <span style="color: var(--text-muted);">Recipient Phone:</span>
+              <strong style="color: var(--text-white);" id="payoutPhoneSpan">+256 784 567 890</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.82rem;">
+              <span style="color: var(--text-muted);">Payout Amount:</span>
+              <strong style="color: var(--accent-green); font-size: 1rem;" id="payoutAmountSpan">UGX 60,000</strong>
+            </div>
+          </div>
+          <div class="modal-form-group">
+            <label>Gateway Bridge</label>
+            <select class="modal-form-input">
+              <option>VSIM-BRIDGE-01 (MTN 4G USSD)</option>
+              <option>VSIM-BRIDGE-02 (Airtel Money API)</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-dialog-footer">
+          <button class="btn-secondary" onclick="closePayoutModal()">Cancel</button>
+          <button class="btn-primary" onclick="confirmInstantPayout()">Dispatch Payout</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 2: Add New eSIM Package -->
+    <div class="modal-overlay-backdrop" id="addPackageModalOverlay">
+      <div class="modal-dialog-box">
+        <div class="modal-dialog-header">
+          <span class="modal-dialog-title">Add eSIM Package</span>
+          <button class="modal-close-btn" onclick="closeAddPackageModal()">✕</button>
+        </div>
+        <form onsubmit="handleCreatePackageSubmit(event)">
+          <div class="modal-dialog-body">
+            <div class="modal-form-group">
+              <label>Package Title</label>
+              <input type="text" id="pkgTitleInput" class="modal-form-input" placeholder="e.g. 500GB - 30 Days Ultra" required />
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div class="modal-form-group">
+                <label>Validity</label>
+                <input type="text" id="pkgValidityInput" class="modal-form-input" value="30 Days" required />
+              </div>
+              <div class="modal-form-group">
+                <label>Data Quota</label>
+                <input type="text" id="pkgDataInput" class="modal-form-input" value="50 GB" required />
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div class="modal-form-group">
+                <label>Price (UGX)</label>
+                <input type="number" id="pkgPriceInput" class="modal-form-input" placeholder="70000" required />
+              </div>
+              <div class="modal-form-group">
+                <label>Daily Yield (UGX)</label>
+                <input type="number" id="pkgIncomeInput" class="modal-form-input" placeholder="4800" required />
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div class="modal-form-group">
+                <label>Country / Market</label>
+                <input type="text" id="pkgCountryInput" class="modal-form-input" value="Uganda" />
+              </div>
+              <div class="modal-form-group">
+                <label>Region</label>
+                <select id="pkgRegionInput" class="modal-form-input">
+                  <option value="global">Global</option>
+                  <option value="africa" selected>Africa</option>
+                  <option value="east_africa">East Africa</option>
+                  <option value="local">Local (UG)</option>
+                </select>
+              </div>
+            </div>
+            <div class="modal-form-group">
+              <label>Package Image URL</label>
+              <input type="url" id="pkgImageInput" class="modal-form-input" placeholder="https://example.com/package-image.jpg" />
+            </div>
+          </div>
+          <div class="modal-dialog-footer">
+            <button type="button" class="btn-secondary" onclick="closeAddPackageModal()">Cancel</button>
+            <button type="submit" class="btn-primary">Create Package</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: Add/Edit Mobile Money Merchant -->
+    <div class="modal-overlay-backdrop" id="merchantModalOverlay">
+      <div class="modal-dialog-box package-modal-dialog">
+        <div class="modal-dialog-header">
+          <div class="package-modal-heading">
+            <div class="package-modal-icon">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                <line x1="2" y1="10" x2="22" y2="10"></line>
+              </svg>
+            </div>
+            <div>
+              <span class="modal-dialog-title" id="merchantModalTitle">Add Mobile Money Merchant</span>
+              <span class="package-modal-subtitle">Dynamic merchant assigned to checkout popups</span>
+            </div>
+          </div>
+          <button type="button" class="modal-close-btn" onclick="closeMerchantModal()">✕</button>
+        </div>
+        <form id="merchantForm" onsubmit="handleMerchantSubmit(event)">
+          <input type="hidden" id="merchantEditId" value="" />
+          <div class="modal-dialog-body">
+            <div class="modal-form-group">
+              <label for="merchantNameInput">Merchant Display Name</label>
+              <input id="merchantNameInput" class="modal-form-input" placeholder="e.g. VSIM Main MTN Line" required />
+            </div>
+            <div class="package-field-grid">
+              <div class="modal-form-group">
+                <label for="merchantNetworkInput">Network</label>
+                <select id="merchantNetworkInput" class="modal-form-input">
+                  <option value="MTN">MTN Uganda (MoMo)</option>
+                  <option value="AIRTEL">Airtel Money</option>
+                  <option value="ALL">Universal (All Networks)</option>
+                </select>
+              </div>
+              <div class="modal-form-group">
+                <label for="merchantCodeInput">Merchant / Paybill Code</label>
+                <input id="merchantCodeInput" class="modal-form-input" placeholder="e.g. 552109" style="font-family: monospace; font-weight: 700;" required />
+              </div>
+            </div>
+            <div class="package-field-grid">
+              <div class="modal-form-group">
+                <label for="merchantAccountInput">Account Name (Beneficiary)</label>
+                <input id="merchantAccountInput" class="modal-form-input" placeholder="e.g. VSIM TELECOM SERVICES" />
+              </div>
+              <div class="modal-form-group">
+                <label for="merchantPhoneInput">Merchant Phone Number</label>
+                <input id="merchantPhoneInput" class="modal-form-input" placeholder="e.g. +256 784 567 890" />
+              </div>
+            </div>
+            <div class="package-field-grid">
+              <div class="modal-form-group">
+                <label for="merchantPriorityInput">Priority Rank (1 = Highest)</label>
+                <input id="merchantPriorityInput" type="number" class="modal-form-input" value="1" min="1" max="100" required />
+              </div>
+              <div class="modal-form-group">
+                <label for="merchantStatusInput">Operational Status</label>
+                <select id="merchantStatusInput" class="modal-form-input">
+                  <option value="active">Active (Available for checkout)</option>
+                  <option value="inactive">Inactive (Disabled)</option>
+                </select>
+              </div>
+            </div>
+            <div class="modal-form-group">
+              <label for="merchantInstructionsInput">USSD & Payment Instructions</label>
+              <textarea id="merchantInstructionsInput" class="modal-form-input" style="height: 75px; resize: none;" placeholder="e.g. Dial *165*3# -> Enter Merchant Code -> Enter Amount -> Enter Reference -> Confirm PIN"></textarea>
+            </div>
+          </div>
+          <div class="modal-dialog-footer">
+            <button type="button" class="btn-secondary" onclick="closeMerchantModal()">Cancel</button>
+            <button type="submit" class="btn-primary" id="merchantSubmitBtn">Save Merchant</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal 3: Adjust User Balance -->
+    <div class="modal-overlay-backdrop" id="userBalanceModalOverlay">
+      <div class="modal-dialog-box">
+        <div class="modal-dialog-header">
+          <span class="modal-dialog-title">Adjust User Wallet Balance</span>
+          <button class="modal-close-btn" onclick="closeUserBalanceModal()">✕</button>
+        </div>
+        <form onsubmit="handleAdjustBalanceSubmit(event)">
+          <div class="modal-dialog-body">
+            <div style="background: var(--bg-card-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px; margin-bottom: 4px;">
+              <div style="font-size: 0.8rem; color: var(--text-muted);">User: <strong style="color: var(--text-white);" id="balanceModalUserName">-</strong></div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">Current Balance: <strong style="color: var(--accent-green);" id="balanceModalCurrent">UGX 86,000</strong></div>
+            </div>
+            <div class="modal-form-group">
+              <label>Adjustment Type</label>
+              <select id="adjTypeSelect" class="modal-form-input">
+                <option value="credit">Credit (Add Funds)</option>
+                <option value="debit">Debit (Deduct Funds)</option>
+              </select>
+            </div>
+            <div class="modal-form-group">
+              <label>Amount (UGX)</label>
+              <input type="number" id="adjAmountInput" class="modal-form-input" placeholder="50000" required />
+            </div>
+            <div class="modal-form-group">
+              <label>Reason / Audit Note</label>
+              <input type="text" id="adjReasonInput" class="modal-form-input" placeholder="Manual bonus credit" />
+            </div>
+          </div>
+          <div class="modal-dialog-footer">
+            <button type="button" class="btn-secondary" onclick="closeUserBalanceModal()">Cancel</button>
+            <button type="submit" class="btn-primary">Apply Adjustment</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal 4: Broadcast Message -->
+    <div class="modal-overlay-backdrop" id="broadcastModalOverlay">
+      <div class="modal-dialog-box">
+        <div class="modal-dialog-header">
+          <span class="modal-dialog-title">Broadcast Push Notification</span>
+          <button class="modal-close-btn" onclick="closeBroadcastModal()">✕</button>
+        </div>
+        <form onsubmit="handleSendBroadcastSubmit(event)">
+          <div class="modal-dialog-body">
+            <div class="modal-form-group">
+              <label>Title</label>
+              <input type="text" id="broadcastTitleInput" class="modal-form-input" placeholder="Important Announcement" required />
+            </div>
+            <div class="modal-form-group">
+              <label>Message</label>
+              <textarea id="broadcastMessageInput" class="modal-form-input" style="height: 80px; resize: none;" placeholder="Message to all app users..." required></textarea>
+            </div>
+            <div class="modal-form-group">
+              <label>Category</label>
+              <select id="broadcastCategoryInput" class="modal-form-input">
+                <option value="promo">Promotion</option>
+                <option value="system">System</option>
+                <option value="alert">Alert</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-dialog-footer">
+            <button type="button" class="btn-secondary" onclick="closeBroadcastModal()">Cancel</button>
+            <button type="submit" class="btn-primary">Send to All Users</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal 5: Create Sub-Admin -->
+    <div class="modal-overlay-backdrop" id="createAdminModalOverlay">
+      <div class="modal-dialog-box">
+        <div class="modal-dialog-header">
+          <span class="modal-dialog-title">Create Sub-Admin</span>
+          <button class="modal-close-btn" onclick="closeCreateAdminModal()">✕</button>
+        </div>
+        <form id="createAdminForm" onsubmit="handleCreateAdminSubmit(event)">
+          <div class="modal-dialog-body">
+            <div class="modal-form-group">
+              <label>Full Name</label>
+              <input id="newAdminName" type="text" class="modal-form-input" placeholder="Jane Admin" required />
+            </div>
+            <div class="modal-form-group">
+              <label>Email</label>
+              <input id="newAdminEmail" type="email" class="modal-form-input" placeholder="jane@vsim.com" required />
+            </div>
+            <div class="modal-form-group">
+              <label>Password</label>
+              <input id="newAdminPassword" type="password" class="modal-form-input" placeholder="Create password" required />
+            </div>
+            <div class="modal-form-group">
+              <label>Role</label>
+              <select id="newAdminRole" class="modal-form-input">
+                <option value="sub_admin">Sub Admin</option>
+                <option value="super_admin">Main Admin</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-dialog-footer">
+            <button type="button" class="btn-secondary" onclick="closeCreateAdminModal()">Cancel</button>
+            <button type="submit" class="btn-primary">Create Admin</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Script Imports -->
+  <script src="js/admin-api.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

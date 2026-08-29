@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+node_modules
+database/*.db
+database/*.db-*
+npm-debug.log*
+.git
+.gitignore
+Dockerfile
+docker-compose.yml
+*.test.js

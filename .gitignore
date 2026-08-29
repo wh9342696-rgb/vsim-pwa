@@ -1,0 +1,76 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment
+.env
+.env.docker
+.env.local
+.env.*.local
+.env.production
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.sublime-workspace
+.sublime-project
+
+# Build output
+dist/
+build/
+out/
+.next/
+.nuxt/
+coverage/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# PM2
+.pm2/
+ecosystem-lock.json
+
+# PocketBase
+pb_migrations/
+pb_public/
+
+# Temp files
+temp/
+tmp/
+*.tmp
+
+# Archive
+*.zip
+*.rar
+*.tar.gz
+*.7z
+
+# Redis
+dump.rdb
+
+# Node version management
+.nvmrc
+.node-version
