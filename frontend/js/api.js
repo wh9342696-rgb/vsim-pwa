@@ -4,22 +4,10 @@
  */
 
 const getApiBase = () => {
-  if (typeof window === 'undefined') return '/api/v1';
-  if (!window.VSIM_API_BASE) {
-    window.VSIM_API_BASE = 'https://api.vsime.uk';
-  }
-  const configured = window.VSIM_API_BASE || document.querySelector('meta[name="vsim-api-base"]')?.content.trim();
-  if (configured) {
-    const configuredUrl = new URL(configured, window.location.origin);
-    if (window.location.protocol === 'https:' && configuredUrl.protocol !== 'https:') {
-      throw new Error('The API must use HTTPS when the PWA is served over HTTPS');
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) { 
+      return 'http://localhost:3000';
     }
-    return configuredUrl.toString().replace(/\/$/, '');
-  }
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return `${window.location.origin}/api/v1`;
-  }
-  return `${window.location.origin}/api/v1`;
+  return 'https://api.vsime.uk';
 };
 
 const API_BASE = getApiBase();
