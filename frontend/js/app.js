@@ -52,7 +52,6 @@ const appState = {
   targetEsimIccid: null,
   renewalPackages: [],
   kyc: { tier: 'Tier 0 Unverified', limits: { daily: 100000, monthly: 500000 }, submissions: [] },
-  kyc: { tier: 'Tier 0 Unverified', limits: { daily: 100000, monthly: 500000 }, submissions: [] },
   selectedPayMethod: 'momo'
 };
 
@@ -1786,11 +1785,6 @@ async function handleLogin(e) {
     const btn = e.target.querySelector('button');
     if (btn) btn.disabled = false;
     profileSaveInFlight = false;
-    if (submitButton) submitButton.disabled = false;
-  }
-
-  if (!appState.profile.profilePhoto && profilePhoto) {
-    appState.profile.profilePhoto = profilePhoto;
   }
 }
 
