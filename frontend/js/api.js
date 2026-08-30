@@ -3,11 +3,20 @@
  * REST API connector between the PWA frontend and the configurable Node.js API.
  */
 
+const DEFAULT_API_BASE = 'https://api.vsime.uk/api/v1';
+
 const getApiBase = () => {
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) { 
-      return 'http://localhost:3000';
+  const configured = (typeof window !== 'undefined' && (window.VSIM_API_BASE || document.querySelector('meta[name="vsim-api-base"]')?.content.trim())) || DEFAULT_API_BASE;
+
+  try {
+    const parsed = new URL(configured, window.location.origin);
+    if (window.location.protocol === 'https:' && parsed.protocol !== 'https:') {
+      throw new Error('The API must use HTTPS when the PWA is served over HTTPS');
     }
-  return 'https://api.vsime.uk';
+    return parsed.toString().replace(/\/$/, '');
+  } catch (error) {
+    return DEFAULT_API_BASE;
+  }
 };
 
 const API_BASE = getApiBase();

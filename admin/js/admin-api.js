@@ -1,9 +1,10 @@
 const AdminAPI = (() => {
+  const defaultApiBase = 'https://api.vsime.uk/api/v1';
   if (!window.VSIM_API_BASE) {
-    window.VSIM_API_BASE = 'http://139.84.239.72:3000/api/v1';
+    window.VSIM_API_BASE = defaultApiBase;
   }
   const configuredApiBase = window.VSIM_API_BASE || document.querySelector('meta[name="vsim-api-base"]')?.content.trim();
-  const apiBase = configuredApiBase ? configuredApiBase.replace(/\/$/, '') : 'http://139.84.239.72:3000/api/v1';
+  const apiBase = configuredApiBase ? configuredApiBase.replace(/\/$/, '') : defaultApiBase;
   const baseUrl = `${apiBase}/admin`;
   const getToken = () => localStorage.getItem('vsim_admin_jwt') || '';
   const setToken = token => token ? localStorage.setItem('vsim_admin_jwt', token) : localStorage.removeItem('vsim_admin_jwt');
