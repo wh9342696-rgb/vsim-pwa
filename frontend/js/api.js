@@ -6,7 +6,7 @@
 const getApiBase = () => {
   if (typeof window === 'undefined') return '/api/v1';
   if (!window.VSIM_API_BASE) {
-    window.VSIM_API_BASE = 'https://api.vsime.uk/api/v1';
+    window.VSIM_API_BASE = 'https://api.vsime.uk';
   }
   const configured = window.VSIM_API_BASE || document.querySelector('meta[name="vsim-api-base"]')?.content.trim();
   if (configured) {
