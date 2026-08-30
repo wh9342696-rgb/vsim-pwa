@@ -5,6 +5,9 @@
 
 const getApiBase = () => {
   if (typeof window === 'undefined') return '/api/v1';
+  if (!window.VSIM_API_BASE) {
+    window.VSIM_API_BASE = 'http://139.84.239.72:3000/api/v1';
+  }
   const configured = window.VSIM_API_BASE || document.querySelector('meta[name="vsim-api-base"]')?.content.trim();
   if (configured) {
     const configuredUrl = new URL(configured, window.location.origin);
