@@ -1610,8 +1610,66 @@ async function execTopUp() {
   }
 }
 
+function getWithdrawNetworkPrefix(phone) {
+  if (!phone || phone.length < 3) return null;
+  const prefix = phone.substring(0, 3);
+  // MTN Uganda prefixes: 070, 075, 076, 077, 078, 079
+  if (['070', '075', '076', '077', '078', '079'].includes(prefix)) return 'MTN';
+  // Airtel Uganda prefixes: 071, 072, 073, 074
+  if (['071', '072', '073', '074'].includes(prefix)) return 'AIRTEL';
+  return null;
+}
+
+function validateWithdrawPhone() {
+  const phoneInput = document.getElementById('withdrawPhoneInput');
+  const errorMsg = document.getElementById('withdrawNetworkMatch');
+  const selectedNetwork = document.querySelector('#withdrawNetworkSelection .network-select-card.selected span:last-child')?.textContent.trim() || 'MTN';
+  const phone = phoneInput?.value.trim() || '';
+  
+  if (!phone) {
+    errorMsg.style.display = 'none';
+    return true;
+  }
+  
+  const detectedNetwork = getWithdrawNetworkPrefix(phone);
+  if (detectedNetwork && detectedNetwork !== selectedNetwork) {
+    errorMsg.textContent = `This ${detectedNetwork} number doesn't match your selected ${selectedNetwork} network. Please select ${detectedNetwork} or use a ${selectedNetwork} number.`;
+    errorMsg.style.display = 'block';
+    return false;
+  }
+  
+  if (!detectedNetwork && phone.length > 3) {
+    errorMsg.textContent = 'Invalid phone number format for Ugandan networks';
+    errorMsg.style.display = 'block';
+    return false;
+  }
+  
+  errorMsg.style.display = 'none';
+  return true;
+}
+
+function pickWithdrawNetwork(elem, network) {
+  const container = elem.parentElement;
+  container.querySelectorAll('.network-select-card').forEach(c => c.classList.remove('selected'));
+  elem.classList.add('selected');
+  validateWithdrawPhone();
+}
+
 async function execWithdraw() {
   const amount = parseFloat(document.getElementById('withdrawVal').value) || 0;
+  const phone = document.getElementById('withdrawPhoneInput')?.value.trim() || '';
+  const selectedNetwork = document.querySelector('#withdrawNetworkSelection .network-select-card.selected span:last-child')?.textContent.trim() || 'MTN';
+  
+  if (!phone) {
+    showToast('Please enter your phone number', 'error');
+    return;
+  }
+
+  if (!validateWithdrawPhone()) {
+    showToast('Phone number does not match the selected network', 'error');
+    return;
+  }
+
   if (amount > appState.walletBalance) {
     showToast('Insufficient wallet balance', 'error');
     return;
@@ -1626,7 +1684,7 @@ async function execWithdraw() {
     return;
   }
   try {
-    const res = await window.VSIM_API.withdrawWallet(amount, appState.profile.phone, 'MTN');
+    const res = await window.VSIM_API.withdrawWallet(amount, phone, selectedNetwork);
     appState.walletBalance = Number(res.walletBalance) || 0;
     updateBalanceDisplay();
     await fetchBackendData();

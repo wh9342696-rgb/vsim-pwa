@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="vsim-api-base" content="https://api.vsime.uk/api/v1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://api.vsime.uk https://*.vsime.uk ws://localhost:4001; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests;" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://api.vsime.uk https://*.vsime.uk wss://api.vsime.uk; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests;" />
   <script>
     window.VSIM_API_BASE = 'https://api.vsime.uk/api/v1';
   </script>
@@ -1163,12 +1163,22 @@
         <div class="screen-body">
           <div class="form-group-item">
             <label class="form-label-text">Withdraw To</label>
-            <input type="text" class="form-input-field" value="MTN Mobile Money" readonly />
+            <div class="network-pills-row" id="withdrawNetworkSelection">
+              <div class="network-select-card selected" onclick="pickWithdrawNetwork(this, 'MTN')">
+                <div class="radio-circle-indicator"></div>
+                <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-white);">MTN</span>
+              </div>
+              <div class="network-select-card" onclick="pickWithdrawNetwork(this, 'AIRTEL')">
+                <div class="radio-circle-indicator"></div>
+                <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-white);">Airtel</span>
+              </div>
+            </div>
           </div>
 
           <div class="form-group-item">
             <label class="form-label-text">Phone Number</label>
-            <input type="tel" class="form-input-field" placeholder="07xxxxxxxx" value="" />
+            <input type="tel" id="withdrawPhoneInput" class="form-input-field" placeholder="07xxxxxxxx" value="" oninput="validateWithdrawPhone()" />
+            <small id="withdrawNetworkMatch" style="display: none; font-size: 0.75rem; margin-top: 4px; color: var(--red-accent);"></small>
           </div>
 
           <div class="form-group-item">
