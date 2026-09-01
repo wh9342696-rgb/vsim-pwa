@@ -33,7 +33,7 @@ const app = express();
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 const PORT = process.env.PORT || 3000;
-const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+const frontendUrl = process.env.FRONTEND_URL || 'https://vsime.uk';
 
 app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
@@ -55,7 +55,7 @@ app.use(helmet({
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
-      connectSrc: ["'self'", frontendUrl, 'http://localhost:4000', 'ws://localhost:4001', 'http://localhost:3000'],
+          connectSrc: ["'self'", frontendUrl, 'https://api.vsime.uk', 'wss://api.vsime.uk'],
       fontSrc: ["'self'", 'data:'],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
@@ -197,8 +197,8 @@ startEarningsCronJob();
 
 const server = app.listen(PORT, () => {
   console.log(`=======================================================`);
-  console.log(`🚀 VSIM API Server running on http://localhost:${PORT}`);
-  console.log(`📡 Health Check: http://localhost:${PORT}/health`);
+  console.log(`🚀 VSIM API Server running on http://0.0.0.0:${PORT}`);
+  console.log(`📡 Health Check: http://0.0.0.0:${PORT}/health`);
   console.log(`🔒 Security: Helmet, Rate Limiter & JWT Active`);
   console.log(`=======================================================`);
 });

@@ -21,11 +21,11 @@ npx --yes -p node@22 node server.js
 
 ## Smoke tests
 
-- GET http://localhost:3000/health
-- GET http://localhost:3000/api/v1/esims/packages
-- POST http://localhost:3000/api/v1/admin/login
-- POST http://localhost:3000/api/v1/auth/login
-- GET http://localhost:3000/api/v1/auth/me
+ - GET https://api.vsime.uk/health
+ - GET https://api.vsime.uk/api/v1/esims/packages
+ - POST https://api.vsime.uk/api/v1/admin/login
+ - POST https://api.vsime.uk/api/v1/auth/login
+ - GET https://api.vsime.uk/api/v1/auth/me
 
 ## Production notes
 

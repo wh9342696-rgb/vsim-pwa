@@ -13,8 +13,8 @@ import {
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
-const RP_ID = process.env.WEBAUTHN_RP_ID || 'localhost';
-const ORIGIN = process.env.FRONTEND_URL || 'http://localhost:3000';
+const RP_ID = process.env.WEBAUTHN_RP_ID || 'vsime.uk';
+const ORIGIN = process.env.FRONTEND_URL || 'https://vsime.uk';
 const PASSKEY_CHALLENGE_TTL_MS = 5 * 60 * 1000;
 
 function encodeJson(value) {

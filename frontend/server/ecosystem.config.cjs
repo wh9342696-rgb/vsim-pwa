@@ -8,7 +8,7 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 3000,
         JWT_SECRET: 'vsim_super_secret_production_key_2026',
-        FRONTEND_URL: 'https://localhost',
+        FRONTEND_URL: 'https://vsime.uk',
         DB_HOST: 'localhost',
         DB_PORT: 5432,
         DB_NAME: 'vsim_db',

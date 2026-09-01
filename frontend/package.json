@@ -1,0 +1,11 @@
+{
+  "name": "vsim-pwa-icons",
+  "version": "1.0.0",
+  "description": "Tooling to generate PWA icons",
+  "scripts": {
+    "gen-icons": "node tools/generate-icons.js"
+  },
+  "dependencies": {
+    "sharp": "^0.32.0"
+  }
+}
