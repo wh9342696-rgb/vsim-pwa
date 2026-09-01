@@ -1663,11 +1663,16 @@ async function execTopUp() {
 
 function getWithdrawNetworkPrefix(phone) {
   if (!phone || phone.length < 3) return null;
-  const prefix = phone.substring(0, 3);
-  // MTN Uganda prefixes: 070, 075, 076, 077, 078, 079
-  if (['070', '075', '076', '077', '078', '079'].includes(prefix)) return 'MTN';
-  // Airtel Uganda prefixes: 071, 072, 073, 074
-  if (['071', '072', '073', '074'].includes(prefix)) return 'AIRTEL';
+  
+  // Check the third digit (index 2) of the phone number
+  const thirdDigit = parseInt(phone.charAt(2), 10);
+  
+  // If third digit >= 6: MTN (076-079)
+  if (thirdDigit >= 6) return 'MTN';
+  
+  // If third digit <= 5: AIRTEL (070-075)
+  if (thirdDigit <= 5) return 'AIRTEL';
+  
   return null;
 }
 
