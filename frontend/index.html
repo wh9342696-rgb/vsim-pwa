@@ -1164,11 +1164,11 @@
           <div class="form-group-item">
             <label class="form-label-text">Withdraw To</label>
             <div class="network-pills-row" id="withdrawNetworkSelection">
-              <div class="network-select-card selected" onclick="pickWithdrawNetwork(this, 'MTN')">
+              <div class="network-select-card selected" onclick="pickWithdrawNetwork(this, 'MTN')" ontouchend="pickWithdrawNetwork(this, 'MTN')">
                 <div class="radio-circle-indicator"></div>
                 <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-white);">MTN</span>
               </div>
-              <div class="network-select-card" onclick="pickWithdrawNetwork(this, 'AIRTEL')">
+              <div class="network-select-card" onclick="pickWithdrawNetwork(this, 'AIRTEL')" ontouchend="pickWithdrawNetwork(this, 'AIRTEL')">
                 <div class="radio-circle-indicator"></div>
                 <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-white);">Airtel</span>
               </div>
@@ -2010,19 +2010,14 @@
             
             <div class="edit-avatar-container">
               <div class="edit-avatar-wrap">
-                <div class="edit-avatar-bubble" id="editAvatarPreview"></div>
-                <button type="button" class="edit-avatar-badge-btn" onclick="openProfilePhotoPicker()" title="Change profile photo" aria-label="Change profile photo">
+                <div class="edit-avatar-bubble" id="editAvatarPreview" onclick="openProfilePhotoActionSheet()" style="cursor: pointer;"></div>
+                <button type="button" class="edit-avatar-badge-btn" onclick="openProfilePhotoActionSheet()" title="Change profile photo" aria-label="Change profile photo">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                     <circle cx="12" cy="13" r="4"></circle>
                   </svg>
                 </button>
               </div>
-              <div class="profile-photo-dropzone" id="profilePhotoDropzone" onclick="openProfilePhotoPicker()" ondragover="event.preventDefault(); this.classList.add('dragging')" ondragleave="this.classList.remove('dragging')" ondrop="handleProfilePhotoDrop(event)">
-                <strong>Change your profile photo</strong>
-                <button type="button" class="avatar-upload-link" onclick="event.stopPropagation(); openProfilePhotoPicker()">Select image</button>
-              </div>
-              <button type="button" class="avatar-remove-link" onclick="removeProfilePhoto()">Remove current photo</button>
             </div>
 
             <div class="profile-hero-meta">
@@ -2133,6 +2128,59 @@
           </form>
         </div>
       </section>
+
+      <!-- Profile Photo Action Sheet Modal (WhatsApp Style) -->
+      <div class="photo-action-sheet-backdrop" id="photoActionSheetBackdrop" onclick="closeProfilePhotoActionSheet()"></div>
+      <div class="photo-action-sheet" id="photoActionSheet">
+        <div class="action-sheet-header">
+          <span class="action-sheet-title">Profile Photo</span>
+          <button type="button" class="action-sheet-close" onclick="closeProfilePhotoActionSheet()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="action-sheet-options">
+          <button type="button" class="action-sheet-option" onclick="triggerCameraCapture()" ontouchend="triggerCameraCapture()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+              <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+            <div class="action-option-text">
+              <span class="action-option-title">Take Photo</span>
+              <span class="action-option-desc">Capture with camera</span>
+            </div>
+          </button>
+          <button type="button" class="action-sheet-option" onclick="triggerGalleryPicker()" ontouchend="triggerGalleryPicker()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+            <div class="action-option-text">
+              <span class="action-option-title">Choose Photo</span>
+              <span class="action-option-desc">From gallery</span>
+            </div>
+          </button>
+          <button type="button" class="action-sheet-option action-sheet-option-danger" onclick="handleRemoveProfilePhoto()" ontouchend="handleRemoveProfilePhoto()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+            <div class="action-option-text">
+              <span class="action-option-title">Remove Photo</span>
+              <span class="action-option-desc">Delete current image</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <input type="file" id="profilePhotoCameraInput" accept="image/*" capture="environment" style="display:none;" onchange="handleProfilePhotoChange(event)" />
+      <input type="file" id="profilePhotoGalleryInput" accept="image/*" style="display:none;" onchange="handleProfilePhotoChange(event)" />
+      <input type="file" id="profilePhotoInput" accept="image/*" style="display:none;" onchange="handleProfilePhotoChange(event)" />
 
 
       <!-- ==================================================================

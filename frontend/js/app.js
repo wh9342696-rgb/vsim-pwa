@@ -698,6 +698,56 @@ function updateProfileUI() {
 // ============================================================================
 // PROFILE & SETTINGS
 // ============================================================================
+// PROFILE PHOTO MANAGEMENT - WhatsApp Style
+// ============================================================================
+
+function openProfilePhotoActionSheet() {
+  const backdrop = document.getElementById('photoActionSheetBackdrop');
+  const sheet = document.getElementById('photoActionSheet');
+  if (backdrop && sheet) {
+    backdrop.classList.add('open');
+    sheet.classList.add('open');
+  }
+}
+
+function closeProfilePhotoActionSheet() {
+  const backdrop = document.getElementById('photoActionSheetBackdrop');
+  const sheet = document.getElementById('photoActionSheet');
+  if (backdrop && sheet) {
+    backdrop.classList.remove('open');
+    sheet.classList.remove('open');
+  }
+}
+
+function triggerCameraCapture() {
+  closeProfilePhotoActionSheet();
+  const input = document.getElementById('profilePhotoCameraInput');
+  if (input) input.click();
+}
+
+function triggerGalleryPicker() {
+  closeProfilePhotoActionSheet();
+  const input = document.getElementById('profilePhotoGalleryInput');
+  if (input) input.click();
+}
+
+function handleRemoveProfilePhoto() {
+  closeProfilePhotoActionSheet();
+  
+  const inputs = [
+    document.getElementById('profilePhotoCameraInput'),
+    document.getElementById('profilePhotoGalleryInput'),
+    document.getElementById('profilePhotoInput')
+  ];
+  
+  inputs.forEach(input => {
+    if (input) input.value = '';
+  });
+  
+  appState.pendingProfilePhoto = '';
+  updateProfileUI();
+  showToast('Profile photo will be removed when you save', 'info');
+}
 
 function openProfilePhotoPicker() {
   document.getElementById('profilePhotoInput')?.click();
@@ -721,6 +771,7 @@ function setProfilePhotoFile(file) {
       canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
       appState.pendingProfilePhoto = canvas.toDataURL('image/jpeg', 0.82);
       updateProfileUI();
+      showToast('Photo selected. Click Save to update', 'success');
     };
     image.onerror = () => showToast('Image processing failed', 'error');
     image.src = reader.result;
@@ -1649,10 +1700,34 @@ function validateWithdrawPhone() {
 }
 
 function pickWithdrawNetwork(elem, network) {
-  const container = elem.parentElement;
-  container.querySelectorAll('.network-select-card').forEach(c => c.classList.remove('selected'));
-  elem.classList.add('selected');
-  validateWithdrawPhone();
+  if (!elem) return;
+  
+  // Prevent double execution on touch devices (which can fire both ontouchend and onclick)
+  if (elem._lastNetworkClick && Date.now() - elem._lastNetworkClick < 100) {
+    return;
+  }
+  elem._lastNetworkClick = Date.now();
+  
+  try {
+    // Get all sibling cards
+    const parent = elem.parentElement;
+    if (!parent) return;
+    
+    const cards = parent.querySelectorAll('.network-select-card');
+    
+    // Remove selected from all cards
+    cards.forEach(card => {
+      card.classList.remove('selected');
+    });
+    
+    // Add selected to clicked card
+    elem.classList.add('selected');
+    
+    // Validate phone
+    validateWithdrawPhone();
+  } catch (err) {
+    console.error('Error in pickWithdrawNetwork:', err);
+  }
 }
 
 async function execWithdraw() {

@@ -1841,6 +1841,17 @@ html, body {
   gap: 10px;
   cursor: pointer;
   transition: all 0.15s;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.network-select-card:active {
+  opacity: 0.8;
 }
 
 .network-select-card.selected {
@@ -2966,6 +2977,170 @@ html, body {
 .profile-photo-dropzone:hover {
   border-color: var(--primary-purple);
   background: var(--bg-card-secondary);
+}
+
+/* WhatsApp-Style Photo Action Sheet */
+.photo-action-sheet-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 5000;
+  animation: backdropFadeIn 0.2s ease-out;
+}
+
+.photo-action-sheet-backdrop.open {
+  display: block;
+}
+
+@keyframes backdropFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.photo-action-sheet {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  border-radius: 24px 24px 0 0;
+  padding: 0;
+  z-index: 5001;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
+  animation: slideUpFromBottom 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.photo-action-sheet.open {
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes slideUpFromBottom {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.action-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.action-sheet-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-white);
+  letter-spacing: -0.01em;
+}
+
+.action-sheet-close {
+  background: transparent;
+  border: none;
+  color: var(--text-gray);
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.action-sheet-close:hover {
+  color: var(--text-white);
+}
+
+.action-sheet-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 12px 12px 24px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.action-sheet-option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 14px;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--text-white);
+  transition: background-color 0.15s ease;
+  text-align: left;
+}
+
+.action-sheet-option:active {
+  background: var(--bg-card-secondary);
+}
+
+.action-sheet-option svg {
+  flex-shrink: 0;
+  color: var(--primary-purple);
+  width: 28px;
+  height: 28px;
+}
+
+.action-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.action-option-title {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-white);
+}
+
+.action-option-desc {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-gray);
+}
+
+.action-sheet-option-danger {
+  color: var(--red-accent);
+}
+
+.action-sheet-option-danger svg {
+  color: var(--red-accent);
+}
+
+.action-sheet-option-danger:active {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+[data-theme="light"] .photo-action-sheet {
+  background: rgba(255, 255, 255, 0.98);
+}
+
+[data-theme="light"] .action-sheet-option:active {
+  background: rgba(91, 66, 243, 0.08);
+}
+
+[data-theme="light"] .action-sheet-option-danger:active {
+  background: rgba(239, 68, 68, 0.08);
 }
 
 .avatar-upload-link,
