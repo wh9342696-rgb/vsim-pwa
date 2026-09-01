@@ -1700,34 +1700,19 @@ function validateWithdrawPhone() {
 }
 
 function pickWithdrawNetwork(elem, network) {
-  if (!elem) return;
+  const container = elem.parentElement;
+  if (!container) return;
   
-  // Prevent double execution on touch devices (which can fire both ontouchend and onclick)
-  if (elem._lastNetworkClick && Date.now() - elem._lastNetworkClick < 100) {
-    return;
-  }
-  elem._lastNetworkClick = Date.now();
+  // Remove selected from all cards in the container
+  container.querySelectorAll('.network-select-card').forEach(card => {
+    card.classList.remove('selected');
+  });
   
-  try {
-    // Get all sibling cards
-    const parent = elem.parentElement;
-    if (!parent) return;
-    
-    const cards = parent.querySelectorAll('.network-select-card');
-    
-    // Remove selected from all cards
-    cards.forEach(card => {
-      card.classList.remove('selected');
-    });
-    
-    // Add selected to clicked card
-    elem.classList.add('selected');
-    
-    // Validate phone
-    validateWithdrawPhone();
-  } catch (err) {
-    console.error('Error in pickWithdrawNetwork:', err);
-  }
+  // Add selected to clicked card
+  elem.classList.add('selected');
+  
+  // Validate phone if entered
+  validateWithdrawPhone();
 }
 
 async function execWithdraw() {
