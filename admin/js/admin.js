@@ -928,11 +928,83 @@ function renderUsersTable() {
       <td style="font-weight: 800; color: var(--accent-green);">UGX ${u.wallet_balance.toLocaleString()}</td>
       <td><span class="status-pill active">${u.kyc_tier || 'Tier 2 Verified'}</span></td>
       <td><span class="status-pill ${u.status || 'active'}">${u.status || 'active'}</span></td>
-      <td>
+      <td style="display:flex; gap:8px;">
         <button class="btn-action-small view" onclick="openUserBalanceModal(${u.id}, '${u.name}', ${u.wallet_balance})">Adjust Balance</button>
+        <button class="btn-action-small view" onclick="openUserEsimsModal(${u.id}, '${(u.name||'User').replace(/'/g, "\\'")}')">View eSIMs</button>
       </td>
     </tr>
   `).join('');
+}
+
+// User eSIMs Modal
+async function openUserEsimsModal(userId, userName) {
+  AdminStore.selectedUser = { id: userId, name: userName };
+  document.getElementById('userEsimsModalTitle').textContent = `${userName} — eSIMs`;
+  document.getElementById('userEsimsModalOverlay').classList.add('open');
+  const list = document.getElementById('userEsimsList');
+  list.innerHTML = '<div style="padding:18px;text-align:center;color:var(--text-muted)">Loading…</div>';
+  try {
+    const res = await AdminAPI.getUserEsims(userId);
+    const esims = res.esims || [];
+    if (!esims.length) {
+      list.innerHTML = '<div style="padding:18px;text-align:center;color:var(--text-muted)">No eSIMs found for this user.</div>';
+      return;
+    }
+    list.innerHTML = esims.map(esim => `
+      <div class="admin-esim-row" data-esim-id="${esim.id}" style="padding:12px;border-bottom:1px solid var(--border-subtle);display:flex;gap:12px;align-items:center;">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;color:var(--text-white);">${esim.title || 'eSIM #' + esim.id}</div>
+          <div style="font-size:0.78rem;color:var(--text-muted);">ICCID: ${esim.iccid || 'N/A'} • Status: ${esim.status}</div>
+        </div>
+        <div style="width:220px;display:flex;flex-direction:column;gap:6px;">
+          <input type="text" class="modal-form-input esim-data-total" placeholder="Data total (e.g. 10 GB)" value="${esim.data_total || ''}" />
+          <input type="text" class="modal-form-input esim-data-remaining" placeholder="Data remaining (e.g. 5 GB)" value="${esim.data_remaining || ''}" />
+          <input type="number" step="0.01" min="0" max="100" class="modal-form-input esim-progress-rate" placeholder="Progress %/hour" value="${esim.progress_percent_per_hour || ''}" />
+          <div style="display:flex;gap:6px;">
+            <select class="modal-form-input esim-status">
+              <option value="active" ${esim.status === 'active' ? 'selected' : ''}>active</option>
+              <option value="expired" ${esim.status === 'expired' ? 'selected' : ''}>expired</option>
+              <option value="cancelled" ${esim.status === 'cancelled' ? 'selected' : ''}>cancelled</option>
+            </select>
+            <button class="btn-action-small view" onclick="saveEsimEdits(${esim.id}, this)">Save</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    list.innerHTML = '<div style="padding:18px;text-align:center;color:var(--accent-red)">Failed to load eSIMs</div>';
+  }
+}
+
+function closeUserEsimsModal() {
+  document.getElementById('userEsimsModalOverlay').classList.remove('open');
+}
+
+async function saveEsimEdits(esimId, btn) {
+  const row = document.querySelector(`[data-esim-id='${esimId}']`);
+  if (!row) return;
+  const dataTotal = row.querySelector('.esim-data-total')?.value.trim();
+  const dataRemaining = row.querySelector('.esim-data-remaining')?.value.trim();
+  const progress = row.querySelector('.esim-progress-rate')?.value;
+  const status = row.querySelector('.esim-status')?.value;
+  btn.disabled = true;
+  try {
+    const payload = {};
+    if (dataTotal !== undefined) payload.data_total = dataTotal;
+    if (dataRemaining !== undefined) payload.data_remaining = dataRemaining;
+    if (progress !== undefined) payload.progress_percent_per_hour = Number(progress);
+    if (status !== undefined) payload.status = status;
+    const res = await AdminAPI.updateUserEsim(esimId, payload);
+    showToast('eSIM updated', 'success');
+    await loadAllData();
+    // refresh list
+    const userId = AdminStore.selectedUser?.id;
+    if (userId) openUserEsimsModal(userId, AdminStore.selectedUser.name);
+  } catch (err) {
+    showToast('Failed to update eSIM', 'error');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // Full Deposits View

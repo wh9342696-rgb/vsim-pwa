@@ -27,6 +27,40 @@ def make_icon(size, path):
     print('Wrote', path)
 
 if __name__ == '__main__':
+    # Standard app icons
     make_icon(512, os.path.join(icons_dir, 'icon-512.png'))
+    make_icon(384, os.path.join(icons_dir, 'icon-384.png'))
+    make_icon(256, os.path.join(icons_dir, 'icon-256.png'))
     make_icon(192, os.path.join(icons_dir, 'icon-192.png'))
+    make_icon(144, os.path.join(icons_dir, 'icon-144.png'))
+    make_icon(96, os.path.join(icons_dir, 'icon-96.png'))
+    make_icon(48, os.path.join(icons_dir, 'icon-48.png'))
+    # Apple touch icon
     make_icon(180, os.path.join(icons_dir, 'apple-touch-icon.png'))
+
+    # Splash screens (centered logo with background)
+    def make_splash(w, h, path):
+        img = Image.new('RGBA', (w, h), bg + (255,))
+        draw = ImageDraw.Draw(img)
+        # place a centered white rounded square as logo placeholder
+        logo_size = int(min(w, h) * 0.36)
+        x = (w - logo_size) // 2
+        y = (h - logo_size) // 2
+        draw.rounded_rectangle((x, y, x+logo_size, y+logo_size), radius=int(logo_size*0.08), fill=white)
+        img.save(path, format='PNG', optimize=True)
+        print('Wrote', path)
+
+    splashes = [
+        (640, 1136),
+        (750, 1334),
+        (828, 1792),
+        (1125, 2436),
+        (1242, 2688),
+        (1536, 2048),
+        (1668, 2388),
+        (2048, 2732),
+        (1280, 720)
+    ]
+    for w, h in splashes:
+        fname = f'splash-{w}x{h}.png'
+        make_splash(w, h, os.path.join(icons_dir, fname))

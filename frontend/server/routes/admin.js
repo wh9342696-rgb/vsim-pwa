@@ -827,6 +827,65 @@ router.get('/users', adminAuth, async (req, res) => {
   }
 });
 
+// Get a user's eSIMs (for admin view)
+router.get('/users/:id/esims', adminAuth, async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT ue.*, ep.image_url
+       FROM user_esims ue
+       LEFT JOIN esim_packages ep ON ep.id = ue.package_id
+       WHERE ue.user_id = $1
+       ORDER BY ue.activated_at DESC`,
+      [req.params.id]
+    );
+    res.json({ esims: result.rows });
+  } catch (err) {
+    console.error('Fetch user eSIMs error:', err);
+    res.status(500).json({ error: 'Failed to fetch user eSIMs' });
+  }
+});
+
+// Update a user eSIM (admin) - allows editing progress rate, data totals, remaining, title and status
+router.put('/esims/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, data_total, data_remaining, progress_percent_per_hour, status } = req.body || {};
+
+    const existing = await query('SELECT * FROM user_esims WHERE id = $1', [id]);
+    if (!existing.rows.length) return res.status(404).json({ error: 'eSIM not found' });
+
+    await query(
+      `UPDATE user_esims SET
+         title = COALESCE($1, title),
+         data_total = COALESCE($2, data_total),
+         data_remaining = COALESCE($3, data_remaining),
+         progress_percent_per_hour = COALESCE($4, progress_percent_per_hour),
+         status = COALESCE($5, status)
+       WHERE id = $6`,
+      [
+        title !== undefined ? String(title).trim() : null,
+        data_total !== undefined ? String(data_total).trim() : null,
+        data_remaining !== undefined ? String(data_remaining).trim() : null,
+        progress_percent_per_hour !== undefined ? Math.max(0, Math.min(100, parseFloat(progress_percent_per_hour) || 0)) : null,
+        status !== undefined ? String(status).trim() : null,
+        id
+      ]
+    );
+
+    const updated = await query('SELECT * FROM user_esims WHERE id = $1', [id]);
+    await query(
+      `INSERT INTO system_logs (action, details, level, time_ago)
+       VALUES ($1, $2, $3, $4)`,
+      ['admin_updated_esim', `Admin updated eSIM #${id}`, 'info', 'Just now']
+    );
+
+    res.json({ message: 'eSIM updated successfully', esim: updated.rows[0] });
+  } catch (err) {
+    console.error('Admin update eSIM error:', err);
+    res.status(500).json({ error: 'Failed to update eSIM' });
+  }
+});
+
 router.get('/referrals', adminAuth, ensureSuperAdmin, async (req, res) => {
   try {
     const result = await query(
