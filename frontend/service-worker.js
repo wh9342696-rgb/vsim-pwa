@@ -23,11 +23,22 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+  // Don't interfere with API calls
   if (e.request.url.includes('/api/')) return;
+
+  // Handle navigation requests (SPA routing) by serving index.html from cache
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      caches.match('./index.html').then(cached => cached || fetch('./index.html'))
+    );
+    return;
+  }
+
+  // For other requests try network first, fallback to cache
   e.respondWith(
     fetch(e.request)
       .then(response => {
-        if (response.ok) {
+        if (response && response.ok) {
           const copy = response.clone();
           caches.open(CACHE).then(cache => cache.put(e.request, copy));
         }

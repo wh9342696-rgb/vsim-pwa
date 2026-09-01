@@ -2446,7 +2446,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function registerUserServiceWorker() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+    // register at root scope so it can control the whole PWA
+    navigator.serviceWorker.register('/service-worker.js', { scope: '/' }).catch(() => {});
   }
 }
 
