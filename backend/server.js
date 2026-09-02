@@ -34,6 +34,18 @@ app.set('trust proxy', 1);
 app.disable('x-powered-by');
 const PORT = process.env.PORT || 3000;
 const frontendUrl = process.env.FRONTEND_URL || 'https://vsime.uk';
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || `${frontendUrl},https://*.pages.dev`)
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+const allowedOriginPatterns = allowedOrigins.map(origin =>
+  origin.startsWith('https://*.') ? new RegExp(`^https:\\/\\/[^/]+${origin.slice('https://*'.length).replace('.', '\\.')}$`) : null
+).filter(Boolean);
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  return allowedOrigins.includes(origin) || allowedOriginPatterns.some(pattern => pattern.test(origin));
+}
 
 app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
@@ -71,7 +83,9 @@ app.use(helmet({
   frameguard: { action: 'deny' }
 }));
 app.use(cors({
-  origin: frontendUrl,
+  origin(origin, callback) {
+    callback(null, isAllowedOrigin(origin));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));

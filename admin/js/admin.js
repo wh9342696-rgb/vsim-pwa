@@ -42,13 +42,138 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   await loadAllData();
+  await pollAnalytics();
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./service-worker.js').catch(console.error);
   }
 
   setInterval(syncHeartbeat, 15000);
+  // Poll analytics every 30s for detailed metrics
+  setInterval(pollAnalytics, 30000);
 });
+
+// =========================
+// Admin Profile Image Sheet
+// =========================
+function openAdminProfilePictureSheet() {
+  const sheet = document.getElementById('adminProfileSheet');
+  const preview = document.getElementById('sheetAvatarPreview');
+  const topAvatar = document.getElementById('topbarAdminAvatar');
+  if (preview && topAvatar) preview.src = topAvatar.src || preview.src;
+  if (sheet) sheet.setAttribute('aria-hidden', 'false');
+}
+
+function closeAdminProfilePictureSheet() {
+  const sheet = document.getElementById('adminProfileSheet');
+  if (sheet) sheet.setAttribute('aria-hidden', 'true');
+}
+
+function triggerAdminCamera() {
+  closeAdminProfilePictureSheet();
+  const input = document.getElementById('adminProfileFileInput');
+  input.accept = 'image/*';
+  input.capture = 'environment';
+  input.click();
+}
+
+function triggerAdminGallery() {
+  closeAdminProfilePictureSheet();
+  const input = document.getElementById('adminProfileFileInput');
+  input.accept = 'image/*';
+  input.removeAttribute('capture');
+  input.click();
+}
+
+document.getElementById('adminProfileFileInput')?.addEventListener('change', handleAdminProfileFileChange);
+// target for where the uploaded photo should be applied (topbar or create-admin modal)
+AdminStore.photoTarget = 'topbar';
+
+function openCreateAdminPhotoSelector() {
+  AdminStore.photoTarget = 'createAdmin';
+  const input = document.getElementById('adminProfileFileInput');
+  input.accept = 'image/*';
+  input.removeAttribute('capture');
+  input.click();
+}
+
+async function handleAdminProfileFileChange(e) {
+  const file = (e.target.files || [])[0];
+  if (!file) return;
+  const max = 5 * 1024 * 1024; // 5MB
+  if (file.size > max) { showToast('Image too large (max 5MB)', 'error'); return; }
+  const dataUrl = await fileToDataURL(file);
+  // show preview immediately
+  document.getElementById('sheetAvatarPreview').src = dataUrl;
+  if (AdminStore.photoTarget === 'topbar') {
+    document.getElementById('topbarAdminAvatar').src = dataUrl;
+    // upload to backend via AdminAPI.updateProfile
+    try {
+      await AdminAPI.updateProfile({ profile_photo: dataUrl });
+      showToast('Profile photo updated', 'success');
+    } catch (err) {
+      showToast('Failed to upload profile photo', 'error');
+    }
+  } else if (AdminStore.photoTarget === 'createAdmin') {
+    document.getElementById('newAdminProfilePhoto').value = dataUrl;
+    const preview = document.getElementById('newAdminPhotoPreview');
+    if (preview) preview.textContent = 'Photo selected';
+    // reset target back to topbar for future actions
+    AdminStore.photoTarget = 'topbar';
+  }
+}
+
+function handleRemoveAdminProfile() {
+  closeAdminProfilePictureSheet();
+  document.getElementById('sheetAvatarPreview').src = '';
+  document.getElementById('topbarAdminAvatar').src = 'https://via.placeholder.com/80/0f1523/ffffff?text=VS';
+  AdminAPI.updateProfile({ profile_photo: null }).catch(() => showToast('Failed to remove photo', 'error'));
+}
+
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => {
+        const size = 512;
+        const scale = Math.min(1, size / Math.max(image.width, image.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      image.onerror = reject;
+      image.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Poll analytics endpoint for detailed metrics
+async function pollAnalytics() {
+  try {
+    const res = await AdminAPI.getAnalytics();
+    if (res && res.analytics) {
+      // Merge analytics into store for charts
+      AdminStore.analytics = res.analytics;
+      renderAnalyticsWidgets(res.analytics);
+    }
+  } catch (err) { /* silent */ }
+}
+
+function renderAnalyticsWidgets(analytics) {
+  const values = [
+    `UGX ${Number(analytics.today_earnings || 0).toLocaleString()}`,
+    `UGX ${Number(analytics.week_earnings || 0).toLocaleString()}`,
+    `UGX ${Number(analytics.month_earnings || 0).toLocaleString()}`
+  ];
+  document.querySelectorAll('.earnings-breakdown-row .val').forEach((element, index) => {
+    if (values[index]) element.textContent = values[index];
+  });
+}
 
 function bindAdminLogin() {
   const form = document.getElementById('adminLoginForm');
@@ -125,6 +250,16 @@ function updateThemeIcon() {
 // ============================================================================
 async function loadAllData() {
   try {
+    const meRes = await AdminAPI.getMe().catch(() => null);
+    if (meRes && meRes.admin) {
+      const admin = meRes.admin;
+      const topAvatar = document.getElementById('topbarAdminAvatar');
+      const nameElem = document.querySelector('.admin-profile-name');
+      const roleElem = document.querySelector('.admin-profile-role');
+      if (topAvatar && admin.profile_photo) topAvatar.src = admin.profile_photo;
+      if (nameElem && admin.name) nameElem.textContent = admin.name;
+      if (roleElem && admin.role) roleElem.textContent = admin.role;
+    }
     const [statsRes, depRes, withRes, pkgRes, merchantsRes, bridgeRes, logsRes, usersRes, adminsRes, investmentsRes] = await Promise.all([
       AdminAPI.getStats(),
       AdminAPI.getDeposits(),
@@ -512,16 +647,16 @@ function renderDashboard() {
 function updateMetricCards(m) {
   if (!m) return;
   const usersEl = document.getElementById('metricTotalUsers');
-  if (usersEl) usersEl.textContent = Number(m.totalUsersReal ?? m.totalUsers ?? 12458).toLocaleString();
+  if (usersEl) usersEl.textContent = Number(m.totalUsersReal ?? m.totalUsers ?? 0).toLocaleString();
 
   const investedEl = document.getElementById('metricTotalInvested');
-  if (investedEl) investedEl.textContent = `UGX ${(m.totalInvested || 87654300).toLocaleString()}`;
+  if (investedEl) investedEl.textContent = `UGX ${Number(m.totalInvested ?? 0).toLocaleString()}`;
 
   const earningsEl = document.getElementById('metricTotalEarnings');
-  if (earningsEl) earningsEl.textContent = `UGX ${(m.totalEarningsPaid || 24685750).toLocaleString()}`;
+  if (earningsEl) earningsEl.textContent = `UGX ${Number(m.totalEarningsPaid ?? 0).toLocaleString()}`;
 
   const withdrawnEl = document.getElementById('metricTotalWithdrawn');
-  if (withdrawnEl) withdrawnEl.textContent = `UGX ${(m.totalWithdrawn || 28340600).toLocaleString()}`;
+  if (withdrawnEl) withdrawnEl.textContent = `UGX ${Number(m.totalWithdrawn ?? 0).toLocaleString()}`;
 }
 
 // Render Recent Deposits Table
@@ -531,15 +666,7 @@ function renderRecentDepositsTable() {
 
   const deposits = (AdminStore.deposits && AdminStore.deposits.length > 0)
     ? AdminStore.deposits.slice(0, 7)
-    : [
-      { phone: '+256 784 567 890', amount: 50000, merchant: 'VSIM-M001', time: '2m ago', status: 'completed' },
-      { phone: '+256 702 345 678', amount: 120000, merchant: 'VSIM-M002', time: '5m ago', status: 'completed' },
-      { phone: '+256 775 123 456', amount: 20000, merchant: 'VSIM-M003', time: '8m ago', status: 'completed' },
-      { phone: '+256 705 987 654', amount: 80000, merchant: 'VSIM-M001', time: '12m ago', status: 'completed' },
-      { phone: '+256 704 111 222', amount: 40000, merchant: 'VSIM-M002', time: '15m ago', status: 'completed' },
-      { phone: '+256 777 222 333', amount: 60000, merchant: 'VSIM-M004', time: '18m ago', status: 'completed' },
-      { phone: '+256 703 444 555', amount: 100000, merchant: 'VSIM-M003', time: '22m ago', status: 'failed' }
-    ];
+    : [];
 
   tbody.innerHTML = deposits.map(d => `
     <tr>
@@ -559,14 +686,7 @@ function renderRecentWithdrawalsTable() {
 
   const withdrawals = (AdminStore.withdrawals && AdminStore.withdrawals.length > 0)
     ? AdminStore.withdrawals.slice(0, 6)
-    : [
-      { id: 1, phone: '+256 784 567 890', amount: 60000, method: 'Mobile Money', time: '3m ago', status: 'pending' },
-      { id: 2, phone: '+256 702 345 678', amount: 120000, method: 'Mobile Money', time: '15m ago', status: 'pending' },
-      { id: 3, phone: '+256 775 123 456', amount: 50000, method: 'Mobile Money', time: '25m ago', status: 'approved' },
-      { id: 4, phone: '+256 705 987 654', amount: 80000, method: 'Mobile Money', time: '45m ago', status: 'paid' },
-      { id: 5, phone: '+256 704 111 222', amount: 40000, method: 'Mobile Money', time: '1h ago', status: 'paid' },
-      { id: 6, phone: '+256 777 222 333', amount: 100000, method: 'Mobile Money', time: '1h 20m ago', status: 'pending' }
-    ];
+    : [];
 
   tbody.innerHTML = withdrawals.map(w => `
     <tr>
@@ -594,13 +714,7 @@ function renderTopPackagesTable() {
 
   const pkgs = (AdminStore.packages && AdminStore.packages.length > 0)
     ? AdminStore.packages.slice(0, 5)
-    : [
-      { title: '10GB - 30 Days', price: 20000, sold_count: 2456, revenue: 3245000 },
-      { title: '20GB - 30 Days', price: 35000, sold_count: 1987, revenue: 2987000 },
-      { title: '50GB - 30 Days', price: 70000, sold_count: 1254, revenue: 2456000 },
-      { title: '100GB - 30 Days', price: 120000, sold_count: 987, revenue: 2123000 },
-      { title: '200GB - 30 Days', price: 220000, sold_count: 654, revenue: 1456000 }
-    ];
+    : [];
 
   tbody.innerHTML = pkgs.map(p => `
     <tr>
@@ -619,13 +733,7 @@ function renderBridgeDevicesList() {
 
   const devices = (AdminStore.bridgeDevices && AdminStore.bridgeDevices.length > 0)
     ? AdminStore.bridgeDevices.slice(0, 5)
-    : [
-      { id: 1, device_id: 'VSIM-BRIDGE-01 (MTN)', network: 'MTN', phone: '+256 784 111 111', status: 'online' },
-      { id: 2, device_id: 'VSIM-BRIDGE-02 (Airtel)', network: 'Airtel', phone: '+256 702 222 222', status: 'online' },
-      { id: 3, device_id: 'VSIM-BRIDGE-03 (MTN)', network: 'MTN', phone: '+256 775 333 333', status: 'online' },
-      { id: 4, device_id: 'VSIM-BRIDGE-04 (Airtel)', network: 'Airtel', phone: '+256 709 444 444', status: 'offline' },
-      { id: 5, device_id: 'VSIM-BRIDGE-05 (MTN)', network: 'MTN', phone: '+256 705 555 555', status: 'online' }
-    ];
+    : [];
 
   container.innerHTML = devices.map(d => `
     <div class="bridge-device-card-item">
@@ -648,14 +756,7 @@ function renderActivityLogsStream() {
 
   const logs = (AdminStore.logs && AdminStore.logs.length > 0)
     ? AdminStore.logs.slice(0, 6)
-    : [
-      { details: 'Deposit confirmed: UGX 50,000 from +256 784 567 890', level: 'info', time_ago: '2m ago' },
-      { details: 'Withdrawal paid: UGX 80,000 to +256 705 987 654', level: 'primary', time_ago: '12m ago' },
-      { details: 'New user registered: +256 777 888 999', level: 'success', time_ago: '25m ago' },
-      { details: 'eSIM package created: 100GB - 30 Days', level: 'success', time_ago: '1h ago' },
-      { details: 'Bridge VSIM-BRIDGE-02 came online', level: 'danger', time_ago: '1h ago' },
-      { details: 'Admin login: admin@vsim.com', level: 'primary', time_ago: '2h ago' }
-    ];
+    : [];
 
   container.innerHTML = logs.map(l => `
     <div class="activity-log-item-row">
@@ -881,13 +982,15 @@ async function handleCreateAdminSubmit(event) {
   const password = document.getElementById('newAdminPassword').value;
   const role = document.getElementById('newAdminRole').value || 'sub_admin';
 
+  const profilePhoto = document.getElementById('newAdminProfilePhoto')?.value || null;
+
   if (!name || !email || !password) {
     showToast('Name, email and password are required', 'error');
     return;
   }
 
   try {
-    await AdminAPI.createAdmin({ name, email, password, role });
+    await AdminAPI.createAdmin({ name, email, password, role, profile_photo: profilePhoto });
     closeCreateAdminModal();
     showToast('Sub-admin created successfully', 'success');
     await loadAllData();

@@ -120,6 +120,10 @@ router.put('/me', adminAuth, async (req, res) => {
     if (!name || !String(name).trim()) {
       return res.status(400).json({ error: 'Name is required' });
     }
+    if (profile_photo !== null && profile_photo !== undefined &&
+        (!/^data:image\/(jpeg|png|webp);base64,/.test(String(profile_photo)) || String(profile_photo).length > 1000000)) {
+      return res.status(400).json({ error: 'Upload a valid profile image up to 750 KB' });
+    }
     const result = await query(
       `UPDATE admin_users SET name = $1, profile_photo = $2
        WHERE id = $3
@@ -506,7 +510,7 @@ router.get('/stats', adminAuth, async (req, res) => {
 
 router.get('/analytics', adminAuth, ensureSuperAdmin, async (req, res) => {
   try {
-    const [users, active, deposits, completed, failed, balances, tiers, packages, withdrawals] = await Promise.all([
+    const [users, active, deposits, completed, failed, balances, tiers, packages, withdrawals, earnings] = await Promise.all([
       query('SELECT COUNT(*) AS total FROM users'),
       query(`SELECT COUNT(*) AS total FROM users WHERE status = 'active'`),
       query('SELECT COALESCE(SUM(amount), 0) AS total FROM payment_requests'),
@@ -515,7 +519,12 @@ router.get('/analytics', adminAuth, ensureSuperAdmin, async (req, res) => {
       query('SELECT COALESCE(AVG(wallet_balance), 0) AS average FROM users'),
       query(`SELECT kyc_tier, COUNT(*) AS total FROM users GROUP BY kyc_tier`),
       query('SELECT COALESCE(SUM(sold_count), 0) AS sold, COALESCE(SUM(revenue), 0) AS revenue FROM esim_packages'),
-      query('SELECT COALESCE(SUM(amount), 0) AS total FROM withdrawals WHERE status = \'paid\'')
+      query('SELECT COALESCE(SUM(amount), 0) AS total FROM withdrawals WHERE status = \'paid\''),
+      query(`SELECT
+        COALESCE(SUM(amount) FILTER (WHERE created_at >= CURRENT_DATE), 0) AS today,
+        COALESCE(SUM(amount) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '6 days'), 0) AS week,
+        COALESCE(SUM(amount) FILTER (WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)), 0) AS month
+        FROM wallet_transactions WHERE type = 'yield' AND status = 'completed'`)
     ]);
     const tierMap = Object.fromEntries(tiers.rows.map(row => [String(row.kyc_tier || '').toLowerCase(), Number(row.total)]));
     res.json({ analytics: {
@@ -529,6 +538,9 @@ router.get('/analytics', adminAuth, ensureSuperAdmin, async (req, res) => {
       average_wallet_balance: Number(balances.rows[0].average),
       packages_sold: Number(packages.rows[0].sold),
       packages_revenue: Number(packages.rows[0].revenue),
+      today_earnings: Number(earnings.rows[0].today),
+      week_earnings: Number(earnings.rows[0].week),
+      month_earnings: Number(earnings.rows[0].month),
       kyc_breakdown: {
         tier1: tierMap['tier 1 basic'] || 0,
         tier2: tierMap['tier 2 verified'] || 0,

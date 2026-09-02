@@ -24,9 +24,9 @@
       </div>
       <div style="text-align:center; color:#94a3b8; margin-bottom:22px; font-size:0.75rem; letter-spacing:.15em; text-transform:uppercase;">Admin Panel Access</div>
       <label style="display:block; margin-bottom:6px; color:#cbd5e1; font-size:0.8rem; font-weight:600;">Admin Email</label>
-      <input id="adminEmailInput" type="email" value="admin@vsim.com" style="width:100%; background:#101625; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 14px; color:#fff; margin-bottom:14px; outline:none;" />
+      <input id="adminEmailInput" type="email" autocomplete="username" style="width:100%; background:#101625; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 14px; color:#fff; margin-bottom:14px; outline:none;" />
       <label style="display:block; margin-bottom:6px; color:#cbd5e1; font-size:0.8rem; font-weight:600;">Password</label>
-      <input id="adminPasswordInput" type="password" value="admin123" style="width:100%; background:#101625; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 14px; color:#fff; margin-bottom:18px; outline:none;" />
+      <input id="adminPasswordInput" type="password" autocomplete="current-password" style="width:100%; background:#101625; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 14px; color:#fff; margin-bottom:18px; outline:none; />
       <button type="submit" style="width:100%; background:linear-gradient(135deg,#6366f1,#8b5cf6); border:none; border-radius:10px; padding:12px 14px; color:#fff; font-weight:700; cursor:pointer; font-size:0.88rem;">Enter Admin Panel</button>
       <div id="adminLoginError" style="color:#fca5a5; min-height:18px; margin-top:10px; text-align:center; font-size:0.75rem;"></div>
     </form>
@@ -254,8 +254,8 @@
           </div>
 
           <!-- Admin Avatar & Profile -->
-          <div class="topbar-admin-profile" onclick="navigateToView('view-admins')">
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Super Admin" class="admin-avatar-img" />
+          <div class="topbar-admin-profile" onclick="openAdminProfilePictureSheet()">
+            <img id="topbarAdminAvatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Super Admin" class="admin-avatar-img" />
             <div class="admin-profile-text">
               <span class="admin-profile-name">Super Admin</span>
               <span class="admin-profile-role">Administrator</span>
@@ -1311,6 +1311,28 @@
       </main>
     </div>
 
+    <!-- Admin Profile Image Action Sheet (WhatsApp-style) -->
+    <div class="modal-overlay-bottom" id="adminProfileSheet" aria-hidden="true">
+      <div class="sheet-handle"></div>
+      <div class="sheet-content">
+        <div style="display:flex; align-items:center; gap:12px; padding:12px 14px;">
+          <img id="sheetAvatarPreview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" style="width:56px;height:56px;border-radius:12px;object-fit:cover;" />
+          <div>
+            <div style="font-weight:800;color:var(--text-white);">Super Admin</div>
+            <div style="font-size:0.82rem;color:var(--text-muted);">Change profile picture</div>
+          </div>
+        </div>
+        <div style="padding: 8px 12px; display:flex; flex-direction:column; gap:8px;">
+          <button class="btn-action-sheet" onclick="triggerAdminCamera()">Take Photo</button>
+          <button class="btn-action-sheet" onclick="triggerAdminGallery()">Choose From Gallery</button>
+          <button class="btn-action-sheet" onclick="handleRemoveAdminProfile()" style="color:var(--accent-red);">Remove Photo</button>
+          <button class="btn-secondary" onclick="closeAdminProfilePictureSheet()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <input type="file" accept="image/*" capture="environment" id="adminProfileFileInput" style="display:none" />
+
 
     <!-- ==================================================================
          4. MOBILE BOTTOM NAVIGATION BAR (PWA SHELL)
@@ -1684,6 +1706,14 @@
                 <option value="sub_admin">Sub Admin</option>
                 <option value="super_admin">Main Admin</option>
               </select>
+            </div>
+            <div class="modal-form-group">
+              <label>Profile Photo</label>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <button type="button" class="btn-action-small view" onclick="openCreateAdminPhotoSelector()">Choose Photo</button>
+                <span id="newAdminPhotoPreview" style="color:var(--text-muted);font-size:0.82rem;">No photo selected</span>
+              </div>
+              <input type="hidden" id="newAdminProfilePhoto" name="profile_photo" />
             </div>
           </div>
           <div class="modal-dialog-footer">

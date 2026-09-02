@@ -68,7 +68,7 @@ const VSIM_API = {
 
       return data;
     } catch (err) {
-      // Silently throw — callers handle fallback to local data
+      // Let callers surface API failures; persistence belongs to the VPS backend.
       throw err;
     }
   },

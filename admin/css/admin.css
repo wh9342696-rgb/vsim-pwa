@@ -363,6 +363,33 @@ html, body {
   color: var(--text-muted);
 }
 
+/* Bottom action sheet (WhatsApp-style) */
+.modal-overlay-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.65));
+  display: none;
+  align-items: flex-end;
+  z-index: 9999;
+}
+.modal-overlay-bottom[aria-hidden="false"] { display: flex; }
+.sheet-content {
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto;
+  background: var(--bg-card);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  padding-bottom: 18px;
+}
+.sheet-handle { width: 48px; height: 6px; background: var(--border-subtle); margin: 10px auto; border-radius: 6px; }
+.btn-action-sheet { width: 100%; padding: 12px 14px; border-radius: 10px; border: none; background: var(--bg-card-secondary); color: var(--text-white); font-weight:700; cursor:pointer }
+
+/* Admin avatar in topbar */
+.admin-avatar-img { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border-subtle); }
+
 /* Topbar Right Controls */
 .topbar-right-controls {
   display: flex;

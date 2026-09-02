@@ -21,6 +21,10 @@ Use a production environment file with real values. Example:
 - FRONTEND_URL must use HTTPS
 - DB credentials must be production-safe
 
+PostgreSQL is mandatory. Set either `DATABASE_URL` or all of `PGHOST`, `PGPORT`,
+`PGDATABASE`, `PGUSER`, and `PGPASSWORD`. The API does not support SQLite or any
+local database fallback.
+
 ## Reverse proxy
 
 Use Nginx or Caddy in front of Node to provide TLS and HTTPS redirect.
@@ -43,6 +47,15 @@ Example config: nginx.conf.example
 - POST /api/v1/auth/login
 - GET /api/v1/auth/me
 - POST /api/v1/admin/login
+
+## VPS PostgreSQL checks
+
+```bash
+cd ~/vsim-pwa/backend
+set -a; . ./.env; set +a
+pg_isready -h "$PGHOST" -p "$PGPORT" -d "$PGDATABASE" -U "$PGUSER"
+npx --yes -p node@22 node --input-type=module -e "import('./config/db.js').then(async ({query, closeDatabase}) => { const result = await query('SELECT current_database() AS database, current_user AS user, NOW() AS server_time'); console.log(result.rows[0]); await closeDatabase(); }).catch(error => { console.error(error); process.exit(1); })"
+```
 
 ## Restart strategy
 

@@ -7,13 +7,15 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3000,
-        JWT_SECRET: 'vsim_super_secret_production_key_2026',
+        JWT_SECRET: process.env.JWT_SECRET,
         FRONTEND_URL: 'https://vsime.uk',
-        DB_HOST: 'localhost',
-        DB_PORT: 5432,
-        DB_NAME: 'vsim_db',
-        DB_USER: 'postgres',
-        DB_PASSWORD: 'joel'
+        ALLOWED_ORIGINS: 'https://vsime.uk,https://www.vsime.uk,https://*.pages.dev',
+        PGHOST: process.env.PGHOST,
+        PGPORT: process.env.PGPORT || 5432,
+        PGDATABASE: process.env.PGDATABASE,
+        PGUSER: process.env.PGUSER,
+        PGPASSWORD: process.env.PGPASSWORD,
+        PGSSL: process.env.PGSSL || 'false'
       },
       autorestart: true,
       restartDelay: 2000,

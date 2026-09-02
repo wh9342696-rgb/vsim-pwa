@@ -10,11 +10,12 @@ Set these variables on the API server:
 PORT=3000
 APP_URL=https://your-domain.com
 JWT_SECRET=<long-random-secret>
-DB_HOST=<private-postgres-host>
-DB_PORT=5432
-DB_NAME=vsim_db
-DB_USER=<database-user>
-DB_PASSWORD=<database-password>
+ALLOWED_ORIGINS=https://vsime.uk,https://www.vsime.uk,https://*.pages.dev
+PGHOST=<private-postgres-host>
+PGPORT=5432
+PGDATABASE=vsim_db
+PGUSER=<database-user>
+PGPASSWORD=<database-password>
 ```
 
 Expose only the API through HTTPS. Do not expose PostgreSQL to the Android device.
