@@ -13,16 +13,16 @@ Agent Rules (required)
 3. When referring to files or paths in the repo, use repository links in reports and include exact relative paths.
 4. Be concise and direct in developer-facing messages; avoid unnecessary user-facing verbosity.
 5. Do not volunteer model details or internal meta info unless explicitly asked.
-6. For server work, prefer Node 22 runtime (where applicable) and use `npm ci` in `frontend/server` to install dependencies.
+6. For server work, prefer Node 22 runtime (where applicable) and use `npm ci` in `backend` to install dependencies.
 7. Treat `frontend` and `admin` as Cloudflare-deployed static sites — do not change deployment-specific headers/redirects or Cloudflare config without testing.
 
 Backend / VPS Access
 - Preferred access: add a temporary public key to `root` (or to an ephemeral sudo user). The agent will never accept private keys or passwords via chat.
-- Backend path: `frontend/server`.
+- Backend path: `backend`.
 - Typical commands to run (on the server):
 
 ```bash
-cd ~/vsim-pwa/frontend/server
+cd ~/vsim-pwa/backend
 git pull
 node -v
 npm -v
@@ -45,7 +45,7 @@ Communication Preferences
 - When asking for clarification, keep questions targeted and list only the exact info needed.
 
 Examples (prompts to test behavior)
-- "Update the backend `package.json` in `frontend/server` to bump `zod` to ^4.0.0; run tests locally and report failures."
+- "Update the backend `package.json` in `backend` to bump `zod` to ^4.0.0; run tests locally and report failures."
 - "Pull latest on VPS, run `npm ci` and start dev server; return `node -v`, `npm -v`, process list, and last 200 log lines."
 
 Next steps

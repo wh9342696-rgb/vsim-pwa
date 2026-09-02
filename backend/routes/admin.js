@@ -335,7 +335,7 @@ router.get('/admins', adminAuth, ensureSuperAdmin, async (req, res) => {
 
 router.post('/admins', adminAuth, ensureSuperAdmin, async (req, res) => {
   try {
-    const { name, email, password, role = 'sub_admin', status = 'active' } = req.body || {};
+    const { name, email, password, role = 'sub_admin', status = 'active', profile_photo = null } = req.body || {};
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Name, email, and password are required' });
@@ -351,10 +351,10 @@ router.post('/admins', adminAuth, ensureSuperAdmin, async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const result = await query(
-      `INSERT INTO admin_users (email, password_hash, name, role, status)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, email, name, role, status, created_at`,
-      [normalizedEmail, passwordHash, name.trim(), normalizedRole, status === 'inactive' ? 'inactive' : 'active']
+      `INSERT INTO admin_users (email, password_hash, name, role, status, profile_photo)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, email, name, role, status, created_at, profile_photo`,
+      [normalizedEmail, passwordHash, name.trim(), normalizedRole, status === 'inactive' ? 'inactive' : 'active', profile_photo]
     );
 
     res.status(201).json({ message: 'Sub-admin created successfully', admin: result.rows[0] });
@@ -367,7 +367,7 @@ router.post('/admins', adminAuth, ensureSuperAdmin, async (req, res) => {
 router.put('/admins/:id', adminAuth, ensureSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, role, status } = req.body || {};
+    const { name, email, role, status, profile_photo } = req.body || {};
 
     const existing = await query('SELECT * FROM admin_users WHERE id = $1', [id]);
     if (existing.rows.length === 0) {
@@ -378,14 +378,15 @@ router.put('/admins/:id', adminAuth, ensureSuperAdmin, async (req, res) => {
     const nextStatus = status === 'inactive' ? 'inactive' : 'active';
 
     const result = await query(
-      `UPDATE admin_users
-       SET name = COALESCE($1, name),
+        `UPDATE admin_users
+         SET name = COALESCE($1, name),
            email = COALESCE($2, email),
            role = COALESCE($3, role),
-           status = COALESCE($4, status)
-       WHERE id = $5
-       RETURNING id, email, name, role, status, created_at`,
-      [name?.trim() || existing.rows[0].name, email?.trim().toLowerCase() || existing.rows[0].email, nextRole, nextStatus, id]
+           status = COALESCE($4, status),
+           profile_photo = COALESCE($5, profile_photo)
+         WHERE id = $6
+         RETURNING id, email, name, role, status, created_at, profile_photo`,
+        [name?.trim() || existing.rows[0].name, email?.trim().toLowerCase() || existing.rows[0].email, nextRole, nextStatus, profile_photo !== undefined ? profile_photo : existing.rows[0].profile_photo, id]
     );
 
     res.json({ message: 'Admin updated successfully', admin: result.rows[0] });

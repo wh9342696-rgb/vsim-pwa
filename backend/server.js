@@ -149,7 +149,7 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const pwaPublicDir = path.join(__dirname, '../');
+const pwaPublicDir = path.join(__dirname, '../frontend');
 
 // Serve static frontend files (PWA, Admin, Icons, CSS, JS)
 app.use(express.static(pwaPublicDir));

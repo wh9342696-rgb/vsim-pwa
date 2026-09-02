@@ -293,7 +293,7 @@ cd backend && tail -f logs/app.log
 
 ```powershell
 # Start dev server
-cd frontend/server && node server.js
+cd backend && node server.js
 
 # Install dependencies
 cd frontend && npm install

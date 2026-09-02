@@ -81,7 +81,7 @@ esim/
 
 ### 4. **Backend is Primary**
 - ✅ Main backend: `momo-wallet-backend-1` (Node + Express + PocketBase)
-- ✅ Secondary: `frontend/server/` (PWA backend with SQLite)
+- ✅ Backend: `backend/` (Node/Express API with PostgreSQL or SQLite development fallback)
 - ✅ Clean API structure with 11 feature modules
 
 ---
@@ -222,7 +222,7 @@ esim/
 | **WebSocket** | `backend/src/websockets/` |
 | **User Frontend** | `frontend/index.html` |
 | **Admin Frontend** | `frontend/admin.html` or `admin/index.html` |
-| **Frontend Server** | `frontend/server/server.js` |
+| **Backend Server** | `backend/server.js` |
 | **API Client** | `frontend/js/api.js` |
 | **Admin PWA** | `admin/index.html` |
 

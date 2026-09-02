@@ -327,7 +327,7 @@ If all are checked ✅, your setup is complete!
 cd C:\pocketbase && ./pocketbase.exe serve        # Terminal 1
 redis-server                                       # Terminal 2
 cd backend && npm run dev                         # Terminal 3
-cd frontend/server && npm install && node server.js  # Terminal 4
+cd backend && npm install && node server.js          # Terminal 4
 
 # Test connections
 curl http://localhost:8090                        # PocketBase

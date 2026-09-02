@@ -293,7 +293,7 @@ ALLOWED_ORIGINS=http://localhost:3000,https://example.com
 ### Frontend (`.env`)
 
 ```bash
-# Configured in frontend/server/.env if separate SQLite backend
+# Configured in backend/.env for the Node API
 # Or set API_BASE in frontend/js/api.js
 ```
 
