@@ -1,0 +1,17 @@
+{
+  "name": "VSIM - Global eSIM Companion",
+  "short_name": "VSIM",
+  "id": "./index.html",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "description": "Your standalone VSIM wallet, eSIM, airtime, and mobile money companion.",
+  "categories": ["finance", "utilities"],
+  "background_color": "#080B11",
+  "theme_color": "#080B11",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icons/vsim.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,27 @@
+/service-worker.js
+  Cache-Control: no-cache
+
+/*
+  Cache-Control: no-cache
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+
+/index.html
+  Cache-Control: no-cache
+
+/admin.html
+  Cache-Control: no-cache
+
+/admin-sw.js
+  Cache-Control: no-cache
+
+/manifest.json
+  Cache-Control: no-cache
+
+/admin-manifest.json
+  Cache-Control: no-cache
+
