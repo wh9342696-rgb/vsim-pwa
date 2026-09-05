@@ -928,6 +928,8 @@ function renderDashboard() {
   if (systemStatus) {
     const bridgeStatusVal = document.getElementById('sidebarBridgeStatus');
     if (bridgeStatusVal && systemStatus.bridgeDevices) bridgeStatusVal.textContent = systemStatus.bridgeDevices;
+    const storageStatusVal = document.getElementById('sidebarStorageStatus');
+    if (storageStatusVal) storageStatusVal.textContent = systemStatus.storage || 'Unavailable';
   }
 }
 

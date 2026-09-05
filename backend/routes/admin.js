@@ -2,6 +2,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import { statfs } from 'node:fs/promises';
 import { query } from '../config/db.js';
 import { createUniqueReference } from '../utils/reference.js';
 import { emitDataChanged } from '../realtime.js';
@@ -10,6 +11,23 @@ import { encryptBridgeSecret, decryptBridgeSecret, hashBridgeSecret } from '../u
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
 const MAX_SUPPORT_MESSAGE_LENGTH = 2000;
+
+async function getVpsStorageStatus() {
+  try {
+    const filesystem = await statfs('/');
+    const totalBytes = Number(filesystem.blocks) * Number(filesystem.bsize);
+    const availableBytes = Number(filesystem.bavail) * Number(filesystem.bsize);
+    const usedPercent = totalBytes > 0 ? Math.round(((totalBytes - availableBytes) / totalBytes) * 100) : null;
+    return {
+      usedPercent,
+      totalGb: totalBytes > 0 ? Number((totalBytes / 1024 ** 3).toFixed(1)) : null,
+      availableGb: availableBytes > 0 ? Number((availableBytes / 1024 ** 3).toFixed(1)) : null
+    };
+  } catch (error) {
+    console.error('VPS storage check failed:', error);
+    return { usedPercent: null, totalGb: null, availableGb: null };
+  }
+}
 
 function normalizeRenewalSchedule(value, basePrice) {
   if (!Array.isArray(value)) return [];
@@ -442,6 +460,7 @@ router.put('/admins/:id/assigned-users', adminAuth, ensureSuperAdmin, async (req
 // 1. Full Admin Overview Dashboard Stats & Charts
 router.get('/stats', adminAuth, async (req, res) => {
   try {
+    const storage = await getVpsStorageStatus();
     const usersCount = await query('SELECT COUNT(*) AS total FROM users');
     const activeUsers = await query(`SELECT COUNT(*) AS total FROM users WHERE status = 'active'`);
     const purchasedValue = await query(
@@ -519,7 +538,10 @@ router.get('/stats', adminAuth, async (req, res) => {
         bridgeDevices: `${Number(bridgeOnline.rows[0]?.online || 0)} Online`,
         apiServer: 'Running',
         database: 'Healthy',
-        storage: 'Database managed',
+        storage: storage.usedPercent === null ? 'Unavailable' : `${storage.usedPercent}% Used`,
+        storageUsedPercent: storage.usedPercent,
+        storageTotalGb: storage.totalGb,
+        storageAvailableGb: storage.availableGb,
         uptime: 'Online'
       }
     });
