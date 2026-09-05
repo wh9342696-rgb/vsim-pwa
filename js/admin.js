@@ -190,8 +190,13 @@ function setupAdminInstallPrompt() {
 }
 
 async function installAdminPwa() {
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIos) {
+    showToast('Tap Share, then choose Add to Home Screen', 'info');
+    return;
+  }
   if (!adminInstallPrompt) {
-    showToast('Use your browser menu and choose Install app or Add to Home Screen', 'info');
+    showToast('Use your browser install option to add VSIM Admin as an app', 'info');
     return;
   }
 

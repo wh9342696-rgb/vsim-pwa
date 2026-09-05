@@ -2573,7 +2573,7 @@ async function installUserPwa() {
   }
 
   if (!userInstallPrompt) {
-    showToast('Open your browser menu and choose Install app or Add to Home Screen', 'info');
+    showToast('Use your browser install option to add VSIM as an app', 'info');
     return;
   }
 

@@ -1,5 +1,5 @@
 // VSIM Admin Panel Service Worker
-const CACHE_NAME = 'vsim-admin-v1.6';
+const CACHE_NAME = 'vsim-admin-v1.7';
 const ASSETS_TO_CACHE = [
   './admin.html',
   './css/admin.css',
