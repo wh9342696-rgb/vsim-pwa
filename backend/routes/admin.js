@@ -636,16 +636,8 @@ router.get('/settings', adminAuth, async (req, res) => {
   } });
 });
 
-router.put('/settings', adminAuth, async (req, res) => {
-  const isSuperAdmin = req.admin.role === 'super_admin';
-  const canChangeFee = isSuperAdmin || Boolean(req.admin.can_manage_withdrawal_fee);
-  if (!canChangeFee && Object.keys(req.body || {}).some(key => key === 'withdrawal_fee')) {
-    return res.status(403).json({ error: 'Withdrawal fee control is not enabled for this sub-admin' });
-  }
-  if (!isSuperAdmin && Object.keys(req.body || {}).some(key => key !== 'withdrawal_fee')) {
-    return res.status(403).json({ error: 'Only the withdrawal fee can be changed by this sub-admin' });
-  }
-  const entries = Object.entries(req.body || {}).filter(([key]) => isSuperAdmin || key === 'withdrawal_fee');
+router.put('/settings', adminAuth, ensureSuperAdmin, async (req, res) => {
+  const entries = Object.entries(req.body || {});
   for (const [key, value] of entries) {
     await query(
       `INSERT INTO system_settings (key, value) VALUES ($1, $2)

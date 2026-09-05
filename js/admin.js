@@ -996,7 +996,7 @@ function applyRoleUI() {
       const isSystemSettingControl = ['platform_name', 'support_email', 'maintenance_mode', 'esim_progress_enabled', 'esim_progress_percent_per_hour', 'airtime_buy_markup_percent', 'airtime_sell_payout_percent'].includes(name);
       const isWithdrawalFeeControl = name === 'withdrawal_fee';
       control.disabled = isSubAdmin && isSystemSettingControl;
-      if (isSubAdmin && isWithdrawalFeeControl) control.disabled = !AdminStore.settings.canManageWithdrawalFee;
+      if (isSubAdmin && isWithdrawalFeeControl) control.disabled = true;
       if (isSubAdmin && isProfileControl) {
         control.disabled = false;
       }
@@ -1194,7 +1194,7 @@ async function handleSettingsSubmit(event) {
     const photoInput = document.getElementById('adminProfilePhotoInput');
     if (photoInput) photoInput.value = '';
 
-    if (!isSubAdmin || AdminStore.settings.canManageWithdrawalFee) {
+    if (!isSubAdmin) {
       await AdminAPI.saveSettings({
         platform_name: payload.platform_name,
         support_email: payload.support_email,
@@ -1221,7 +1221,7 @@ async function handleSettingsSubmit(event) {
         esim_progress_enabled: payload.esim_progress_enabled,
         esim_progress_percent_per_hour: payload.esim_progress_percent_per_hour
       };
-      showToast(isSubAdmin ? 'Profile and withdrawal fee saved' : 'Profile and settings saved to backend', 'success');
+      showToast('Profile and settings saved to backend', 'success');
     } else {
       showToast('Profile updated successfully. System settings remain controlled by the main admin.', 'success');
     }
@@ -1538,7 +1538,6 @@ function renderAdminsView() {
         ${admin.role !== 'super_admin' ? `
           <div style="display:flex; gap:8px;">
             <button class="btn-action-small view" onclick="assignUsersToAdmin(${admin.id}, ${admin.assigned_users || 0})">Assign users</button>
-            <button class="btn-action-small view" onclick="toggleAdminFeePermission(${admin.id}, ${admin.can_manage_withdrawal_fee})">Fee: ${admin.can_manage_withdrawal_fee ? 'On' : 'Off'}</button>
             <button class="btn-action-small view" onclick="toggleAdminStatus(${admin.id}, '${admin.status === 'active' ? 'inactive' : 'active'}')">${admin.status === 'active' ? 'Disable' : 'Enable'}</button>
             <button class="btn-action-small view" style="color:var(--accent-red);" onclick="deleteAdminAccount(${admin.id})">Delete</button>
           </div>
@@ -1564,13 +1563,6 @@ async function assignUsersToAdmin(id, currentCount) {
   } catch (error) { showToast(error.message || 'Could not assign users', 'error'); }
 }
 
-async function toggleAdminFeePermission(id, currentlyEnabled) {
-  try {
-    await AdminAPI.updateAdmin(id, { can_manage_withdrawal_fee: !currentlyEnabled });
-    showToast(`Withdrawal fee control ${currentlyEnabled ? 'disabled' : 'enabled'}`, 'success');
-    await loadAllData();
-  } catch (error) { showToast(error.message || 'Could not update fee permission', 'error'); }
-}
 
 async function deleteAdminAccount(id) {
   const confirmed = await showCustomConfirm({
@@ -1606,7 +1598,6 @@ async function handleCreateAdminSubmit(event) {
   const email = document.getElementById('newAdminEmail').value.trim();
   const password = document.getElementById('newAdminPassword').value;
   const role = document.getElementById('newAdminRole').value || 'sub_admin';
-  const canManageWithdrawalFee = document.getElementById('newAdminCanManageFee')?.checked || false;
 
   if (!name || !email || !password) {
     showToast('Name, email and password are required', 'error');
@@ -1614,7 +1605,7 @@ async function handleCreateAdminSubmit(event) {
   }
 
   try {
-    await AdminAPI.createAdmin({ name, email, password, role, can_manage_withdrawal_fee: canManageWithdrawalFee });
+    await AdminAPI.createAdmin({ name, email, password, role });
     closeCreateAdminModal();
     showToast('Sub-admin created successfully', 'success');
     await loadAllData();
