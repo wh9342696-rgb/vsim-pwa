@@ -814,7 +814,9 @@ router.post('/withdrawals/:id/action', adminAuth, ensureSuperAdmin, async (req, 
          WHERE user_id = $1 AND reference = $2 AND type = 'withdrawal' AND status = 'pending'`,
         [w.user_id, w.reference]
       );
-      const requiredBalance = Number(transactionRes.rows[0]?.amount ?? Number(w.amount) + 2000);
+      const feeResult = await query("SELECT value FROM system_settings WHERE key = 'withdrawal_fee'");
+      const withdrawalFee = Math.max(0, Number(feeResult.rows[0]?.value) || 0);
+      const requiredBalance = Number(transactionRes.rows[0]?.amount ?? Number(w.amount) + withdrawalFee);
       const debitRes = await query(
         `UPDATE users
          SET wallet_balance = wallet_balance - $1
@@ -1089,7 +1091,7 @@ router.post('/bridge-devices', adminAuth, async (req, res) => {
     await query(
       `INSERT INTO bridge_devices (device_id, network, phone, status, sim_balance, ping_ms, device_secret, credential_hash)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [normalizedDeviceId, network || 'MTN', phone, 'provisioning', parseFloat(sim_balance) || 1000000, 35, encryptBridgeSecret(deviceSecret), credentialHash]
+      [normalizedDeviceId, network || 'MTN', phone, 'provisioning', Number.isFinite(Number(sim_balance)) ? Number(sim_balance) : 0, 35, encryptBridgeSecret(deviceSecret), credentialHash]
     );
     res.status(201).json({ message: `Bridge device ${normalizedDeviceId} registered`, deviceSecret });
   } catch (err) {

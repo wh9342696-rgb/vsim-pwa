@@ -261,6 +261,8 @@ async function initializePostgresSchema() {
     await pool.query(statement);
   }
 
+  await pool.query(`INSERT INTO system_settings (key, value) VALUES ('withdrawal_fee', '2000') ON CONFLICT (key) DO NOTHING`);
+
   await pool.query('ALTER TABLE esim_packages ADD COLUMN IF NOT EXISTS progress_percent_per_hour NUMERIC(8,4) DEFAULT 0.42');
   await pool.query("ALTER TABLE esim_packages ADD COLUMN IF NOT EXISTS renewal_schedule TEXT DEFAULT '[]'");
   await pool.query('ALTER TABLE user_esims ADD COLUMN IF NOT EXISTS progress_percent_per_hour NUMERIC(8,4) DEFAULT 0.42');
