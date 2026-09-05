@@ -25,6 +25,8 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+  const requestUrl = new URL(e.request.url);
+  if (requestUrl.pathname === '/admin' || requestUrl.pathname.startsWith('/admin/')) return;
   if (e.request.url.includes('/api/')) return;
   e.respondWith(
     fetch(e.request)

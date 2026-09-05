@@ -1,5 +1,5 @@
 // VSIM Admin Panel Service Worker
-const CACHE_NAME = 'vsim-admin-v1.6';
+const CACHE_NAME = 'vsim-admin-v1.7';
 const ASSETS_TO_CACHE = [
   './admin.html',
   './css/admin.css',
@@ -31,6 +31,8 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  const requestUrl = new URL(event.request.url);
+  if (!requestUrl.pathname.startsWith('/admin/')) return;
   if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
     return; // Pass through API requests to network
   }

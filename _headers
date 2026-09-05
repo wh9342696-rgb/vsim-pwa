@@ -33,6 +33,7 @@
 
 /admin-sw.js
   Cache-Control: no-cache
+  Service-Worker-Allowed: /admin/
 
 /manifest.json
   Cache-Control: no-cache
