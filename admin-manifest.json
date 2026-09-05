@@ -1,9 +1,9 @@
 {
   "name": "VSIM Admin Panel PWA",
   "short_name": "VSIM Admin",
-  "id": "/admin/",
-  "start_url": "/admin",
-  "scope": "/admin/",
+  "id": "./admin.html",
+  "start_url": "./admin.html",
+  "scope": "./",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
   "description": "VSIM operations dashboard for users, payouts, merchants, and platform health.",

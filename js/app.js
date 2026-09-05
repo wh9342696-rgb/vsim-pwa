@@ -63,6 +63,10 @@ const supportContacts = {
 };
 let withdrawalFee = 2000;
 let selectedWithdrawNetwork = 'MTN';
+const withdrawalNetworkPrefixes = {
+  MTN: ['076', '077', '078'],
+  AIRTEL: ['070', '074', '075']
+};
 
 const authScreens = ['screen-splash', 'screen-onboarding', 'screen-login', 'screen-signup', 'screen-reset-password'];
 const ESIM_REFRESH_INTERVAL_MS = 30000;
@@ -1681,20 +1685,16 @@ function calcWithdrawReceive() {
 function syncWithdrawNetwork() {
   const phone = String(document.getElementById('withdrawPhone')?.value || '').replace(/\s+/g, '');
   const hint = document.getElementById('withdrawNetworkHint');
-  const inferred = /^076\d/.test(phone) ? (Number(phone[3]) >= 6 ? 'MTN' : 'AIRTEL') : null;
+  const inferred = Object.entries(withdrawalNetworkPrefixes).find(([, prefixes]) => prefixes.some(prefix => phone.startsWith(prefix)))?.[0] || null;
 
-  document.querySelectorAll('#withdrawNetworkOptions .network-select-card').forEach(card => {
-    card.classList.toggle('selected', card.dataset.network === selectedWithdrawNetwork);
-  });
+  if (inferred) selectedWithdrawNetwork = inferred;
+  document.querySelectorAll('#withdrawNetworkOptions .network-select-card').forEach(card => card.classList.toggle('selected', card.dataset.network === selectedWithdrawNetwork));
   if (!hint) return;
-  if (inferred && inferred !== selectedWithdrawNetwork) {
-    hint.textContent = `This number belongs to ${inferred}. Select ${inferred}.`;
-    hint.classList.add('error');
-  } else if (inferred) {
+  if (inferred) {
     hint.textContent = `Number matched to ${inferred}.`;
     hint.classList.remove('error');
   } else {
-    hint.textContent = 'Use a 10-digit number beginning with 076.';
+    hint.textContent = 'Use a 10-digit MTN or Airtel number beginning with 070, 074-078.';
     hint.classList.remove('error');
   }
 }
@@ -1754,13 +1754,15 @@ async function execWithdraw() {
   const amount = parseFloat(document.getElementById('withdrawVal').value) || 0;
   const phone = String(document.getElementById('withdrawPhone')?.value || '').replace(/\s+/g, '');
   const network = selectedWithdrawNetwork;
-  if (!/^076\d{7}$/.test(phone)) {
-    showToast('Enter a valid 10-digit number beginning with 076', 'error');
+  const inferredNetwork = Object.entries(withdrawalNetworkPrefixes).find(([, prefixes]) => prefixes.some(prefix => phone.startsWith(prefix)))?.[0] || null;
+  if (!/^0\d{9}$/.test(phone) || !inferredNetwork) {
+    showToast('Enter a valid 10-digit MTN or Airtel number beginning with 070, 074-078', 'error');
     return;
   }
-  const inferredNetwork = Number(phone[3]) >= 6 ? 'MTN' : 'AIRTEL';
   if (network !== inferredNetwork) {
-    showToast(`This number belongs to ${inferredNetwork}. Select the matching network.`, 'error');
+    selectedWithdrawNetwork = inferredNetwork;
+    syncWithdrawNetwork();
+    showToast(`The withdrawal network was switched to ${inferredNetwork}.`, 'info');
     return;
   }
   if (amount > appState.walletBalance) {
