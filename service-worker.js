@@ -1,5 +1,5 @@
 
-const CACHE = 'vsim-v11';
+const CACHE = 'vsim-v12';
 const ASSETS = [
   './',
   './index.html',
