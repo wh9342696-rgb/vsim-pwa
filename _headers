@@ -10,6 +10,21 @@
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Resource-Policy: same-origin
 
+/.env
+  X-Robots-Tag: noindex
+
+/.env.*
+  X-Robots-Tag: noindex
+
+/config.js
+  X-Robots-Tag: noindex
+
+/config.json
+  X-Robots-Tag: noindex
+
+/settings.js
+  X-Robots-Tag: noindex
+
 /index.html
   Cache-Control: no-cache
 
