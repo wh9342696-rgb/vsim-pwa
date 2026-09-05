@@ -331,7 +331,12 @@ async function loadAllData() {
     if (salesRes?.requests) AdminStore.airtimeSales = salesRes.requests;
     if (pkgRes && pkgRes.packages) AdminStore.packages = pkgRes.packages;
     if (merchantsRes?.merchants) AdminStore.merchants = merchantsRes.merchants;
-    if (bridgeRes && bridgeRes.devices) AdminStore.bridgeDevices = bridgeRes.devices;
+    if (bridgeRes) {
+      const devices = Array.isArray(bridgeRes.devices)
+        ? bridgeRes.devices
+        : Array.isArray(bridgeRes.bridgeDevices) ? bridgeRes.bridgeDevices : [];
+      AdminStore.bridgeDevices = devices;
+    }
     if (bridgeEventsRes?.events) AdminStore.bridgeEvents = bridgeEventsRes.events;
     if (logsRes && logsRes.logs) AdminStore.logs = logsRes.logs;
     if (usersRes && usersRes.users) AdminStore.users = usersRes.users;
@@ -1721,17 +1726,35 @@ function renderBridgeGrid() {
   const container = document.getElementById('fullBridgeGrid');
   if (!container) return;
 
-  container.innerHTML = AdminStore.bridgeDevices.map(d => {
+  const devices = Array.isArray(AdminStore.bridgeDevices) ? AdminStore.bridgeDevices : [];
+  if (!devices.length) {
+    container.innerHTML = `
+      <div class="dashboard-widget-card" style="grid-column: 1 / -1; padding: 24px;">
+        <div class="widget-card-header">
+          <span class="widget-header-title">No bridge device loaded</span>
+          <span class="metric-trend-pill">Backend sync pending</span>
+        </div>
+        <div class="widget-card-body" style="color: var(--text-muted);">
+          The registered device is not available in this admin session yet. Refresh this view or register the Android Device ID above.
+        </div>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = devices.map(d => {
     const connection = getBridgeConnectionState(d);
     const registeredLabel = d.created_at ? `Registered ${formatWorldTime(d.created_at)}` : 'Registered device';
+    const deviceId = d.device_id || d.deviceId || 'Unknown device';
+    const network = d.provider || d.network || 'Provider not assigned';
+    const phone = d.phone || d.msisdn || 'No phone assigned';
     return `
     <div class="dashboard-widget-card" style="padding: 16px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <div style="display: flex; align-items: center; gap: 10px;">
           <div class="bridge-network-badge" style="width: 32px; height: 32px;">B</div>
           <div>
-            <div style="font-weight: 800; font-size: 0.9rem;">${d.device_id}</div>
-            <div style="font-size: 0.76rem; color: var(--text-muted);">${d.phone}</div>
+            <div style="font-weight: 800; font-size: 0.9rem;">${deviceId}</div>
+            <div style="font-size: 0.76rem; color: var(--text-muted);">${network} - ${phone}</div>
           </div>
         </div>
         <span class="status-pill ${String(d.status || 'unknown').toLowerCase()}" style="color:${connection.tone};">${connection.label}</span>
@@ -1754,7 +1777,7 @@ function renderBridgeGrid() {
       <div style="display: flex; gap: 8px;">
         <button class="btn-action-small view" style="flex: 1;" onclick="provisionBridgeDevice(${d.id})">${d.mtn_merchant_id || d.airtel_merchant_id || d.merchant_id ? 'Update Binding / Secret' : 'Provision and Bind'}</button>
         <button class="btn-action-small view" onclick="setBridgeLifecycle(${d.id}, '${d.status === 'disabled' ? 'active' : 'disabled'}')">${d.status === 'disabled' ? 'Enable' : 'Disable'}</button>
-        <button class="btn-action-small view" onclick="showToast('USSD ping sent to ${d.device_id}', 'success')">Ping USSD</button>
+        <button class="btn-action-small view" onclick="showToast('USSD ping sent to ${deviceId}', 'success')">Ping USSD</button>
       </div>
     </div>
   `;
