@@ -35,7 +35,7 @@ Base path: `/api/v1/bridge`
 - `POST /authenticate`: `{ "bridgeDeviceId": "...", "credential": "..." }`
 - QR enrollment payload includes compatible aliases (`apiBase`, `bridgeApiBase`, `apiRoot`, `deviceId`, `bridgeDeviceId`, `device_id`, `deviceSecret`, `credential`, and `device_secret`); the app can scan it and call `/authenticate`.
 - `GET /config`: bearer token required
-- `POST /heartbeat`: `{ "appVersion": "1.0.0", "queueSize": 0 }`
+- `POST /heartbeat`: `{ "appVersion": "1.0.0", "queueSize": 0, "simBalance": 0, "pingMs": 120, "simLines": { "MTN": "0770000000", "AIRTEL": "0750000000" } }`
 - `POST /events`: normalized event, bearer token required
 - `POST /sync`: bearer token required
 - `POST /acknowledge`: bearer token required
@@ -58,6 +58,8 @@ Event body:
 ```
 
 Deposit events are matched only against one unambiguous pending deposit with the same amount and authorized merchant/provider. The bridge cannot specify a wallet user. Unmatched or ambiguous events are stored as `UNMATCHED` or `REVIEW_REQUIRED`. Repeated provider identities return an idempotent acknowledgement and do not create another wallet credit.
+
+The Admin Bridge card displays `simLines.MTN`, `simLines.AIRTEL`, `simBalance`, `pingMs`, and the provisioned `mtn_merchant_id`/`airtel_merchant_id`. Send only installed lines; send `null` or omit a line when that SIM is not present. The card shows MTN, Airtel, or both based on the reported lines.
 
 ## Statuses
 
