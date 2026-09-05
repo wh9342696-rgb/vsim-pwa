@@ -1280,7 +1280,7 @@ function renderBridgeDevicesList() {
   container.innerHTML = devices.map(d => {
     const connection = getBridgeConnectionState(d);
     return `
-    <div class="bridge-device-card-item">
+    <div class="bridge-device-card-item" role="button" tabindex="0" onclick="navigateToView('view-bridge')" onkeydown="if (event.key === 'Enter' || event.key === ' ') navigateToView('view-bridge')">
       <div class="bridge-left-info">
         <div class="bridge-network-badge">B</div>
         <div>
