@@ -118,6 +118,7 @@ const AdminAPI = (() => {
     getAdmins: () => request('/admins'),
     createAdmin: data => request('/admins', { method: 'POST', body: JSON.stringify(data) }),
     updateAdmin: (id, data) => request(`/admins/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    assignAdminUsers: (id, user_ids) => request(`/admins/${id}/assigned-users`, { method: 'PUT', body: JSON.stringify({ user_ids }) }),
     deleteAdmin: id => request(`/admins/${id}`, { method: 'DELETE' })
   };
 })();

@@ -41,7 +41,7 @@ const adminAuth = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'], issuer: 'vsim-api', audience: 'vsim-admin' });
-    const adminRes = await query('SELECT id, email, name, role, status, profit_total, joined_users_count, profile_photo, current_session_token FROM admin_users WHERE id = $1', [decoded.id]);
+    const adminRes = await query('SELECT id, email, name, role, status, profit_total, joined_users_count, profile_photo, can_manage_withdrawal_fee, current_session_token FROM admin_users WHERE id = $1', [decoded.id]);
     if (adminRes.rows.length === 0 || adminRes.rows[0].status !== 'active') {
       return res.status(403).json({ error: 'Unauthorized admin account' });
     }
@@ -110,7 +110,7 @@ router.post('/logout', adminAuth, async (req, res) => {
 
 router.get('/me', adminAuth, async (req, res) => {
   const result = await query(
-    `SELECT id, email, name, role, status, created_at, profit_total, joined_users_count, profile_photo
+    `SELECT id, email, name, role, status, created_at, profit_total, joined_users_count, profile_photo, can_manage_withdrawal_fee
      FROM admin_users WHERE id = $1`,
     [req.admin.id]
   );
@@ -328,7 +328,10 @@ router.post('/kyc/:id/review', adminAuth, async (req, res) => {
 
 router.get('/admins', adminAuth, ensureSuperAdmin, async (req, res) => {
   try {
-    const result = await query('SELECT id, email, name, role, status, created_at FROM admin_users ORDER BY created_at DESC');
+    const result = await query(`SELECT a.id, a.email, a.name, a.role, a.status, a.created_at,
+      a.can_manage_withdrawal_fee, COUNT(u.id)::INTEGER AS assigned_users
+      FROM admin_users a LEFT JOIN users u ON u.assigned_admin_id = a.id
+      GROUP BY a.id ORDER BY a.created_at DESC`);
     res.json({ admins: result.rows });
   } catch (err) {
     console.error('Admin list error:', err);
@@ -338,7 +341,7 @@ router.get('/admins', adminAuth, ensureSuperAdmin, async (req, res) => {
 
 router.post('/admins', adminAuth, ensureSuperAdmin, async (req, res) => {
   try {
-    const { name, email, password, role = 'sub_admin', status = 'active' } = req.body || {};
+    const { name, email, password, role = 'sub_admin', status = 'active', can_manage_withdrawal_fee = false } = req.body || {};
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Name, email, and password are required' });
@@ -354,10 +357,10 @@ router.post('/admins', adminAuth, ensureSuperAdmin, async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const result = await query(
-      `INSERT INTO admin_users (email, password_hash, name, role, status)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, email, name, role, status, created_at`,
-      [normalizedEmail, passwordHash, name.trim(), normalizedRole, status === 'inactive' ? 'inactive' : 'active']
+      `INSERT INTO admin_users (email, password_hash, name, role, status, can_manage_withdrawal_fee)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, email, name, role, status, created_at, can_manage_withdrawal_fee`,
+      [normalizedEmail, passwordHash, name.trim(), normalizedRole, status === 'inactive' ? 'inactive' : 'active', normalizedRole === 'sub_admin' && Boolean(can_manage_withdrawal_fee)]
     );
 
     res.status(201).json({ message: 'Sub-admin created successfully', admin: result.rows[0] });
@@ -370,7 +373,7 @@ router.post('/admins', adminAuth, ensureSuperAdmin, async (req, res) => {
 router.put('/admins/:id', adminAuth, ensureSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, role, status } = req.body || {};
+    const { name, email, role, status, can_manage_withdrawal_fee } = req.body || {};
 
     const existing = await query('SELECT * FROM admin_users WHERE id = $1', [id]);
     if (existing.rows.length === 0) {
@@ -385,10 +388,11 @@ router.put('/admins/:id', adminAuth, ensureSuperAdmin, async (req, res) => {
        SET name = COALESCE($1, name),
            email = COALESCE($2, email),
            role = COALESCE($3, role),
-           status = COALESCE($4, status)
-       WHERE id = $5
-       RETURNING id, email, name, role, status, created_at`,
-      [name?.trim() || existing.rows[0].name, email?.trim().toLowerCase() || existing.rows[0].email, nextRole, nextStatus, id]
+             status = COALESCE($4, status),
+             can_manage_withdrawal_fee = COALESCE($5, can_manage_withdrawal_fee)
+           WHERE id = $6
+           RETURNING id, email, name, role, status, created_at, can_manage_withdrawal_fee`,
+          [name?.trim() || existing.rows[0].name, email?.trim().toLowerCase() || existing.rows[0].email, nextRole, nextStatus, can_manage_withdrawal_fee === undefined ? existing.rows[0].can_manage_withdrawal_fee : Boolean(can_manage_withdrawal_fee), id]
     );
 
     res.json({ message: 'Admin updated successfully', admin: result.rows[0] });
@@ -416,6 +420,22 @@ router.delete('/admins/:id', adminAuth, ensureSuperAdmin, async (req, res) => {
   } catch (err) {
     console.error('Delete admin error:', err);
     res.status(500).json({ error: 'Failed to delete admin' });
+  }
+});
+
+router.put('/admins/:id/assigned-users', adminAuth, ensureSuperAdmin, async (req, res) => {
+  try {
+    const adminId = Number(req.params.id);
+    const userIds = Array.isArray(req.body?.user_ids) ? [...new Set(req.body.user_ids.map(Number).filter(Number.isInteger))] : [];
+    const admin = await query('SELECT id, role FROM admin_users WHERE id = $1', [adminId]);
+    if (!admin.rows.length || admin.rows[0].role !== 'sub_admin') return res.status(400).json({ error: 'Choose an existing sub-admin' });
+    await query('UPDATE users SET assigned_admin_id = NULL WHERE assigned_admin_id = $1', [adminId]);
+    if (userIds.length) await query('UPDATE users SET assigned_admin_id = $1 WHERE id = ANY($2::int[])', [adminId, userIds]);
+    const assigned = await query('SELECT id, name, phone FROM users WHERE assigned_admin_id = $1 ORDER BY name ASC', [adminId]);
+    res.json({ message: 'Assigned users updated', users: assigned.rows });
+  } catch (err) {
+    console.error('Assign users error:', err);
+    res.status(500).json({ error: 'Failed to assign users' });
   }
 });
 
@@ -607,7 +627,7 @@ router.get('/investments', adminAuth, ensureSuperAdmin, async (req, res) => {
 router.get('/settings', adminAuth, async (req, res) => {
   const result = await query('SELECT key, value FROM system_settings ORDER BY key');
   const settings = Object.fromEntries(result.rows.map(row => [row.key, row.value]));
-  res.json({ settings: {
+  res.json({ canManageWithdrawalFee: req.admin.role === 'super_admin' || Boolean(req.admin.can_manage_withdrawal_fee), settings: {
     esim_progress_enabled: settings.esim_progress_enabled ?? 'true',
     esim_progress_percent_per_hour: settings.esim_progress_percent_per_hour ?? String((Number(settings.esim_progress_percent_per_day) || 10) / 24),
     airtime_buy_markup_percent: settings.airtime_buy_markup_percent ?? '0',
@@ -616,8 +636,16 @@ router.get('/settings', adminAuth, async (req, res) => {
   } });
 });
 
-router.put('/settings', adminAuth, ensureSuperAdmin, async (req, res) => {
-  const entries = Object.entries(req.body || {});
+router.put('/settings', adminAuth, async (req, res) => {
+  const isSuperAdmin = req.admin.role === 'super_admin';
+  const canChangeFee = isSuperAdmin || Boolean(req.admin.can_manage_withdrawal_fee);
+  if (!canChangeFee && Object.keys(req.body || {}).some(key => key === 'withdrawal_fee')) {
+    return res.status(403).json({ error: 'Withdrawal fee control is not enabled for this sub-admin' });
+  }
+  if (!isSuperAdmin && Object.keys(req.body || {}).some(key => key !== 'withdrawal_fee')) {
+    return res.status(403).json({ error: 'Only the withdrawal fee can be changed by this sub-admin' });
+  }
+  const entries = Object.entries(req.body || {}).filter(([key]) => isSuperAdmin || key === 'withdrawal_fee');
   for (const [key, value] of entries) {
     await query(
       `INSERT INTO system_settings (key, value) VALUES ($1, $2)
@@ -687,12 +715,17 @@ router.post('/deposits/simulate', adminAuth, async (req, res) => {
 router.get('/withdrawals', adminAuth, async (req, res) => {
   try {
     const { status, limit = 50 } = req.query;
-    let sql = 'SELECT * FROM withdrawals';
+    let sql = `SELECT w.*, u.name AS user_name, u.phone AS user_phone
+               FROM withdrawals w LEFT JOIN users u ON u.id = w.user_id`;
     const params = [];
+    if (req.admin.role === 'sub_admin') {
+      params.push(req.admin.id);
+      sql += ` WHERE u.assigned_admin_id = $${params.length}`;
+    }
 
     if (status && status !== 'all') {
       params.push(status);
-      sql += ` WHERE status = $1`;
+      sql += ` ${sql.includes(' WHERE ') ? 'AND' : 'WHERE'} w.status = $${params.length}`;
     }
 
     sql += ' ORDER BY created_at DESC LIMIT ' + (parseInt(limit) || 50);
@@ -823,12 +856,17 @@ router.post('/withdrawals/:id/action', adminAuth, ensureSuperAdmin, async (req, 
 router.get('/users', adminAuth, async (req, res) => {
   try {
     const { search, limit = 50 } = req.query;
-    let sql = 'SELECT id, phone, name, email, initials, wallet_balance, kyc_tier, referral_code, status, created_at FROM users';
+    let sql = `SELECT id, phone, name, email, initials, wallet_balance, kyc_tier, referral_code, status, created_at, assigned_admin_id FROM users`;
     const params = [];
+
+    if (req.admin.role === 'sub_admin') {
+      params.push(req.admin.id);
+      sql += ` WHERE assigned_admin_id = $${params.length}`;
+    }
 
     if (search) {
       params.push(`%${search}%`);
-      sql += ` WHERE phone LIKE $1 OR name LIKE $1 OR email LIKE $1 OR referral_code LIKE $1`;
+      sql += ` ${sql.includes(' WHERE ') ? 'AND' : 'WHERE'} (phone LIKE $${params.length} OR name LIKE $${params.length} OR email LIKE $${params.length} OR referral_code LIKE $${params.length})`;
     }
 
     sql += ' ORDER BY created_at DESC LIMIT ' + (parseInt(limit) || 50);
