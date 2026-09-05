@@ -851,10 +851,36 @@ function renderActiveView(viewId) {
   if (viewId === 'view-airtime-purchases') renderAirtimePurchases();
   if (viewId === 'view-packages')    renderPackagesGrid();
     if (viewId === 'view-merchants')   renderMerchantsView();
-  if (viewId === 'view-bridge')      renderBridgeGrid();
+  if (viewId === 'view-bridge') {
+    renderBridgeGrid();
+    refreshBridgeDevicesView();
+  }
   if (viewId === 'view-logs')        renderFullLogs();
   if (viewId === 'view-admins')      renderAdminsView();
   if (viewId === 'view-analytics')   renderAnalyticsView();
+}
+
+let bridgeViewRequest = null;
+
+async function refreshBridgeDevicesView() {
+  if (bridgeViewRequest || !AdminAPI.isLoggedIn()) return;
+  bridgeViewRequest = AdminAPI.getBridgeDevices()
+    .then(result => {
+      const devices = Array.isArray(result?.devices)
+        ? result.devices
+        : Array.isArray(result?.bridgeDevices) ? result.bridgeDevices : [];
+      AdminStore.bridgeDevices = devices;
+      renderBridgeGrid();
+      renderBridgeDevicesList();
+    })
+    .catch(error => {
+      console.error('Bridge device refresh failed:', error);
+      renderBridgeGrid();
+    })
+    .finally(() => {
+      bridgeViewRequest = null;
+    });
+  return bridgeViewRequest;
 }
 
 // ============================================================================
