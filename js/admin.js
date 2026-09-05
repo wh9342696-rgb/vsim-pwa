@@ -1824,7 +1824,7 @@ function renderBridgeGrid() {
       <div class="bridge-device-detail-grid">
         <div class="bridge-device-detail"><span>App version</span><strong>${d.app_version || 'Not reported'}</strong></div>
         <div class="bridge-device-detail"><span>Last heartbeat</span><strong>${formatWorldTime(d.last_heartbeat)}</strong></div>
-        <div class="bridge-device-detail"><span>SIM balance</span><strong>UGX ${Number(d.sim_balance ?? 0).toLocaleString()}</strong></div>
+        <div class="bridge-device-detail"><span>SIM balance</span><strong>${d.sim_balance === null || d.sim_balance === undefined || Number(d.sim_balance) <= 0 ? 'Waiting for bridge app' : `UGX ${Number(d.sim_balance).toLocaleString()}`}</strong></div>
         <div class="bridge-device-detail"><span>Ping latency</span><strong>${d.ping_ms ?? '-'}${d.ping_ms === null || d.ping_ms === undefined ? '' : ' ms'}</strong></div>
         <div class="bridge-device-detail"><span>MTN merchant</span><strong>${mtnBinding}</strong></div>
         <div class="bridge-device-detail"><span>Airtel merchant</span><strong>${airtelBinding}</strong></div>
