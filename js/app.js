@@ -818,6 +818,10 @@ function openProfilePhotoPicker() {
 
 function setProfilePhotoFile(file) {
   if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    showToast('Profile photo must be 2 MB or smaller', 'error');
+    return;
+  }
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
     showToast('Choose a JPG, PNG or WebP file', 'error');
     return;
