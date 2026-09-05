@@ -331,32 +331,30 @@ async function loadAllData() {
     if (AdminStore.admin.role === 'super_admin') requests.push(AdminAPI.getAdmins());
     const [statsRes, depRes, withRes, airtimeRes, salesRes, pkgRes, merchantsRes, bridgeRes, bridgeEventsRes, logsRes, usersRes, referralRes, transactionRes, ticketRes, kycRes, settingsRes, notificationsRes, investmentsRes, earningsRes, adminsRes] = await Promise.allSettled(requests).then(results => results.map(result => result.status === 'fulfilled' ? result.value : null));
 
-    if (statsRes) AdminStore.stats = statsRes;
-    if (depRes?.deposits) AdminStore.deposits = depRes.deposits;
-    if (withRes && withRes.withdrawals) AdminStore.withdrawals = withRes.withdrawals;
-    if (airtimeRes?.requests) AdminStore.airtimePurchases = airtimeRes.requests;
-    if (salesRes?.requests) AdminStore.airtimeSales = salesRes.requests;
-    if (pkgRes && pkgRes.packages) AdminStore.packages = pkgRes.packages;
-    if (merchantsRes?.merchants) AdminStore.merchants = merchantsRes.merchants;
-    if (bridgeRes) {
-      const devices = Array.isArray(bridgeRes.devices)
-        ? bridgeRes.devices
-        : Array.isArray(bridgeRes.bridgeDevices) ? bridgeRes.bridgeDevices : [];
-      AdminStore.bridgeDevices = devices;
-    }
-    if (bridgeEventsRes?.events) AdminStore.bridgeEvents = bridgeEventsRes.events;
-    if (logsRes && logsRes.logs) AdminStore.logs = logsRes.logs;
-    if (usersRes && usersRes.users) AdminStore.users = usersRes.users;
-    if (referralRes?.referrals) AdminStore.referrals = referralRes.referrals;
-    if (transactionRes?.transactions) AdminStore.transactions = transactionRes.transactions;
-    if (ticketRes?.tickets) AdminStore.tickets = ticketRes.tickets;
-    if (kycRes?.submissions) AdminStore.kycSubmissions = kycRes.submissions;
-    if (settingsRes?.settings) AdminStore.settings = { ...settingsRes.settings, canManageWithdrawalFee: settingsRes.canManageWithdrawalFee };
-    if (notificationsRes?.notifications) AdminStore.notifications = notificationsRes.notifications;
+    AdminStore.stats = statsRes || null;
+    AdminStore.deposits = depRes?.deposits || [];
+    AdminStore.withdrawals = withRes?.withdrawals || [];
+    AdminStore.airtimePurchases = airtimeRes?.requests || [];
+    AdminStore.airtimeSales = salesRes?.requests || [];
+    AdminStore.packages = pkgRes?.packages || [];
+    AdminStore.merchants = merchantsRes?.merchants || [];
+    const devices = Array.isArray(bridgeRes?.devices)
+      ? bridgeRes.devices
+      : Array.isArray(bridgeRes?.bridgeDevices) ? bridgeRes.bridgeDevices : [];
+    AdminStore.bridgeDevices = devices;
+    AdminStore.bridgeEvents = bridgeEventsRes?.events || [];
+    AdminStore.logs = logsRes?.logs || [];
+    AdminStore.users = usersRes?.users || [];
+    AdminStore.referrals = referralRes?.referrals || [];
+    AdminStore.transactions = transactionRes?.transactions || [];
+    AdminStore.tickets = ticketRes?.tickets || [];
+    AdminStore.kycSubmissions = kycRes?.submissions || [];
+    AdminStore.settings = settingsRes?.settings ? { ...settingsRes.settings, canManageWithdrawalFee: settingsRes.canManageWithdrawalFee } : {};
+    AdminStore.notifications = notificationsRes?.notifications || [];
     AdminStore.unreadNotifications = Number(notificationsRes?.unread || 0);
-    if (investmentsRes?.investments) AdminStore.investments = investmentsRes.investments;
-    if (earningsRes) AdminStore.earnings = earningsRes;
-    if (adminsRes?.admins) AdminStore.admins = adminsRes.admins;
+    AdminStore.investments = investmentsRes?.investments || null;
+    AdminStore.earnings = earningsRes || { activeLines: [], recentYields: [] };
+    AdminStore.admins = adminsRes?.admins || [];
 
     applyRoleUI();
     renderSettingsView();
