@@ -169,17 +169,12 @@ function connectRealtimeUpdates() {
   let refreshTimer = null;
   source.addEventListener('data_changed', event => {
     const payload = JSON.parse(event.data || '{}');
-    if (payload.type === 'support' && liveSupportTicketId && String(payload.ticketId) === String(liveSupportTicketId)) refreshLiveSupport();
     clearTimeout(refreshTimer);
     refreshTimer = setTimeout(() => fetchBackendData(), 500);
   });
   source.onerror = () => {
     clearTimeout(refreshTimer);
     source.close();
-    if (liveSupportTicketId && document.getElementById('liveSupportPanel')?.style.display !== 'none') {
-      clearInterval(liveSupportRefreshTimer);
-      liveSupportRefreshTimer = setInterval(refreshLiveSupport, 5000);
-    }
     setTimeout(connectRealtimeUpdates, 3000);
   };
   window.vsimRealtimeSource = source;
@@ -2204,77 +2199,6 @@ async function submitSupportTicket(event) {
     form.reset();
     showToast(result.message || 'Support ticket sent to the admin team', 'success');
   } catch (error) { showToast(error.message || 'Could not send support ticket', 'error'); }
-}
-
-let liveSupportTicketId = null;
-let liveSupportRefreshTimer = null;
-
-function startLiveSupportRefresh() {
-  clearInterval(liveSupportRefreshTimer);
-  liveSupportRefreshTimer = setInterval(refreshLiveSupport, 5000);
-}
-
-function renderLiveSupportMessages(messages = []) {
-  const target = document.getElementById('liveSupportMessages');
-  if (!target) return;
-  target.innerHTML = messages.map(message => {
-    const mine = message.sender_type === 'user';
-    return `<div style="align-self:${mine ? 'flex-end' : 'flex-start'}; max-width:85%; padding:9px 11px; border-radius:12px; background:${mine ? 'var(--primary-purple)' : 'var(--bg-card-secondary)'}; color:var(--text-white); font-size:0.8rem;">${String(message.body || '').replace(/[&<>]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[character]))}</div>`;
-  }).join('') || '<div style="font-size:0.78rem; color:var(--text-gray);">A support agent will join shortly.</div>';
-  target.scrollTop = target.scrollHeight;
-}
-
-async function refreshLiveSupport() {
-  if (!liveSupportTicketId) return;
-  try {
-    const result = await window.VSIM_API.fetchLiveSupport(liveSupportTicketId);
-    renderLiveSupportMessages(result.messages || []);
-    const status = document.getElementById('liveSupportStatus');
-    if (status) status.textContent = result.ticket?.assigned_admin_id ? 'Connected to an assigned support agent' : 'Waiting for the main admin to assign a support agent';
-  } catch (error) {
-    showToast(error.message || 'Could not refresh live support', 'error');
-  }
-}
-
-async function openLiveSupport() {
-  const panel = document.getElementById('liveSupportPanel');
-  if (!panel) return;
-  panel.style.display = 'block';
-  if (!liveSupportTicketId) {
-    try {
-      const result = await window.VSIM_API.startLiveSupport();
-      liveSupportTicketId = result.ticket.id;
-      renderLiveSupportMessages(result.messages || []);
-      await refreshLiveSupport();
-      startLiveSupportRefresh();
-    } catch (error) {
-      panel.style.display = 'none';
-      showToast(error.message || 'Could not start live support', 'error');
-    }
-  } else {
-    await refreshLiveSupport();
-    startLiveSupportRefresh();
-  }
-}
-
-function closeLiveSupport() {
-  const panel = document.getElementById('liveSupportPanel');
-  if (panel) panel.style.display = 'none';
-  clearInterval(liveSupportRefreshTimer);
-}
-
-async function sendLiveSupportMessage(event) {
-  event.preventDefault();
-  const input = document.getElementById('liveSupportInput');
-  const body = input?.value.trim();
-  if (!liveSupportTicketId || !body) return;
-  try {
-    await window.VSIM_API.sendLiveSupportMessage(liveSupportTicketId, body);
-    input.value = '';
-    await refreshLiveSupport();
-  } catch (error) {
-    showToast(error.message || 'Could not send message', 'error');
-  }
 }
 
 // Handle Get Started button on splash screen

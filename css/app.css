@@ -2880,64 +2880,6 @@ html, body {
   color: var(--text-gray);
 }
 
-.live-support-panel {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  clear: both;
-  min-width: 0;
-  margin-top: 2px;
-  padding: 16px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: 14px;
-}
-
-.live-support-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.live-support-title {
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: var(--text-white);
-}
-
-.live-support-status {
-  font-size: 0.72rem;
-  color: var(--text-gray);
-}
-
-.live-support-messages {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 220px;
-  overflow: auto;
-  margin-bottom: 10px;
-}
-
-.live-support-form {
-  display: flex;
-  gap: 8px;
-  align-items: stretch;
-}
-
-.live-support-form .form-input-field {
-  min-width: 0;
-  margin: 0;
-}
-
-.live-support-form .btn-primary-purple {
-  width: auto;
-  min-width: 72px;
-  white-space: nowrap;
-}
-
 .form-field-hint {
   margin-top: 6px;
   color: var(--text-muted);
