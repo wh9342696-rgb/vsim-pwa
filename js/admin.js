@@ -994,7 +994,7 @@ function applyRoleUI() {
       const isSystemSettingControl = ['platform_name', 'support_email', 'maintenance_mode', 'esim_progress_enabled', 'esim_progress_percent_per_hour', 'airtime_buy_markup_percent', 'airtime_sell_payout_percent'].includes(name);
       const isWithdrawalFeeControl = name === 'withdrawal_fee';
       control.disabled = isSubAdmin && isSystemSettingControl;
-      if (isSubAdmin && isWithdrawalFeeControl) control.disabled = true;
+      if (isWithdrawalFeeControl) control.disabled = isSubAdmin;
       if (isSubAdmin && isProfileControl) {
         control.disabled = false;
       }
@@ -2284,6 +2284,8 @@ function handleGlobalSearch(query) {
       wrapper.appendChild(message);
     }
   }
+  const feeNote = document.getElementById('withdrawalFeeAccessNote');
+  if (feeNote) feeNote.textContent = isSubAdmin ? 'Locked: only the Super Admin can change this value.' : 'Controlled centrally by the Super Admin.';
 }
 
 // Mobile Drawers
