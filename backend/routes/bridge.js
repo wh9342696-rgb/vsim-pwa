@@ -156,7 +156,7 @@ router.post(['/auth', '/authenticate'], async (req, res) => {
 });
 
 router.get('/config', bridgeAuth, async (req, res) => {
-  res.json({ deviceId: req.bridge.device_id, provider: req.bridge.provider, merchantId: req.bridge.merchant_id, merchantBindings: { MTN: req.bridge.mtn_merchant_id || null, AIRTEL: req.bridge.airtel_merchant_id || null }, status: req.bridge.status, appVersion: req.bridge.app_version || null, simBalance: Number(req.bridge.sim_balance || 0) });
+  res.json({ deviceId: req.bridge.device_id, provider: req.bridge.provider, merchantId: req.bridge.merchant_id, merchantBindings: { MTN: req.bridge.mtn_merchant_id || null, AIRTEL: req.bridge.airtel_merchant_id || null }, simLines: { MTN: req.bridge.mtn_sim_phone || null, AIRTEL: req.bridge.airtel_sim_phone || null }, status: req.bridge.status, appVersion: req.bridge.app_version || null, simBalance: Number(req.bridge.sim_balance || 0), pingMs: req.bridge.ping_ms });
 });
 
 router.post('/heartbeat', bridgeAuth, async (req, res) => {
@@ -164,12 +164,21 @@ router.post('/heartbeat', bridgeAuth, async (req, res) => {
   const queueSize = Math.max(0, Number(req.body?.queueSize) || 0);
   const hasSimBalance = req.body?.simBalance !== undefined && req.body?.simBalance !== null;
   const simBalance = hasSimBalance ? Number(req.body.simBalance) : null;
+  const simLines = req.body?.simLines && typeof req.body.simLines === 'object' ? req.body.simLines : {};
+  const mtnSimPhone = simLines.MTN || simLines.mtn || simLines.mtnPhone || null;
+  const airtelSimPhone = simLines.AIRTEL || simLines.airtel || simLines.airtelPhone || null;
+  const hasPingMs = req.body?.pingMs !== undefined && req.body?.pingMs !== null;
+  const pingMs = hasPingMs ? Number(req.body.pingMs) : null;
   if (hasSimBalance && (!Number.isFinite(simBalance) || simBalance < 0)) return res.status(400).json({ error: 'INVALID_SIM_BALANCE' });
+  if (hasPingMs && (!Number.isFinite(pingMs) || pingMs < 0 || pingMs > 60000)) return res.status(400).json({ error: 'INVALID_PING_MS' });
   await query(`UPDATE bridge_devices
     SET status = $1, app_version = $2, last_heartbeat = CURRENT_TIMESTAMP, last_sync = CURRENT_TIMESTAMP,
-        sim_balance = CASE WHEN $3 THEN $4 ELSE COALESCE(sim_balance, 0) END
-    WHERE device_id = $5`, ['active', appVersion, hasSimBalance, simBalance, req.bridge.device_id]);
-  res.json({ status: 'ONLINE', queueSize, simBalance: hasSimBalance ? simBalance : Number(req.bridge.sim_balance || 0), serverTime: new Date().toISOString() });
+        sim_balance = CASE WHEN $3 THEN $4 ELSE COALESCE(sim_balance, 0) END,
+        ping_ms = CASE WHEN $5 THEN $6 ELSE ping_ms END,
+        mtn_sim_phone = COALESCE($7, mtn_sim_phone),
+        airtel_sim_phone = COALESCE($8, airtel_sim_phone)
+    WHERE device_id = $9`, ['active', appVersion, hasSimBalance, simBalance, hasPingMs, pingMs, mtnSimPhone, airtelSimPhone, req.bridge.device_id]);
+  res.json({ status: 'ONLINE', queueSize, simBalance: hasSimBalance ? simBalance : Number(req.bridge.sim_balance || 0), pingMs: hasPingMs ? pingMs : req.bridge.ping_ms, simLines: { MTN: mtnSimPhone || req.bridge.mtn_sim_phone || null, AIRTEL: airtelSimPhone || req.bridge.airtel_sim_phone || null }, serverTime: new Date().toISOString() });
 });
 
 router.post('/events', bridgeAuth, async (req, res) => {
@@ -245,7 +254,7 @@ router.post('/sync', bridgeAuth, async (req, res) => res.json({ acknowledged: tr
 router.post('/acknowledge', bridgeAuth, async (req, res) => res.json({ acknowledged: true }));
 
 router.get('/status', bridgeAuth, async (req, res) => {
-  res.json({ deviceId: req.bridge.device_id, status: req.bridge.status, provider: req.bridge.provider, merchantId: req.bridge.merchant_id, lastHeartbeat: req.bridge.last_heartbeat, lastSync: req.bridge.last_sync, appVersion: req.bridge.app_version, simBalance: Number(req.bridge.sim_balance || 0) });
+  res.json({ deviceId: req.bridge.device_id, status: req.bridge.status, provider: req.bridge.provider, merchantId: req.bridge.merchant_id, lastHeartbeat: req.bridge.last_heartbeat, lastSync: req.bridge.last_sync, appVersion: req.bridge.app_version, simBalance: Number(req.bridge.sim_balance || 0), pingMs: req.bridge.ping_ms, simLines: { MTN: req.bridge.mtn_sim_phone || null, AIRTEL: req.bridge.airtel_sim_phone || null } });
 });
 
 export default router;

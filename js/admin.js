@@ -1803,6 +1803,9 @@ function renderBridgeGrid() {
     const phone = d.phone || d.msisdn || 'No phone assigned';
     const mtnBinding = d.mtn_merchant_id || (String(d.provider || '').toUpperCase() === 'MTN' ? d.merchant_id : '') || 'Not assigned';
     const airtelBinding = d.airtel_merchant_id || (String(d.provider || '').toUpperCase() === 'AIRTEL' ? d.merchant_id : '') || 'Not assigned';
+    const mtnSimPhone = d.mtn_sim_phone || '';
+    const airtelSimPhone = d.airtel_sim_phone || '';
+    const installedNetworks = [mtnSimPhone && 'MTN', airtelSimPhone && 'Airtel'].filter(Boolean).join(' + ') || 'Waiting for bridge app';
     const lifecycle = String(d.status || 'unknown').toLowerCase();
     return `
     <article class="bridge-device-review-card">
@@ -1822,6 +1825,9 @@ function renderBridgeGrid() {
         <span><strong>Registered</strong>${registeredLabel.replace(/^Registered /, '')}</span>
       </div>
       <div class="bridge-device-detail-grid">
+        <div class="bridge-device-detail"><span>SIMs installed</span><strong>${installedNetworks}</strong></div>
+        <div class="bridge-device-detail"><span>MTN SIM line</span><strong>${mtnSimPhone || 'Not reported'}</strong></div>
+        <div class="bridge-device-detail"><span>Airtel SIM line</span><strong>${airtelSimPhone || 'Not reported'}</strong></div>
         <div class="bridge-device-detail"><span>App version</span><strong>${d.app_version || 'Not reported'}</strong></div>
         <div class="bridge-device-detail"><span>Last heartbeat</span><strong>${formatWorldTime(d.last_heartbeat)}</strong></div>
         <div class="bridge-device-detail"><span>SIM balance</span><strong>${d.sim_balance === null || d.sim_balance === undefined || Number(d.sim_balance) <= 0 ? 'Waiting for bridge app' : `UGX ${Number(d.sim_balance).toLocaleString()}`}</strong></div>

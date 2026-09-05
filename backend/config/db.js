@@ -195,7 +195,9 @@ async function initializePostgresSchema() {
       last_heartbeat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       device_secret TEXT,
       mtn_merchant_id TEXT,
-      airtel_merchant_id TEXT
+      airtel_merchant_id TEXT,
+      mtn_sim_phone TEXT,
+      airtel_sim_phone TEXT
     )`,
     `CREATE TABLE IF NOT EXISTS bridge_events (
       id SERIAL PRIMARY KEY,
@@ -278,6 +280,8 @@ async function initializePostgresSchema() {
   await pool.query('ALTER TABLE bridge_devices ADD COLUMN IF NOT EXISTS last_sync TIMESTAMP');
   await pool.query('ALTER TABLE bridge_devices ADD COLUMN IF NOT EXISTS mtn_merchant_id TEXT');
   await pool.query('ALTER TABLE bridge_devices ADD COLUMN IF NOT EXISTS airtel_merchant_id TEXT');
+  await pool.query('ALTER TABLE bridge_devices ADD COLUMN IF NOT EXISTS mtn_sim_phone TEXT');
+  await pool.query('ALTER TABLE bridge_devices ADD COLUMN IF NOT EXISTS airtel_sim_phone TEXT');
 
   await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS profit_total NUMERIC(12,2) DEFAULT 0');
   await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS joined_users_count INTEGER DEFAULT 0');
@@ -653,7 +657,9 @@ if (databaseDriver === 'postgres') {
       last_heartbeat DATETIME DEFAULT CURRENT_TIMESTAMP,
       device_secret TEXT,
       mtn_merchant_id TEXT,
-      airtel_merchant_id TEXT
+      airtel_merchant_id TEXT,
+      mtn_sim_phone TEXT,
+      airtel_sim_phone TEXT
     );
 
     CREATE TABLE IF NOT EXISTS bridge_events (
@@ -754,7 +760,7 @@ if (databaseDriver === 'postgres') {
   for (const column of ['provider TEXT', 'merchant_id TEXT', 'app_version TEXT', 'credential_hash TEXT', 'device_secret TEXT', 'revoked_at DATETIME', 'last_sync DATETIME']) {
     try { sqlite.exec(`ALTER TABLE bridge_devices ADD COLUMN ${column}`); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   }
-  for (const column of ['mtn_merchant_id TEXT', 'airtel_merchant_id TEXT']) {
+  for (const column of ['mtn_merchant_id TEXT', 'airtel_merchant_id TEXT', 'mtn_sim_phone TEXT', 'airtel_sim_phone TEXT']) {
     try { sqlite.exec(`ALTER TABLE bridge_devices ADD COLUMN ${column}`); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   }
   const bridgeDevices = sqlite.prepare('SELECT id, device_secret FROM bridge_devices WHERE device_secret IS NULL OR device_secret = \'\' OR device_secret NOT LIKE \'v1:%\'').all();
