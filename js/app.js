@@ -2530,7 +2530,10 @@ function setupUserPwaInstall() {
   const row = document.getElementById('pwaInstallRow');
   const label = document.getElementById('pwaInstallLabel');
   const help = document.getElementById('pwaInstallHelp');
-  if (!row || !label || !help) return;
+  const prompt = document.getElementById('pwaInstallPrompt');
+  const promptTitle = document.getElementById('pwaInstallPromptTitle');
+  const promptText = document.getElementById('pwaInstallPromptText');
+  if (!row || !label || !help || !prompt) return;
 
   const userAgent = navigator.userAgent || '';
   const isIos = /iphone|ipad|ipod/i.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -2542,9 +2545,17 @@ function setupUserPwaInstall() {
     return;
   }
 
+  const showPrompt = () => {
+    prompt.hidden = false;
+    row.hidden = false;
+  };
+
   if (isIos) {
     label.textContent = 'Add VSIM to Home Screen';
     help.textContent = 'Tap Share, then Add to Home Screen';
+    promptTitle.textContent = 'Add VSIM to your Home Screen';
+    promptText.textContent = 'Tap Share, then choose Add to Home Screen for the app version.';
+    showPrompt();
   } else if (isAndroid) {
     label.textContent = 'Install VSIM app';
     help.textContent = 'Install the Android app-style PWA';
@@ -2556,13 +2567,22 @@ function setupUserPwaInstall() {
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
     userInstallPrompt = event;
+    promptTitle.textContent = 'Install VSIM as an app';
+    promptText.textContent = 'Install VSIM on your home screen without browser controls.';
+    showPrompt();
   });
 
   window.addEventListener('appinstalled', () => {
     userInstallPrompt = null;
     row.hidden = true;
+    prompt.hidden = true;
     showToast('VSIM installed on this device', 'success');
   });
+}
+
+function dismissUserPwaPrompt() {
+  const prompt = document.getElementById('pwaInstallPrompt');
+  if (prompt) prompt.hidden = true;
 }
 
 async function installUserPwa() {

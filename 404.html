@@ -20,6 +20,14 @@
   <script src="js/pwa-register.js" defer></script>
 </head>
 <body data-service-worker="service-worker.js">
+  <div class="pwa-install-prompt" id="pwaInstallPrompt" hidden>
+    <div class="pwa-install-prompt-copy">
+      <strong id="pwaInstallPromptTitle">Install VSIM as an app</strong>
+      <span id="pwaInstallPromptText">Use VSIM from your home screen without browser controls.</span>
+    </div>
+    <button type="button" class="pwa-install-prompt-action" onclick="installUserPwa()">Install</button>
+    <button type="button" class="pwa-install-prompt-close" onclick="dismissUserPwaPrompt()" aria-label="Dismiss install prompt">&times;</button>
+  </div>
   <script>
     (() => {
       const blockKeys = ['F12', 'I', 'J', 'C', 'U'];
