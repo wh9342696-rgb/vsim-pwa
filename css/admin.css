@@ -1175,6 +1175,18 @@ html, body {
   margin-bottom: 18px;
 }
 
+.bridge-registration-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(120px, 1fr) minmax(0, 1.3fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.bridge-registration-form .btn-primary {
+  min-height: 42px;
+  white-space: nowrap;
+}
+
 .bridge-device-review-header,
 .bridge-device-identity,
 .bridge-device-review-status,
@@ -1294,6 +1306,21 @@ html, body {
 }
 
 @media (max-width: 560px) {
+  .bridge-registration-card .widget-card-header {
+    display: grid;
+    gap: 8px;
+  }
+
+  .bridge-registration-form {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .bridge-registration-form .btn-primary {
+    width: 100%;
+    white-space: normal;
+  }
+
   #fullBridgeGrid {
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
