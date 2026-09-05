@@ -1882,18 +1882,6 @@
               </div>
             </div>
 
-            <div id="liveSupportPanel" class="live-support-panel" style="display:none;">
-              <div class="live-support-header">
-                <div><div class="live-support-title">Live Support</div><div id="liveSupportStatus" class="live-support-status">Connecting you to the support team...</div></div>
-                <button type="button" class="icon-button" onclick="closeLiveSupport()" title="Close live support">&times;</button>
-              </div>
-              <div id="liveSupportMessages" class="live-support-messages"></div>
-              <form onsubmit="sendLiveSupportMessage(event)" class="live-support-form">
-                <input id="liveSupportInput" class="form-input-field" placeholder="Type your message" required />
-                <button class="btn-primary-purple" type="submit">Send</button>
-              </form>
-            </div>
-
             <a class="support-channel-card" id="supportWhatsAppCard" target="_blank" rel="noopener">
               <div class="support-channel-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--green-accent);">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
@@ -1928,6 +1916,18 @@
                 <div class="support-channel-sub" id="supportCallCenterValue">Currently unavailable</div>
               </div>
             </a>
+          </div>
+
+          <div id="liveSupportPanel" class="live-support-panel" style="display:none;">
+            <div class="live-support-header">
+              <div><div class="live-support-title">Live Support</div><div id="liveSupportStatus" class="live-support-status">Connecting you to the support team...</div></div>
+              <button type="button" class="icon-button" onclick="closeLiveSupport()" title="Close live support">&times;</button>
+            </div>
+            <div id="liveSupportMessages" class="live-support-messages"></div>
+            <form onsubmit="sendLiveSupportMessage(event)" class="live-support-form">
+              <input id="liveSupportInput" class="form-input-field" placeholder="Type your message" required />
+              <button class="btn-primary-purple" type="submit">Send</button>
+            </form>
           </div>
 
           <div style="margin-top:20px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:14px; padding:16px;">
