@@ -36,6 +36,7 @@ const AdminStore = {
 
 let adminInstallPrompt = null;
 let adminDataRefreshInFlight = null;
+let lastAdminRefreshAt = 0;
 let adminAutoLogoutTimer = null;
 const ADMIN_INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -131,6 +132,8 @@ function registerAdminServiceWorker() {
 
 function refreshAdminData() {
   if (adminDataRefreshInFlight || !AdminAPI.isLoggedIn()) return adminDataRefreshInFlight;
+  if (Date.now() - lastAdminRefreshAt < 10000) return Promise.resolve();
+  lastAdminRefreshAt = Date.now();
   adminDataRefreshInFlight = loadAllData().finally(() => {
     adminDataRefreshInFlight = null;
   });
@@ -163,7 +166,7 @@ function startAdminRefreshCoordinator() {
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) refresh();
   });
-  setInterval(refresh, 30000);
+  setInterval(refresh, 60000);
 }
 
 function setupAdminInstallPrompt() {
@@ -244,7 +247,7 @@ function connectAdminRealtimeUpdates() {
   if (!AdminAPI.isLoggedIn() || !window.EventSource) return;
   if (window.adminRealtimeSource) window.adminRealtimeSource.close();
   const source = new EventSource(`${AdminAPI.baseUrl}/../realtime?token=${encodeURIComponent(AdminAPI.getToken())}`);
-  source.addEventListener('data_changed', () => loadAllData());
+  source.addEventListener('data_changed', () => refreshAdminData());
   source.onerror = () => {
     source.close();
     setTimeout(connectAdminRealtimeUpdates, 3000);
