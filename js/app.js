@@ -2205,6 +2205,11 @@ async function submitSupportTicket(event) {
 let liveSupportTicketId = null;
 let liveSupportRefreshTimer = null;
 
+function startLiveSupportRefresh() {
+  clearInterval(liveSupportRefreshTimer);
+  liveSupportRefreshTimer = setInterval(refreshLiveSupport, 5000);
+}
+
 function renderLiveSupportMessages(messages = []) {
   const target = document.getElementById('liveSupportMessages');
   if (!target) return;
@@ -2236,12 +2241,15 @@ async function openLiveSupport() {
       const result = await window.VSIM_API.startLiveSupport();
       liveSupportTicketId = result.ticket.id;
       renderLiveSupportMessages(result.messages || []);
-      refreshLiveSupport();
-      clearInterval(liveSupportRefreshTimer);
+      await refreshLiveSupport();
+      startLiveSupportRefresh();
     } catch (error) {
       panel.style.display = 'none';
       showToast(error.message || 'Could not start live support', 'error');
     }
+  } else {
+    await refreshLiveSupport();
+    startLiveSupportRefresh();
   }
 }
 
