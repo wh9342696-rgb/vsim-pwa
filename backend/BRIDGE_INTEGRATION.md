@@ -33,7 +33,7 @@ Base path: `/api/v1/bridge`
 
 - `POST /register`: `{ "bridgeDeviceId": "..." }`
 - `POST /authenticate`: `{ "bridgeDeviceId": "...", "credential": "..." }`
-- QR enrollment payload: JSON with `type: "vsim-bridge-enrollment"`, `apiBase`, `deviceId`, and `deviceSecret`; the app can scan this payload and call `/authenticate`.
+- QR enrollment payload includes compatible aliases (`apiBase`, `bridgeApiBase`, `apiRoot`, `deviceId`, `bridgeDeviceId`, `device_id`, `deviceSecret`, `credential`, and `device_secret`); the app can scan it and call `/authenticate`.
 - `GET /config`: bearer token required
 - `POST /heartbeat`: `{ "appVersion": "1.0.0", "queueSize": 0 }`
 - `POST /events`: normalized event, bearer token required

@@ -1062,8 +1062,14 @@ router.get('/bridge-devices/:id/enrollment-qr', adminAuth, ensureSuperAdmin, asy
       type: 'vsim-bridge-enrollment',
       version: 1,
       apiBase: `${process.env.PUBLIC_API_BASE || 'https://api.vsime.uk/api/v1'}/bridge`,
+      bridgeApiBase: `${process.env.PUBLIC_API_BASE || 'https://api.vsime.uk/api/v1'}/bridge`,
+      apiRoot: process.env.PUBLIC_API_BASE || 'https://api.vsime.uk/api/v1',
       deviceId: device.device_id,
-      deviceSecret
+      bridgeDeviceId: device.device_id,
+      device_id: device.device_id,
+      deviceSecret,
+      credential: deviceSecret,
+      device_secret: deviceSecret
     });
     const qrDataUrl = await QRCode.toDataURL(payload, { errorCorrectionLevel: 'M', margin: 2, width: 320 });
     res.json({ deviceId: device.device_id, status: device.status, payload, qrDataUrl });

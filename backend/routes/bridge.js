@@ -136,8 +136,8 @@ router.post('/register', async (req, res) => {
 });
 
 router.post(['/auth', '/authenticate'], async (req, res) => {
-  const deviceId = String(req.body?.bridgeDeviceId || req.body?.deviceId || '').trim();
-  const deviceSecret = String(req.body?.deviceSecret || req.body?.credential || '').trim();
+  const deviceId = String(req.body?.bridgeDeviceId || req.body?.deviceId || req.body?.device_id || req.body?.id || '').trim();
+  const deviceSecret = String(req.body?.deviceSecret || req.body?.credential || req.body?.device_secret || req.body?.secret || '').trim();
   if (!deviceId || !deviceSecret) return res.status(400).json({ error: 'bridgeDeviceId and deviceSecret are required' });
   const result = await query('SELECT * FROM bridge_devices WHERE device_id = $1', [deviceId]);
   const device = result.rows[0];
