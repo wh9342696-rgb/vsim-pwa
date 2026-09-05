@@ -1,0 +1,2378 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>VSIM - Global eSIM Companion</title>
+  <meta name="theme-color" content="#080B11" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="vsim-api-base" content="https://api.vsime.uk/api/v1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://api.vsime.uk; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests;" />
+  <script>
+    window.VSIM_API_BASE = 'https://api.vsime.uk/api/v1';
+  </script>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/vsim.svg" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="VSIM" />
+  <link rel="stylesheet" href="css/app.css" />
+  <script src="js/pwa-register.js" defer></script>
+</head>
+<body data-service-worker="service-worker.js">
+  <script>
+    (() => {
+      const blockKeys = ['F12', 'I', 'J', 'C', 'U'];
+      document.addEventListener('contextmenu', event => event.preventDefault());
+      document.addEventListener('keydown', event => {
+        const key = event.key && event.key.toUpperCase ? event.key.toUpperCase() : '';
+        const blockedShortcut = event.key === 'F12' ||
+          (event.ctrlKey && event.shiftKey && blockKeys.includes(key)) ||
+          (event.ctrlKey && key === 'U') ||
+          (event.metaKey && event.altKey && key === 'I');
+
+        if (blockedShortcut) {
+          event.preventDefault();
+          event.stopPropagation();
+          return false;
+        }
+      }, { passive: false });
+    })();
+  </script>
+
+  <!-- Native App Container Shell -->
+  <div class="app-container hide-nav" id="app">
+
+    <!-- Global Toast Messages Hub -->
+    <div class="toast-message-box" id="toastHub"></div>
+
+    <!-- Main Screens Viewport -->
+    <main class="main-viewport">
+
+      <!-- ==================================================================
+           1. SPLASH SCREEN (Initial Launch Screen)
+           ================================================================== -->
+      <section class="screen active" id="screen-splash">
+        <div class="splash-container">
+          <!-- Background Glow Effect -->
+          <div class="splash-bg-glow"></div>
+
+          <!-- Splash Top Bar with Quick Theme Switcher -->
+          <div class="splash-top-bar">
+            <div class="icon-button" id="themeToggleSplashBtn" onclick="toggleTheme()" title="Toggle Light / Dark mode">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Center Branding Content -->
+          <div class="splash-center-content">
+            <!-- Logo Symbol & Brand Name -->
+            <div class="splash-brand-hero">
+              <div class="splash-v-symbol">V</div>
+              <span class="splash-brand-text">VSIM</span>
+            </div>
+
+            <!-- Taglines -->
+            <h2 class="splash-tag-title">Stay Connected Anywhere</h2>
+            <p class="splash-tag-subtitle">Your Global eSIM Companion</p>
+
+            <!-- Animated Multi-color Neon Wave Ribbon -->
+            <div class="splash-wave-box">
+              <svg viewBox="0 0 320 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
+                  <linearGradient id="neonGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#5B42F3" />
+                    <stop offset="45%" stop-color="#EC4899" />
+                    <stop offset="100%" stop-color="#3B82F6" />
+                  </linearGradient>
+                  <linearGradient id="neonGrad2" x1="0%" y1="100%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#8B5CF6" />
+                    <stop offset="60%" stop-color="#C084FC" />
+                    <stop offset="100%" stop-color="#60A5FA" />
+                  </linearGradient>
+                  <linearGradient id="neonGrad3" x1="0%" y1="50%" x2="100%" y2="50%">
+                    <stop offset="0%" stop-color="#7C3AED" stop-opacity="0.3" />
+                    <stop offset="50%" stop-color="#F43F5E" stop-opacity="0.6" />
+                    <stop offset="100%" stop-color="#38BDF8" stop-opacity="0.2" />
+                  </linearGradient>
+                </defs>
+
+                <!-- Flowing Wave Strands -->
+                <path class="wave-line-1" d="M10 50C60 15 110 75 160 45C210 15 260 75 310 40" stroke="url(#neonGrad1)" stroke-width="3.5" stroke-linecap="round" filter="url(#glowEffect)"/>
+                <path class="wave-line-2" d="M15 58C65 25 115 85 165 52C215 20 265 82 305 48" stroke="url(#neonGrad2)" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M20 42C75 10 120 70 170 38C220 10 270 70 300 35" stroke="url(#neonGrad3)" stroke-width="5" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Bottom Action Button -->
+          <div class="splash-action-bottom">
+            <button class="btn-primary-purple" onclick="handleGetStarted()">Get Started</button>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           2. LOGIN SCREEN (Modernized)
+           ================================================================== -->
+      <section class="screen" id="screen-login">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <div class="icon-button" onclick="navigateTo('screen-splash')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+          </div>
+          <div class="icon-button" onclick="toggleTheme()" title="Toggle Theme">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </div>
+        </div>
+
+        <div class="screen-body" style="padding-top: 10px;">
+          <!-- Brand Emblem -->
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+            <div class="brand-v-logo" style="width: 34px; height: 34px; font-size: 19px; border-radius: 10px;">V</div>
+            <div>
+              <h2 style="font-size: 1.45rem; font-weight: 800; color: var(--text-white); letter-spacing: -0.3px;">Welcome Back</h2>
+              <p style="font-size: 0.82rem; color: var(--text-gray);">Log in to manage your eSIMs & daily earnings</p>
+            </div>
+          </div>
+
+          <!-- Segmented Switch (Login / Sign Up) -->
+          <div class="segmented-control-bar" style="margin-bottom: 20px;">
+            <button class="segmented-tab-item active" onclick="navigateTo('screen-login', false)">Login</button>
+            <button class="segmented-tab-item" onclick="navigateTo('screen-signup', false)">Sign Up</button>
+          </div>
+
+          <form onsubmit="handleLogin(event)">
+            <!-- Phone Input with Country Code -->
+            <div class="form-group-item">
+              <label class="form-label-text">Phone Number</label>
+              <div class="phone-composite-group">
+                <div class="country-code-badge"><span>+256</span></div>
+                <div class="auth-input-wrapper" style="flex: 1;">
+                  <div class="auth-input-icon">&#9742;</div>
+                  <input type="tel" id="loginPhoneInput" class="auth-input-clean" placeholder="0700 123 456" inputmode="numeric" maxlength="10" pattern="07[0-9]{8}" required />
+                </div>
+              </div>
+            </div>
+
+            <!-- Password Input with Eye Reveal -->
+            <div class="form-group-item">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="form-label-text" style="margin-bottom: 0;">Password</label>
+                <span onclick="navigateTo('screen-reset-password')" style="color: var(--primary-purple); font-size: 0.78rem; font-weight: 700; cursor: pointer;">Forgot password?</span>
+              </div>
+              <div class="auth-input-wrapper">
+                <div class="auth-input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                </div>
+                <input type="password" id="loginPass" class="auth-input-clean" placeholder="Enter password" value="" required />
+                <span class="auth-input-icon" onclick="togglePass('loginPass')" style="cursor: pointer;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </span>
+              </div>
+            </div>
+
+            <!-- Simplified login: only phone number and password -->
+
+            <button type="submit" class="btn-primary-purple">
+              <span>Sign In</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </button>
+          </form>
+
+          <!-- Biometric Fast Login Pill -->
+          <div class="biometric-auth-banner" onclick="simulateBiometricAuth()">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary-purple)" stroke-width="2">
+                <path d="M12 2a10 10 0 0 0-10 10c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"></path>
+              </svg>
+              <span style="font-size: 0.84rem; font-weight: 600; color: var(--text-white);">Sign in with Biometrics / Face ID</span>
+            </div>
+            <span style="font-size: 0.74rem; color: var(--primary-purple); font-weight: 700;">Instant</span>
+          </div>
+
+          <!-- Divider -->
+          <div style="display: flex; align-items: center; margin: 20px 0 14px 0; color: var(--text-muted); font-size: 0.76rem;">
+            <div style="flex: 1; height: 1px; background: var(--border-subtle);"></div>
+            <span style="padding: 0 10px;">or continue with</span>
+            <div style="flex: 1; height: 1px; background: var(--border-subtle);"></div>
+          </div>
+
+          <!-- Modern SSO Grid -->
+          <div class="social-login-grid">
+            <div class="social-login-btn" aria-disabled="true" style="opacity: 0.45; cursor: not-allowed;">
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"/>
+                <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
+                <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3 0-.8.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12 0 14.5s.7 4.8 1.9 7.2l3.7-2.9z"/>
+                <path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 17C3.7 20.7 7.5 24 12 24z"/>
+              </svg>
+              <span>Google</span>
+            </div>
+            <div class="social-login-btn" aria-disabled="true" style="opacity: 0.45; cursor: not-allowed;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.85c.65-.8 1.09-1.92.97-3.04-.94.04-2.07.63-2.73 1.4-.58.67-1.09 1.77-.95 2.87 1.04.08 2.1-.47 2.71-1.23z"/>
+              </svg>
+              <span>Apple</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           3. SIGN UP SCREEN (Modernized)
+           ================================================================== -->
+      <section class="screen" id="screen-signup">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <div class="icon-button" onclick="navigateTo('screen-login')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+          </div>
+          <div class="icon-button" onclick="toggleTheme()" title="Toggle Theme">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </div>
+        </div>
+
+        <div class="screen-body" style="padding-top: 10px;">
+          <!-- Brand Emblem -->
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+            <div class="brand-v-logo" style="width: 34px; height: 34px; font-size: 19px; border-radius: 10px;">V</div>
+            <div>
+              <h2 style="font-size: 1.45rem; font-weight: 800; color: var(--text-white); letter-spacing: -0.3px;">Create Account</h2>
+              <p style="font-size: 0.82rem; color: var(--text-gray);">Get your free global eSIM and start earning</p>
+            </div>
+          </div>
+
+          <!-- Segmented Switch (Login / Sign Up) -->
+          <div class="segmented-control-bar" style="margin-bottom: 20px;">
+            <button class="segmented-tab-item" onclick="navigateTo('screen-login', false)">Login</button>
+            <button class="segmented-tab-item active" onclick="navigateTo('screen-signup', false)">Sign Up</button>
+          </div>
+
+          <form onsubmit="handleSignup(event)">
+            <!-- Full Name -->
+            <div class="form-group-item">
+              <label class="form-label-text">Full Name</label>
+              <div class="auth-input-wrapper">
+                <div class="auth-input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                </div>
+                <input type="text" class="auth-input-clean" placeholder="e.g. John Doe" required />
+              </div>
+            </div>
+
+            <!-- Phone Number with Country Code -->
+            <div class="form-group-item">
+              <label class="form-label-text">Phone Number</label>
+              <div class="phone-composite-group signup-phone-group">
+                <div class="country-code-badge signup-country-code">
+                  <span>+256</span>
+                </div>
+                <div class="auth-input-wrapper signup-phone-wrapper" style="flex: 1;">
+                  <div class="auth-input-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                    </svg>
+                  </div>
+                  <input type="tel" id="signupPhoneInput" class="auth-input-clean signup-phone-input" placeholder="0700 123 456" inputmode="numeric" maxlength="10" pattern="07[0-9]{8}" required />
+                </div>
+              </div>
+            </div>
+
+            <!-- Password with Eye Toggle -->
+            <div class="form-group-item">
+              <label class="form-label-text">Create Password</label>
+              <div class="auth-input-wrapper">
+                <div class="auth-input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                </div>
+                <input type="password" id="signupPass" class="auth-input-clean" placeholder="Minimum 8 characters" required />
+                <span class="auth-input-icon" onclick="togglePass('signupPass')" style="cursor: pointer;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </span>
+              </div>
+            </div>
+
+            <!-- Referral Code (Optional) -->
+            <div class="form-group-item">
+              <label class="form-label-text" id="signupReferralLabel">Referral Code <span class="signup-referral-status">Optional</span> <span style="color: var(--green-accent); font-weight: 600;">(+UGX 5,000 Bonus)</span></label>
+              <div class="auth-input-wrapper">
+                <div class="auth-input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 12 20 22 4 22 4 12"></polyline>
+                    <rect x="2" y="7" width="20" height="5"></rect>
+                    <line x1="12" y1="22" x2="12" y2="7"></line>
+                  </svg>
+                </div>
+                <input type="text" id="signupRefCode" class="auth-input-clean" placeholder="e.g. VSIM123456 (optional)" style="text-transform: uppercase;" />
+              </div>
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="form-group-item">
+              <label class="form-label-text">Confirm Password</label>
+              <div class="auth-input-wrapper">
+                <div class="auth-input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                </div>
+                <input type="password" id="confirmPass" class="auth-input-clean" placeholder="Re-enter your password" required />
+                <span class="auth-input-icon" onclick="togglePass('confirmPass')" style="cursor: pointer;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </span>
+              </div>
+            </div>
+
+            <!-- Terms & Conditions -->
+            <div style="display: flex; align-items: flex-start; gap: 10px; margin: 16px 0 20px 0; font-size: 0.78rem; color: var(--text-gray); line-height: 1.35;">
+              <input type="checkbox" id="signupTerms" checked required style="accent-color: var(--primary-purple); width: 17px; height: 17px; margin-top: 2px;" />
+              <label for="signupTerms">I agree to the <span style="color: var(--primary-purple); font-weight: 600;">Terms of Service</span> and <span style="color: var(--primary-purple); font-weight: 600;">Privacy Policy</span></label>
+            </div>
+
+            <button type="submit" class="btn-primary-purple">
+              <span>Create Account</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </button>
+          </form>
+
+          <!-- Divider -->
+          <div style="display: flex; align-items: center; margin: 20px 0 14px 0; color: var(--text-muted); font-size: 0.76rem;">
+            <div style="flex: 1; height: 1px; background: var(--border-subtle);"></div>
+            <span style="padding: 0 10px;">or register with</span>
+            <div style="flex: 1; height: 1px; background: var(--border-subtle);"></div>
+          </div>
+
+          <!-- SSO Buttons -->
+          <div class="social-login-grid" style="margin-bottom: 20px;">
+            <div class="social-login-btn" aria-disabled="true" style="opacity: 0.45; cursor: not-allowed;">
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"/>
+                <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
+                <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3 0-.8.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12 0 14.5s.7 4.8 1.9 7.2l3.7-2.9z"/>
+                <path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 17C3.7 20.7 7.5 24 12 24z"/>
+              </svg>
+              <span>Google</span>
+            </div>
+            <div class="social-login-btn" aria-disabled="true" style="opacity: 0.45; cursor: not-allowed;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.85c.65-.8 1.09-1.92.97-3.04-.94.04-2.07.63-2.73 1.4-.58.67-1.09 1.77-.95 2.87 1.04.08 2.1-.47 2.71-1.23z"/>
+              </svg>
+              <span>Apple</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           4. RESET PASSWORD SCREEN (Modernized)
+           ================================================================== -->
+      <section class="screen" id="screen-reset-password">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <div class="icon-button" onclick="navigateTo('screen-login')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+            <span class="header-title-text">Reset Password</span>
+          </div>
+        </div>
+
+        <div class="screen-body" style="padding-top: 16px;">
+          <div style="margin-bottom: 24px;">
+            <div style="width: 56px; height: 56px; border-radius: 16px; background: rgba(91, 66, 243, 0.12); color: var(--primary-purple); display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--text-white);">Forgot Password?</h2>
+            <p style="font-size: 0.84rem; color: var(--text-gray); margin-top: 4px; line-height: 1.4;">
+              Use your registered phone number, new password, and your device passkey to reset securely.
+            </p>
+          </div>
+
+            <form onsubmit="handleReset(event)">
+            <div class="form-group-item">
+              <label class="form-label-text">Registered Phone Number</label>
+              <div class="auth-input-wrapper">
+                <div class="auth-input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                  </svg>
+                </div>
+                <input type="tel" id="resetPhoneInput" class="auth-input-clean" placeholder="0700 123 456" inputmode="numeric" maxlength="10" pattern="07[0-9]{8}" required />
+              </div>
+            </div>
+
+            <div class="form-group-item">
+              <label class="form-label-text">New Password</label>
+              <div class="auth-input-wrapper">
+                <div class="auth-input-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                </div>
+                <input type="password" id="resetNewPassword" class="auth-input-clean" placeholder="At least 6 characters" minlength="6" required />
+              </div>
+            </div>
+
+            <button type="submit" class="btn-primary-purple" style="margin-top: 14px;">Reset with Passkey</button>
+          </form>
+
+          <div style="text-align: center; margin-top: 24px; font-size: 0.85rem;">
+            <span onclick="navigateTo('screen-login')" style="color: var(--primary-purple); font-weight: 700; cursor: pointer;">Return to Login</span>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           5. ONBOARDING SCREEN
+           ================================================================== -->
+      <section class="screen" id="screen-onboarding">
+        <div class="onboarding-screen-body">
+          <div class="onboarding-topbar">
+            <span class="onboarding-step-label">WELCOME TO VSIM</span>
+            <button class="onboarding-skip-button" onclick="skipOnboarding()">Skip</button>
+          </div>
+
+          <div class="onboarding-content">
+            <div class="onboarding-visual" id="onboardingVisual">
+              <div class="onboarding-visual-ring"></div>
+              <div class="onboarding-visual-icon" id="onboardingVisualIcon">
+                <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="2" width="14" height="20" rx="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line><rect x="8" y="6" width="8" height="8" rx="1"></rect></svg>
+              </div>
+              <span class="onboarding-visual-tag">01 / 03</span>
+            </div>
+            <div class="onboarding-copy">
+              <p class="onboarding-eyebrow" id="onboardingEyebrow">YOUR CONNECTION, EVERYWHERE</p>
+              <h2 id="onboardingTitle">Stay connected without borders</h2>
+              <p id="onboardingDescription">Buy a travel eSIM in a few taps and get reliable mobile data wherever your journey takes you.</p>
+            </div>
+          </div>
+
+          <div class="onboarding-actions">
+            <div class="onboarding-dots" role="tablist" aria-label="Onboarding steps">
+              <button class="onboarding-dot active" role="tab" aria-label="Step 1" aria-selected="true" onclick="setOnboardingStep(0)"></button>
+              <button class="onboarding-dot" role="tab" aria-label="Step 2" aria-selected="false" onclick="setOnboardingStep(1)"></button>
+              <button class="onboarding-dot" role="tab" aria-label="Step 3" aria-selected="false" onclick="setOnboardingStep(2)"></button>
+            </div>
+            <button class="btn-primary-purple onboarding-next-button" id="onboardingNextButton" onclick="nextOnboardingStep()">Next</button>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           6. HOME SCREEN
+           ================================================================== -->
+      <section class="screen" id="screen-home">
+        <!-- Top App Bar -->
+        <div class="app-topbar">
+          <div class="brand-title-wrap">
+            <div class="brand-v-logo">V</div>
+            <span>VSIM</span>
+          </div>
+          <div class="topbar-actions-row">
+            <!-- Theme Toggle Button -->
+            <div class="icon-button" id="themeToggleHomeBtn" onclick="toggleTheme()" title="Toggle Light / Dark mode">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+            </div>
+            <!-- Notification Bell -->
+            <div class="icon-button" onclick="navigateTo('screen-notifications')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
+              <div class="unread-dot"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <!-- Wallet Balance Card -->
+          <div class="card-wallet-hero">
+            <div>
+              <div class="balance-label">Wallet Balance</div>
+              <div class="balance-num" id="homeBalDisplay">UGX 0</div>
+            </div>
+            <div class="wallet-hero-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                <line x1="2" y1="10" x2="22" y2="10"></line>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Referral Banner -->
+          <div class="card-referral-banner" onclick="navigateTo('screen-referral')">
+            <div style="display: flex; align-items: center;">
+              <div class="gift-box-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 12 20 22 4 22 4 12"></polyline>
+                  <rect x="2" y="7" width="20" height="5"></rect>
+                  <line x1="12" y1="22" x2="12" y2="7"></line>
+                  <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
+                  <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+                </svg>
+              </div>
+              <div>
+                <div class="referral-title">Invite & Earn</div>
+                <div class="referral-sub">Earn daily from active referrals</div>
+                <div class="referral-earnings-val">UGX 0</div>
+              </div>
+            </div>
+            <div class="badge-green-pill">+12%</div>
+          </div>
+
+          <!-- Quick Actions Grid -->
+          <div class="home-section-title">
+            <span>Quick Actions</span>
+          </div>
+
+          <div class="quick-actions-grid">
+            <div class="quick-action-card" onclick="navigateTo('screen-esims')">
+              <div class="icon-holder">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="5" y="2" width="14" height="20" rx="2"></rect>
+                  <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                </svg>
+              </div>
+              <span class="label-holder">Buy eSIM</span>
+            </div>
+
+            <div class="quick-action-card" onclick="navigateTo('screen-buy-airtime')">
+              <div class="icon-holder">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                </svg>
+              </div>
+              <span class="label-holder">Buy Airtime</span>
+            </div>
+
+            <div class="quick-action-card" onclick="navigateTo('screen-sell-airtime')">
+              <div class="icon-holder">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="1" x2="12" y2="23"></line>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+              </div>
+              <span class="label-holder">Sell Airtime</span>
+            </div>
+
+            <div class="quick-action-card" onclick="navigateTo('screen-my-esims')">
+              <div class="icon-holder">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                </svg>
+              </div>
+              <span class="label-holder">My eSIMs</span>
+            </div>
+          </div>
+
+          <!-- Recent Activity -->
+          <div class="home-section-title">
+            <span>Recent Activity</span>
+            <span class="action-link" onclick="navigateTo('screen-wallet')">See All</span>
+          </div>
+
+          <div class="activity-stream"></div>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           7. eSIMs CATALOG SCREEN (All Packages)
+           ================================================================== -->
+      <section class="screen" id="screen-esims">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <span class="header-title-text">eSIM Packages</span>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <!-- Search Bar -->
+          <div style="display: flex; align-items: center; gap: 8px; background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 12px; height: 44px; padding: 0 12px; margin-bottom: 12px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="catalogSearch" placeholder="Search countries" oninput="onSearchCatalog()" style="background: transparent; border: none; color: var(--text-white); width: 100%; outline: none; font-size: 0.88rem;" />
+          </div>
+
+          <!-- Category Chips -->
+          <div class="filter-categories-strip">
+            <div class="filter-category-pill active" onclick="onCategorySelect(this, 'all')">Popular</div>
+            <div class="filter-category-pill" onclick="onCategorySelect(this, 'europe')">Europe</div>
+            <div class="filter-category-pill" onclick="onCategorySelect(this, 'asia')">Asia</div>
+            <div class="filter-category-pill" onclick="onCategorySelect(this, 'africa')">Africa</div>
+            <div class="filter-category-pill" onclick="onCategorySelect(this, 'americas')">Americas</div>
+          </div>
+
+          <!-- 2x2 Grid Packages -->
+          <div class="packages-2x2-grid" id="packagesContainer">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           8. PACKAGE DETAILS SCREEN
+           ================================================================== -->
+      <section class="screen" id="screen-package-details">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <div class="icon-button" onclick="navigateBack()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <div class="package-photo-box" id="pkgHeroImg" style="height: 160px; border-radius: 14px; margin-bottom: 14px;">
+            <div style="position: absolute; top: 10px; right: 10px;">
+              <span class="badge-tag-income" id="pkgDetailIncomeTag">Daily Income</span>
+            </div>
+          </div>
+
+          <h2 id="pkgDetailTitle" style="font-size: 1.3rem; font-weight: 800; color: var(--text-white); margin-bottom: 12px;"></h2>
+
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 6px 14px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-subtle); font-size: 0.88rem;">
+              <span style="color: var(--text-gray);">Coverage</span>
+              <span id="pkgDetailCoverage" style="font-weight: 600; color: var(--text-white);"></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-subtle); font-size: 0.88rem;">
+              <span style="color: var(--text-gray);">Validity</span>
+              <span id="pkgDetailValidity" style="font-weight: 600; color: var(--text-white);"></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-subtle); font-size: 0.88rem;">
+              <span style="color: var(--text-gray);">Data</span>
+              <span id="pkgDetailData" style="font-weight: 600; color: var(--text-white);"></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-subtle); font-size: 0.88rem;">
+              <span style="color: var(--text-gray);">Type</span>
+              <span style="font-weight: 600; color: var(--text-white);">Date Only</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 0.88rem;">
+              <span style="color: var(--text-gray);">Price</span>
+              <span id="pkgDetailPrice" style="font-weight: 700; color: var(--text-white);"></span>
+            </div>
+          </div>
+
+          <button class="btn-primary-purple" onclick="goToCheckout()">Buy Now</button>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           9. CHECKOUT SCREEN
+           ================================================================== -->
+      <section class="screen" id="screen-checkout">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <div class="icon-button" onclick="navigateBack()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+            <span class="header-title-text">Order Checkout</span>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <div style="font-size: 0.9rem; font-weight: 700; color: var(--text-white); margin-bottom: 10px;">Order Summary</div>
+
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 14px; display: flex; align-items: center; gap: 14px; margin-bottom: 20px; box-shadow: var(--card-shadow);">
+            <div id="checkoutImgThumb" style="width: 58px; height: 58px; border-radius: 12px; background-size: cover; background-position: center; border: 1px solid var(--border-subtle);"></div>
+            <div style="flex: 1;">
+              <div id="checkoutItemTitle" style="font-size: 0.96rem; font-weight: 800; color: var(--text-white);"></div>
+              <div style="font-size: 0.76rem; color: var(--text-gray); margin-top: 2px;" id="checkoutItemSub">30 Days • Data Only</div>
+              <div style="margin-top: 5px;"><span class="badge-tag-income" id="checkoutItemInc">Daily Income</span></div>
+            </div>
+            <div id="checkoutItemPrice" style="font-weight: 900; font-size: 1.05rem; color: var(--primary-purple);"></div>
+          </div>
+
+          <div style="font-size: 0.9rem; font-weight: 700; color: var(--text-white); margin-bottom: 12px;">Choose Payment Method</div>
+
+          <!-- Payment Method: Mobile Money -->
+          <div class="network-select-card selected" id="payMethodMomoCard" style="margin-bottom: 12px; padding: 14px; cursor: pointer;" onclick="choosePayMethod(this, 'momo')">
+            <div class="radio-circle-indicator"></div>
+            <div style="flex: 1;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.92rem; font-weight: 700; color: var(--text-white);">Mobile Money</span>
+                <div style="display: flex; gap: 5px;">
+                  <span style="background: #eab308; color: #000; font-size: 0.65rem; font-weight: 900; padding: 2px 6px; border-radius: 4px;">MTN</span>
+                  <span style="background: #ef4444; color: #fff; font-size: 0.65rem; font-weight: 900; padding: 2px 6px; border-radius: 4px;">AIRTEL</span>
+                </div>
+              </div>
+              <div style="font-size: 0.75rem; color: var(--text-gray); margin-top: 3px;">Dynamic live merchant assigned in popup</div>
+            </div>
+          </div>
+
+          <!-- Payment Method: Wallet Balance -->
+          <div class="network-select-card" id="payMethodWalletCard" style="margin-bottom: 24px; padding: 14px; cursor: pointer;" onclick="choosePayMethod(this, 'wallet')">
+            <div class="radio-circle-indicator"></div>
+            <div style="flex: 1;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.92rem; font-weight: 700; color: var(--text-white);">VSIM Wallet Balance</span>
+                <span style="background: var(--green-bg); color: var(--green-accent); font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px;">Instant</span>
+              </div>
+              <div style="font-size: 0.75rem; color: var(--text-gray); margin-top: 3px;" id="checkoutWalletSub">Available: UGX 0</div>
+            </div>
+          </div>
+
+          <!-- Total Due Row -->
+          <div style="background: var(--bg-card-secondary); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <span style="font-size: 0.92rem; font-weight: 600; color: var(--text-gray);">Total Amount Due</span>
+            <span id="checkoutTotalVal" style="font-size: 1.3rem; font-weight: 900; color: var(--text-white);">UGX 0</span>
+          </div>
+
+          <button class="btn-primary-purple" id="checkoutMainBtn" onclick="submitCheckoutPayment()">
+            <span>Proceed to Payment</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: 6px;">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           REAL-TIME MOBILE MONEY CHECKOUT POPUP DIALOG
+           ================================================================== -->
+      <div class="modal-overlay-backdrop" id="mobileMoneyModal" onclick="handleModalBackdropClick(event)">
+        <div class="modal-dialog-box mobile-money-dialog" onclick="event.stopPropagation()">
+          
+          <!-- Dialog Header -->
+          <div class="modal-dialog-header">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="modal-dialog-title">Mobile Money Checkout</span>
+                <span class="live-merchant-badge">
+                  <span class="live-dot-pulse"></span>
+                  Live Merchant
+                </span>
+              </div>
+              <span class="package-modal-subtitle">Pay securely via MTN or Airtel Mobile Money</span>
+            </div>
+            <button class="modal-close-btn" type="button" onclick="closeMobileMoneyModal()" aria-label="Close dialog">✕</button>
+          </div>
+
+          <div class="modal-dialog-body" style="padding-top: 8px;">
+
+            <!-- Network Selection Switcher Inside Dialog -->
+            <div class="modal-network-tabs" id="modalNetworkTabs">
+              <button type="button" class="modal-network-tab active" id="modalTabMTN" onclick="switchModalNetwork('MTN')">
+                <span class="net-dot mtn"></span>
+                <span>MTN MoMo</span>
+              </button>
+              <button type="button" class="modal-network-tab" id="modalTabAIRTEL" onclick="switchModalNetwork('AIRTEL')">
+                <span class="net-dot airtel"></span>
+                <span>Airtel Money</span>
+              </button>
+            </div>
+
+            <!-- 1. Realtime Loading State -->
+            <div id="mobileMoneyLoading" class="payment-state-message" style="display: none;">
+              <div class="momo-spinner"></div>
+              <div style="font-weight: 700; color: var(--text-white); margin-top: 14px; font-size: 0.9rem;">Connecting to Merchant Network...</div>
+              <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">Assigning real-time active mobile money merchant</div>
+            </div>
+
+            <!-- 2. No Merchant / Searching State -->
+            <div id="mobileMoneyError" class="no-merchant-state" style="display: none;">
+              <div class="no-merchant-icon-wrap">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+              </div>
+              <div class="no-merchant-title" id="mobileMoneyErrorTitle">No Merchants Available</div>
+              <div class="no-merchant-desc" id="mobileMoneyErrorText">There are currently no active merchants online for this network.</div>
+              <div class="no-merchant-auto-status">
+                <span class="auto-scan-pulse"></span>
+                <span>Searching automatically for available merchants...</span>
+              </div>
+            </div>
+
+            <!-- 3. Active Merchant Content -->
+            <div id="mobileMoneyContent" style="display: none;">
+              
+              <!-- Prominent Merchant Hero Card -->
+              <div class="modern-merchant-hero">
+                <div class="merchant-hero-top">
+                  <div class="merchant-hero-network-badge">
+                    <span id="merchantNetwork" class="merchant-network-tag mtn">MTN</span>
+                    <span class="verified-tag">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      Verified Merchant
+                    </span>
+                  </div>
+                  <div class="merchant-amount-chip">
+                    <span class="amount-label">Amount:</span>
+                    <span id="merchantAmountDisplay" class="amount-val">UGX 0</span>
+                    <button type="button" class="btn-mini-copy" id="copyAmountBtn" onclick="copyModalField('amount')" title="Copy Amount">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="merchant-code-spotlight">
+                  <div class="code-spotlight-label">Merchant Number / Code</div>
+                  <div class="code-spotlight-val-row">
+                    <span id="merchantCode" class="spotlight-code-text">------</span>
+                    <button type="button" class="btn-spotlight-copy" id="copyCodeBtn" onclick="copyModalField('code')">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                      <span>Copy Number</span>
+                    </button>
+                  </div>
+                  <div class="merchant-meta-sub" id="merchantNameWrapper">
+                    <span id="merchantName"></span>
+                    <span id="merchantAccount" class="merchant-sub-account"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Payment Directions / Step-by-Step Card -->
+              <div class="modern-direction-card">
+                <div class="direction-header">
+                  <div class="direction-icon-wrap">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  </div>
+                  <span>Payment Directions</span>
+                </div>
+                <div class="direction-body">
+                  <p id="merchantInstructions" class="instruction-text"></p>
+                </div>
+                <div class="direction-ref-row">
+                  <span class="ref-hint">Reference: <strong id="merchantReference" style="font-family: monospace; color: var(--text-white);">VSIM-000000</strong></span>
+                  <button type="button" class="btn-mini-copy" id="copyRefBtn" onclick="copyModalField('ref')">Copy Ref</button>
+                </div>
+              </div>
+
+              <!-- Payer Phone Input Field -->
+              <div class="payer-input-container">
+                <label class="payer-input-label">Your Mobile Money Phone Number</label>
+                <div class="payer-input-box">
+                  <input id="merchantPayerPhone" class="modal-form-input modern-payer-input" placeholder="e.g. 0784 567 890" />
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Success Receipt State -->
+            <div id="mobileMoneySuccess" class="payment-success-state" style="display: none;">
+              <div class="success-icon-circle">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--text-white); margin-top: 10px;">Bundle renewed</h3>
+              <p style="font-size: 0.78rem; color: var(--text-gray); margin-top: 4px;">Your data has been added and your eSIM is active again.</p>
+              <div class="success-receipt-card">
+                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 6px;">
+                  <span style="color: var(--text-muted);">Reference:</span>
+                  <strong style="color: var(--text-white); font-family: monospace;" id="successReceiptRef"></strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 6px;">
+                  <span style="color: var(--text-muted);">Status:</span>
+                  <span class="badge-tag-income">Verified</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 6px;">
+                  <span style="color: var(--text-muted);">Data added:</span>
+                  <strong style="color: var(--accent-green);" id="successDataAdded">Bundle added</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.78rem;">
+                  <span style="color: var(--text-muted);">eSIM Status:</span>
+                  <strong style="color: var(--accent-green);">Active · Progress started</strong>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Dialog Footer Actions -->
+          <div class="modal-dialog-footer" id="modalNormalFooter">
+            <button type="button" class="btn-modal-cancel" onclick="closeMobileMoneyModal()">
+              <span>Cancel</span>
+            </button>
+            <button type="button" id="confirmMerchantPaymentBtn" class="btn-modal-confirm" onclick="confirmMobileMoneyPayment()" disabled>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>I Have Sent Payment</span>
+              <span id="confirmSpinner" class="btn-inline-spinner" style="display:none;"></span>
+            </button>
+          </div>
+
+          <div class="modal-dialog-footer" id="modalSuccessFooter" style="display: none;">
+            <button type="button" class="btn-modal-confirm" onclick="goToMyEsimsFromModal()" style="width: 100%;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="2"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+              </svg>
+              <span>View My eSIMs</span>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+
+      <!-- ==================================================================
+           10. MY ESIMS SCREEN
+           ================================================================== -->
+      <section class="screen" id="screen-my-esims">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <div class="icon-button" onclick="navigateTo('screen-home')">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+            <span class="header-title-text">My eSIMs</span>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <div class="segmented-control-bar">
+            <button class="segmented-tab-item active" onclick="filterMyESIMs(this, 'active')">Active</button>
+            <button class="segmented-tab-item" onclick="filterMyESIMs(this, 'expired')">Expired</button>
+          </div>
+
+          <div id="myESIMContainer"></div>
+        </div>
+      </section>
+
+      <!-- Bundle picker for active eSIMs with no remaining data -->
+      <div class="modal-overlay-backdrop" id="esimBundleModal" onclick="closeEsimBundleModal(event)">
+        <div class="modal-dialog-box esim-bundle-dialog" onclick="event.stopPropagation()">
+          <div class="modal-dialog-header">
+            <div>
+              <span class="modal-dialog-title">Choose a new bundle</span>
+              <span class="package-modal-subtitle">Available bundles published by VSIM</span>
+            </div>
+            <button class="modal-close-btn" type="button" onclick="closeEsimBundleModal()" aria-label="Close bundle picker">✕</button>
+          </div>
+          <div class="modal-dialog-body">
+            <div class="esim-bundle-list" id="esimBundleList"></div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ==================================================================
+           11. eSIM DETAILS SCREEN (QR & ICCID)
+           ================================================================== -->
+      <section class="screen" id="screen-esim-details">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <div class="icon-button" onclick="navigateBack()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+            <span class="header-title-text">eSIM Details</span>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <div class="package-photo-box" style="height: 140px; border-radius: 14px; margin-bottom: 14px;">
+            <div style="position: absolute; top: 10px; right: 10px;">
+              <span class="badge-tag-active">Active</span>
+            </div>
+          </div>
+
+          <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text-white); margin-bottom: 12px;"></h2>
+
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 6px 14px; margin-bottom: 20px; box-shadow: var(--card-shadow);">
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-subtle); font-size: 0.85rem;">
+              <span style="color: var(--text-gray);">ICCID</span>
+              <span style="font-family: monospace; font-size: 0.8rem; font-weight: 600; color: var(--text-white);"></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-subtle); font-size: 0.85rem;">
+              <span style="color: var(--text-gray);">Activated On</span>
+              <span style="font-weight: 600; color: var(--text-white);"></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-subtle); font-size: 0.85rem;">
+              <span style="color: var(--text-gray);">Expiry Date</span>
+              <span style="font-weight: 600; color: var(--text-white);"></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border-subtle); font-size: 0.85rem;">
+              <span style="color: var(--text-gray);">Data Remaining</span>
+              <span style="font-weight: 600; color: var(--text-white);"></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 0.85rem;">
+              <span style="color: var(--text-gray);">Daily Income</span>
+              <span style="font-weight: 700; color: var(--yellow-accent);"></span>
+            </div>
+          </div>
+
+          <button class="btn-primary-purple" onclick="openQRModalSheet()">View QR Code</button>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           12. WALLET SCREEN
+           ================================================================== -->
+      <section class="screen" id="screen-wallet">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <span class="header-title-text">Wallet</span>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <div class="card-wallet-hero">
+            <div>
+              <div class="balance-label">Wallet Balance</div>
+              <div class="balance-num" id="walletScreenBal">UGX 0</div>
+            </div>
+            <div class="wallet-hero-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                <line x1="2" y1="10" x2="22" y2="10"></line>
+              </svg>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <button class="btn-primary-purple" onclick="navigateTo('screen-esims')">Top Up</button>
+            <button class="btn-ghost-dark" onclick="navigateTo('screen-withdraw')">Withdraw</button>
+          </div>
+
+          <div class="home-section-title">
+            <span>Recent Transactions</span>
+            <span class="action-link" onclick="navigateTo('screen-wallet')" role="button" tabindex="0">See All</span>
+          </div>
+
+          <div class="activity-stream"></div>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           13. TOP UP SCREEN
+           ================================================================== -->
+      <section class="screen" id="screen-topup">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <div class="icon-button" onclick="navigateBack()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+            <span class="header-title-text">Top Up</span>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <label class="form-label-text">Select Network</label>
+          <div class="network-pills-row">
+            <div class="network-select-card selected" onclick="pickNetwork(this)">
+              <div class="radio-circle-indicator"></div>
+              <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-white);">MTN</span>
+            </div>
+            <div class="network-select-card" onclick="pickNetwork(this)">
+              <div class="radio-circle-indicator"></div>
+              <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-white);">Airtel</span>
+            </div>
+          </div>
+
+          <div class="form-group-item">
+            <label class="form-label-text">Payout Phone Number</label>
+            <input type="tel" class="form-input-field" placeholder="07xxxxxxxx" value="" />
+          </div>
+
+          <div class="form-group-item">
+            <label class="form-label-text">Amount</label>
+            <input type="number" id="topupVal" class="form-input-field" placeholder="Amount" value="" />
+          </div>
+
+          <div id="topupSelectedPackage" style="display: none; margin: 10px 0 16px; padding: 12px; border: 1px solid var(--border-subtle); border-radius: 12px; color: var(--text-gray); font-size: 0.82rem;"></div>
+
+          <div class="chips-row">
+            <button class="chip-select-btn" onclick="selectChip('topupVal', 10000)">10K</button>
+            <button class="chip-select-btn selected" onclick="selectChip('topupVal', 20000)">20K</button>
+            <button class="chip-select-btn" onclick="selectChip('topupVal', 50000)">50K</button>
+            <button class="chip-select-btn" onclick="selectChip('topupVal', 100000)">100K</button>
+            <button class="chip-select-btn" onclick="focusField('topupVal')">Other</button>
+          </div>
+
+          <button class="btn-primary-purple" onclick="execTopUp()">Continue</button>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           14. WITHDRAW SCREEN
+           ================================================================== -->
+      <section class="screen" id="screen-withdraw">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <div class="icon-button" onclick="navigateBack()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+            <span class="header-title-text">Withdraw</span>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <div class="form-group-item">
+            <label class="form-label-text">Withdraw To</label>
+            <div class="network-pills-row" id="withdrawNetworkOptions">
+              <div class="network-select-card selected" data-network="MTN" onclick="chooseWithdrawNetwork('MTN', this)"><div class="radio-circle-indicator"></div><span>MTN</span></div>
+              <div class="network-select-card" data-network="AIRTEL" onclick="chooseWithdrawNetwork('AIRTEL', this)"><div class="radio-circle-indicator"></div><span>Airtel</span></div>
+            </div>
+          </div>
+
+          <div class="form-group-item">
+            <label class="form-label-text">Phone Number</label>
+            <input id="withdrawPhone" type="tel" class="form-input-field" placeholder="0766 123 456" value="" maxlength="10" inputmode="numeric" oninput="syncWithdrawNetwork()" />
+            <div id="withdrawNetworkHint" class="form-field-hint">Use a 10-digit number beginning with 076.</div>
+          </div>
+
+          <div class="form-group-item">
+            <label class="form-label-text">Amount</label>
+            <input type="number" id="withdrawVal" class="form-input-field" placeholder="Amount" value="" oninput="calcWithdrawReceive()" />
+          </div>
+
+          <div class="chips-row">
+            <button class="chip-select-btn" onclick="selectChip('withdrawVal', 5000); calcWithdrawReceive();">5K</button>
+            <button class="chip-select-btn" onclick="selectChip('withdrawVal', 20000); calcWithdrawReceive();">20K</button>
+            <button class="chip-select-btn" onclick="selectChip('withdrawVal', 50000); calcWithdrawReceive();">50K</button>
+            <button class="chip-select-btn selected" onclick="selectChip('withdrawVal', 100000); calcWithdrawReceive();">100K</button>
+            <button class="chip-select-btn" onclick="focusField('withdrawVal')">Other</button>
+          </div>
+
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 12px 14px; margin-bottom: 20px; box-shadow: var(--card-shadow);">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-gray);">
+              <span>You will receive</span>
+              <span id="withdrawReceiveVal" style="font-weight: 700; color: var(--text-white);">UGX 0</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+              <span>Fee</span>
+              <span id="withdrawFeeVal">UGX 0</span>
+            </div>
+          </div>
+
+          <button class="btn-primary-purple" onclick="execWithdraw()">Continue</button>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           15. AIRTIME HUB SCREEN
+           ================================================================== -->
+      <section class="screen" id="screen-airtime">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <span class="header-title-text">Airtime</span>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <div class="airtime-selection-card" onclick="navigateTo('screen-buy-airtime')">
+            <div class="airtime-icon-circle blue">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+              </svg>
+            </div>
+            <div>
+              <div style="font-size: 1rem; font-weight: 700; color: var(--text-white);">Buy Airtime</div>
+              <div style="font-size: 0.78rem; color: var(--text-gray); margin-top: 2px;">Pay the standard amount and receive airtime manually</div>
+            </div>
+          </div>
+
+          <div class="airtime-selection-card" onclick="navigateTo('screen-sell-airtime')">
+            <div class="airtime-icon-circle orange">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              </svg>
+            </div>
+            <div>
+              <div style="font-size: 1rem; font-weight: 700; color: var(--text-white);">Sell Airtime</div>
+              <div style="font-size: 0.78rem; color: var(--text-gray); margin-top: 2px;">Sell your airtime instantly</div>
+            </div>
+          </div>
+
+          <div class="home-section-title" style="margin-top: 20px;">
+            <span>Recent Transactions</span>
+          </div>
+
+          <div class="activity-stream"></div>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           16. BUY AIRTIME SCREEN
+           ================================================================== -->
+      <section class="screen" id="screen-buy-airtime">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <div class="icon-button" onclick="navigateBack()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+            <span class="header-title-text">Buy Airtime</span>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <label class="form-label-text">Select Network</label>
+          <div class="network-pills-row">
+            <div class="network-select-card selected" onclick="pickNetwork(this)">
+              <div class="radio-circle-indicator"></div>
+              <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-white);">MTN</span>
+            </div>
+            <div class="network-select-card" onclick="pickNetwork(this)">
+              <div class="radio-circle-indicator"></div>
+              <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-white);">Airtel</span>
+            </div>
+          </div>
+
+          <div class="form-group-item">
+            <label class="form-label-text">Phone Number</label>
+            <input type="tel" class="form-input-field" placeholder="07xxxxxxxx" value="" />
+          </div>
+
+          <div class="chips-row">
+            <button class="chip-select-btn" onclick="selectChip('buyAirVal', 1000)">1K</button>
+            <button class="chip-select-btn" onclick="selectChip('buyAirVal', 2000)">2K</button>
+            <button class="chip-select-btn selected" onclick="selectChip('buyAirVal', 5000)">5K</button>
+            <button class="chip-select-btn" onclick="selectChip('buyAirVal', 10000)">10K</button>
+            <button class="chip-select-btn" onclick="focusField('buyAirVal')">Other</button>
+          </div>
+
+          <input type="hidden" id="buyAirVal" value="5000" />
+          <button class="btn-primary-purple" onclick="execBuyAirtime()">Buy Now</button>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           17. SELL AIRTIME SCREEN
+           ================================================================== -->
+      <div class="modal-overlay-backdrop" id="airtimePurchaseModal" onclick="if (event.target === this) closeAirtimePurchaseModal()">
+        <div class="modal-dialog-box mobile-money-dialog" onclick="event.stopPropagation()">
+          <div class="modal-dialog-header">
+            <div>
+              <span class="modal-dialog-title">Confirm Airtime Order</span>
+              <span class="package-modal-subtitle">Deposit the full standard amount, then our team will send your airtime.</span>
+            </div>
+            <button class="modal-close-btn" type="button" onclick="closeAirtimePurchaseModal()" aria-label="Close dialog">&#10005;</button>
+          </div>
+          <div class="modal-dialog-body">
+            <div class="modern-merchant-hero">
+              <div class="merchant-hero-top"><span class="verified-tag">Manual delivery</span><span class="merchant-amount-chip"><span class="amount-label">Airtime</span> <strong id="airtimePurchaseAmount">UGX 0</strong></span></div>
+              <div class="merchant-code-spotlight"><div class="code-spotlight-label">Deposit standard amount</div><div id="airtimeDepositAmount" class="spotlight-code-text">UGX 0</div><div class="merchant-meta-sub">After admin verifies your deposit, the requested airtime will be sent manually.</div></div>
+            </div>
+            <div class="modern-direction-card">
+              <div class="direction-header"><span>Merchant deposit number</span></div>
+              <div class="direction-body"><div id="airtimeMerchantNumber" class="spotlight-code-text">------</div><p class="instruction-text">Send the deposit manually, then tap the confirmation button below.</p></div>
+              <div class="direction-ref-row"><span class="ref-hint">Reference: <strong id="airtimePurchaseReference" style="font-family: monospace; color: var(--text-white);"></strong></span></div>
+            </div>
+          </div>
+          <div class="modal-dialog-footer">
+            <button type="button" class="btn-modal-cancel" onclick="closeAirtimePurchaseModal()">Cancel</button>
+            <button type="button" class="btn-modal-confirm" onclick="confirmAirtimePurchase()">I Have Deposited</button>
+          </div>
+        </div>
+      </div>
+      <section class="screen" id="screen-sell-airtime">
+      <div class="modal-overlay-backdrop" id="airtimeSaleModal" onclick="if (event.target === this) closeAirtimeSaleModal()">
+        <div class="modal-dialog-box mobile-money-dialog" onclick="event.stopPropagation()">
+          <div class="modal-dialog-header"><div><span class="modal-dialog-title">Sell Airtime</span><span class="package-modal-subtitle">Send airtime to our number and receive cash after verification.</span></div><button class="modal-close-btn" type="button" onclick="closeAirtimeSaleModal()" aria-label="Close dialog">&#10005;</button></div>
+          <div class="modal-dialog-body">
+            <div class="modern-merchant-hero"><div class="merchant-hero-top"><span class="verified-tag">Manual verification</span><span class="merchant-amount-chip"><span class="amount-label">Your airtime</span> <strong id="airtimeSaleAmount">UGX 0</strong></span></div><div class="merchant-code-spotlight"><div class="code-spotlight-label">Send airtime to this number</div><div id="airtimeSaleMerchantNumber" class="spotlight-code-text">------</div><div class="merchant-meta-sub">Transfer the selected airtime amount manually, then confirm below.</div></div></div>
+            <div class="modern-direction-card"><div class="direction-header"><span>Your payout</span></div><div class="direction-body"><div id="airtimeSalePayout" class="spotlight-code-text">UGX 0</div><p class="instruction-text">This is the discounted cash value. Airtime is purchased at a lower rate and paid after admin verification.</p></div><div class="direction-ref-row"><span class="ref-hint">Payout phone: <strong id="airtimeSalePayoutPhone" style="color: var(--text-white);"></strong></span><span class="ref-hint">Ref: <strong id="airtimeSaleReference" style="font-family: monospace; color: var(--text-white);"></strong></span></div></div>
+          </div>
+          <div class="modal-dialog-footer"><button type="button" class="btn-modal-cancel" onclick="closeAirtimeSaleModal()">Cancel</button><button type="button" class="btn-modal-confirm" onclick="confirmAirtimeSale()">I Have Sent Airtime</button></div>
+        </div>
+      </div>
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <div class="icon-button" onclick="navigateBack()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+            <span class="header-title-text">Sell Airtime</span>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <label class="form-label-text">Select Network</label>
+          <div class="network-pills-row">
+            <div class="network-select-card" onclick="pickNetwork(this)">
+              <div class="radio-circle-indicator"></div>
+              <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-white);">MTN</span>
+            </div>
+            <div class="network-select-card selected" onclick="pickNetwork(this)">
+              <div class="radio-circle-indicator"></div>
+              <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-white);">Airtel</span>
+            </div>
+          </div>
+
+          <div class="form-group-item">
+            <label class="form-label-text">Phone Number to Receive Payment</label>
+            <input type="tel" class="form-input-field" placeholder="07xxxxxxxx" value="" />
+          </div>
+
+          <div class="form-group-item">
+            <label class="form-label-text">Amount to Sell</label>
+            <input type="number" id="sellAirVal" class="form-input-field" placeholder="Amount" value="" />
+          </div>
+
+          <div class="chips-row">
+            <button class="chip-select-btn" onclick="selectChip('sellAirVal', 1000)">1K</button>
+            <button class="chip-select-btn" onclick="selectChip('sellAirVal', 2000)">2K</button>
+            <button class="chip-select-btn" onclick="selectChip('sellAirVal', 5000)">5K</button>
+            <button class="chip-select-btn selected" onclick="selectChip('sellAirVal', 10000)">10K</button>
+            <button class="chip-select-btn" onclick="focusField('sellAirVal')">Other</button>
+          </div>
+
+          <button class="btn-primary-purple" onclick="execSellAirtime()">Sell Now</button>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           18. PROFILE SCREEN
+           ================================================================== -->
+      <section class="screen" id="screen-profile">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <span class="header-title-text">Profile</span>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <!-- Profile Header Card (Clickable to Edit Profile) -->
+          <div class="profile-header-card" onclick="navigateTo('screen-edit-profile')">
+            <div class="profile-avatar-circle" id="profileCardAvatar"></div>
+            <div style="flex: 1;">
+              <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-white);" id="profileCardName"></div>
+              <div style="font-size: 0.78rem; color: var(--text-gray); margin-top: 1px;" id="profileCardPhone"></div>
+              <div style="margin-top: 4px;">
+                <span class="badge-green-pill" id="profileKycStatus" style="font-size: 0.68rem; padding: 2px 8px;">Unverified</span>
+              </div>
+            </div>
+            <div style="color: var(--text-muted);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </div>
+          </div>
+
+          <div class="menu-card-group">
+            <!-- Appearance / Dark Mode Toggle Row -->
+            <div class="menu-row-item" onclick="toggleTheme()">
+              <div class="menu-row-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-gray)" stroke-width="2">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+                <span>Dark Mode</span>
+              </div>
+              <div class="theme-switch-toggle active" id="profileThemeToggle">
+                <div class="theme-switch-knob"></div>
+              </div>
+            </div>
+
+            <!-- Install the customer app as a standalone PWA -->
+            <div class="menu-row-item pwa-install-row" id="pwaInstallRow">
+              <div class="menu-row-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green-accent)" stroke-width="2">
+                  <path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path>
+                </svg>
+                <div>
+                  <span id="pwaInstallLabel">Install VSIM app</span>
+                  <small class="pwa-install-help" id="pwaInstallHelp">Use VSIM like a standalone app</small>
+                </div>
+              </div>
+              <div class="pwa-action-buttons">
+                <button class="pwa-share-button" id="pwaShareButton" type="button" onclick="shareUserPwa()">Share</button>
+                <button class="pwa-install-button" id="pwaInstallButton" type="button" onclick="installUserPwa()">Install</button>
+              </div>
+            </div>
+
+            <!-- KYC Verification Screen Link -->
+            <div class="menu-row-item" onclick="navigateTo('screen-kyc')">
+              <div class="menu-row-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-gray)" stroke-width="2">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                <span>KYC Verification</span>
+              </div>
+              <div class="menu-row-right">
+                <span style="color: var(--green-accent);">Tier 2 Verified</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </div>
+            </div>
+
+            <!-- Referral & Affiliate Screen Link -->
+            <div class="menu-row-item" onclick="navigateTo('screen-referral')">
+              <div class="menu-row-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-gray)" stroke-width="2">
+                  <polyline points="20 12 20 22 4 22 4 12"></polyline>
+                  <rect x="2" y="7" width="20" height="5"></rect>
+                  <line x1="12" y1="22" x2="12" y2="7"></line>
+                </svg>
+                <span>Referral & Affiliate</span>
+              </div>
+              <div class="menu-row-right">
+                <span>UGX 0</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </div>
+            </div>
+
+            <!-- My eSIMs Screen Link -->
+            <div class="menu-row-item" onclick="navigateTo('screen-my-esims')">
+              <div class="menu-row-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-gray)" stroke-width="2">
+                  <rect x="5" y="2" width="14" height="20" rx="2"></rect>
+                  <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                </svg>
+                <span>My eSIMs</span>
+              </div>
+              <div class="menu-row-right">
+                <span id="profileActiveEsimCount" style="color: var(--green-accent);">0 Active</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </div>
+            </div>
+
+            <!-- My Transactions / Wallet Link -->
+            <div class="menu-row-item" onclick="navigateTo('screen-wallet')">
+              <div class="menu-row-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-gray)" stroke-width="2">
+                  <line x1="12" y1="1" x2="12" y2="23"></line>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+                <span>My Transactions</span>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-gray)" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+
+            <!-- Notification Settings Screen Link -->
+            <div class="menu-row-item" onclick="navigateTo('screen-notification-settings')">
+              <div class="menu-row-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-gray)" stroke-width="2">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <span>Notification Settings</span>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-gray)" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+
+            <!-- Language Screen Link -->
+            <div class="menu-row-item" onclick="navigateTo('screen-language')">
+              <div class="menu-row-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-gray)" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="2" y1="12" x2="22" y2="12"></line>
+                </svg>
+                <span>Language</span>
+              </div>
+              <div class="menu-row-right">
+                <span id="currentLangLabel">English (US)</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </div>
+            </div>
+
+            <!-- Help Center Screen Link -->
+            <div class="menu-row-item" onclick="navigateTo('screen-help')">
+              <div class="menu-row-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-gray)" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <span>Help Center</span>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-gray)" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+
+            <!-- Log Out -->
+            <div class="menu-row-item danger-logout" onclick="execLogout()">
+              <div class="menu-row-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red-accent)" stroke-width="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                <span>Log Out</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           19. NOTIFICATION CENTER SCREEN (Notifications Inbox)
+           ================================================================== -->
+      <section class="screen" id="screen-notifications">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <div class="icon-button" onclick="navigateBack()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+            <span class="header-title-text">Notifications</span>
+          </div>
+          <div class="icon-button" onclick="navigateTo('screen-notification-settings')" title="Notification Settings">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <!-- Notification Filter Pills & Actions -->
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+            <div class="filter-categories-strip" style="margin-bottom: 0;">
+              <div class="filter-category-pill active" onclick="filterNotificationList(this, 'all')">All (<span id="notifTotalCount">0</span>)</div>
+              <div class="filter-category-pill" onclick="filterNotificationList(this, 'unread')">Unread (<span id="notifUnreadCount">0</span>)</div>
+              <div class="filter-category-pill" onclick="filterNotificationList(this, 'system')">System</div>
+            </div>
+            <span onclick="markAllNotificationsRead()" style="color: var(--primary-purple); font-size: 0.76rem; font-weight: 700; cursor: pointer; white-space: nowrap;">Mark read</span>
+          </div>
+
+          <!-- Notification Items Stream -->
+          <div class="notifications-stream-list" id="notificationListContainer"></div>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           19B. NOTIFICATION SETTINGS SCREEN (Dedicated Screen)
+           ================================================================== -->
+      <section class="screen" id="screen-notification-settings">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <div class="icon-button" onclick="navigateBack()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+            <span class="header-title-text">Notification Settings</span>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-gray); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Push Notifications</div>
+          <div class="menu-card-group">
+            <div class="settings-toggle-row">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-title">Allow Push Notifications</div>
+                <div class="settings-toggle-desc">Receive real-time alerts and updates on this device</div>
+              </div>
+              <label class="custom-switch">
+                <input type="checkbox" id="pushMasterToggle" checked onchange="toggleNotifyOption('pushMaster', this.checked)" />
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+
+            <div class="settings-toggle-row">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-title">eSIM Expiry & Data Alerts</div>
+                <div class="settings-toggle-desc">Notify when eSIM data hits 80% or expires soon</div>
+              </div>
+              <label class="custom-switch">
+                <input type="checkbox" id="pushEsimToggle" checked onchange="toggleNotifyOption('esimAlerts', this.checked)" />
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+
+            <div class="settings-toggle-row">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-title">Daily Income & Rewards</div>
+                <div class="settings-toggle-desc">Instant notification whenever daily yields are credited</div>
+              </div>
+              <label class="custom-switch">
+                <input type="checkbox" id="pushIncomeToggle" checked onchange="toggleNotifyOption('incomeAlerts', this.checked)" />
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+
+            <div class="settings-toggle-row">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-title">Transactions & Wallet</div>
+                <div class="settings-toggle-desc">Receipts for top-ups, withdrawals & airtime sales</div>
+              </div>
+              <label class="custom-switch">
+                <input type="checkbox" id="pushTxToggle" checked onchange="toggleNotifyOption('txAlerts', this.checked)" />
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-gray); text-transform: uppercase; margin: 18px 0 8px 0; letter-spacing: 0.5px;">Channels & Marketing</div>
+          <div class="menu-card-group">
+            <div class="settings-toggle-row">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-title">SMS Notifications</div>
+                <div class="settings-toggle-desc">Receive critical OTPs and transaction receipts by SMS</div>
+              </div>
+              <label class="custom-switch">
+                <input type="checkbox" id="smsToggle" checked onchange="toggleNotifyOption('smsAlerts', this.checked)" />
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+
+            <div class="settings-toggle-row">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-title">Email Receipts</div>
+                <div class="settings-toggle-desc">Send monthly summary and PDF invoices to your email</div>
+              </div>
+              <label class="custom-switch">
+                <input type="checkbox" id="emailToggle" onchange="toggleNotifyOption('emailAlerts', this.checked)" />
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+
+            <div class="settings-toggle-row">
+              <div class="settings-toggle-info">
+                <div class="settings-toggle-title">Promotions & Discounts</div>
+                <div class="settings-toggle-desc">Special eSIM country deals and double-reward weekends</div>
+              </div>
+              <label class="custom-switch">
+                <input type="checkbox" id="promoToggle" checked onchange="toggleNotifyOption('promoAlerts', this.checked)" />
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <button class="btn-primary-purple" style="margin-top: 10px;" onclick="saveNotificationSettings()">Save Preferences</button>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           20. KYC VERIFICATION SCREEN (Dedicated Screen)
+           ================================================================== -->
+      <section class="screen" id="screen-kyc">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <div class="icon-button" onclick="navigateBack()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+            <span class="header-title-text">KYC Verification</span>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <div class="kyc-status-hero modern-kyc-hero">
+            <div class="kyc-icon-badge">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                <path d="m9 12 2 2 4-4"></path>
+              </svg>
+            </div>
+            <div class="kyc-level-title" id="kycTierLabel">Tier 0 Unverified</div>
+            <p id="kycTierDescription" style="font-size: 0.8rem; color: var(--text-gray); max-width: 280px; margin: 0 auto;">Submit your details to unlock higher transaction limits.</p>
+          </div>
+
+          <div class="kyc-tier-grid modern-kyc-limits">
+            <div class="kyc-tier-box">
+              <div class="kyc-tier-label">Daily Limit</div>
+              <div class="kyc-tier-val" id="kycDailyLimit">UGX 100,000</div>
+            </div>
+            <div class="kyc-tier-box">
+              <div class="kyc-tier-label">Monthly Limit</div>
+              <div class="kyc-tier-val" id="kycMonthlyLimit">UGX 500,000</div>
+            </div>
+          </div>
+
+          <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-white); margin-bottom: 8px;">KYC Submission</div>
+
+          <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 14px 16px; margin-bottom: 18px; box-shadow: var(--card-shadow);">
+            <div style="display: flex; justify-content: space-between; font-size: 0.84rem; padding: 8px 0; border-bottom: 1px solid var(--border-subtle);">
+              <span style="color: var(--text-gray);">Latest submission</span>
+              <span id="kycSubmissionStatus" style="color: var(--green-accent); font-weight: 700;">No submissions yet</span>
+            </div>
+          </div>
+
+          <div class="kyc-step-card"><span class="kyc-step-number">1</span><div><strong>Basic verification</strong><p>Submit your NIN to request Tier 1 access.</p><div class="kyc-input-row"><input id="kycNinInput" class="auth-input-clean" placeholder="Enter NIN" /><button class="btn-primary-purple" data-kyc-submit onclick="submitKycTier1()">Submit</button></div></div></div>
+          <div class="kyc-step-card"><span class="kyc-step-number">2</span><div><strong>Identity document</strong><p>Upload a clear ID image to request Tier 2.</p><label class="kyc-upload-button"><input type="file" accept="image/*" onchange="submitKycTier2(event)" data-kyc-submit />Choose ID image</label></div></div>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           21. LANGUAGE SELECTION SCREEN (Dedicated Screen)
+           ================================================================== -->
+      <section class="screen" id="screen-language">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <div class="icon-button" onclick="navigateBack()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+            <span class="header-title-text">Language</span>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <div class="menu-card-group" id="languageOptionsList">
+            <!-- English -->
+            <div class="language-select-row selected" onclick="chooseLanguage(this, 'English (US)')">
+              <div class="language-meta">
+                <div class="language-flag-circle">🇺🇸</div>
+                <div class="language-names">
+                  <div class="language-main-name">English (US)</div>
+                  <div class="language-native-name">English</div>
+                </div>
+              </div>
+              <svg class="lang-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary-purple)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+
+            <!-- Français -->
+            <div class="language-select-row" onclick="chooseLanguage(this, 'Français')">
+              <div class="language-meta">
+                <div class="language-flag-circle">🇫🇷</div>
+                <div class="language-names">
+                  <div class="language-main-name">French</div>
+                  <div class="language-native-name">Français</div>
+                </div>
+              </div>
+              <svg class="lang-check" style="display: none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary-purple)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+
+            <!-- Swahili -->
+            <div class="language-select-row" onclick="chooseLanguage(this, 'Kiswahili')">
+              <div class="language-meta">
+                <div class="language-flag-circle">🇰🇪</div>
+                <div class="language-names">
+                  <div class="language-main-name">Swahili</div>
+                  <div class="language-native-name">Kiswahili</div>
+                </div>
+              </div>
+              <svg class="lang-check" style="display: none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary-purple)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+
+            <!-- Luganda -->
+            <div class="language-select-row" onclick="chooseLanguage(this, 'Luganda')">
+              <div class="language-meta">
+                <div class="language-flag-circle">🇺🇬</div>
+                <div class="language-names">
+                  <div class="language-main-name">Luganda</div>
+                  <div class="language-native-name">Oluganda</div>
+                </div>
+              </div>
+              <svg class="lang-check" style="display: none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary-purple)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+
+            <!-- Arabic -->
+            <div class="language-select-row" onclick="chooseLanguage(this, 'العربية')">
+              <div class="language-meta">
+                <div class="language-flag-circle">🇦🇪</div>
+                <div class="language-names">
+                  <div class="language-main-name">Arabic</div>
+                  <div class="language-native-name">العربية</div>
+                </div>
+              </div>
+              <svg class="lang-check" style="display: none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary-purple)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+
+            <!-- Spanish -->
+            <div class="language-select-row" onclick="chooseLanguage(this, 'Español')">
+              <div class="language-meta">
+                <div class="language-flag-circle">🇪🇸</div>
+                <div class="language-names">
+                  <div class="language-main-name">Spanish</div>
+                  <div class="language-native-name">Español</div>
+                </div>
+              </div>
+              <svg class="lang-check" style="display: none;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary-purple)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+          </div>
+
+          <button class="btn-primary-purple" onclick="applySelectedLanguage()" style="margin-top: 14px;">Apply Language</button>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           22. HELP CENTER SCREEN (Dedicated Screen)
+           ================================================================== -->
+      <section class="screen" id="screen-help">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <div class="icon-button" onclick="navigateBack()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+            <span class="header-title-text">Help Center</span>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <div style="font-size: 0.95rem; font-weight: 800; color: var(--text-white); margin-bottom: 4px;">How can we help?</div>
+          <p style="font-size: 0.78rem; color: var(--text-gray); margin-bottom: 16px;">Search our knowledge base or connect with 24/7 support</p>
+
+          <!-- 4 Support Channels -->
+          <div class="support-channels-grid">
+            <div class="support-channel-card" onclick="openLiveSupport()">
+              <div class="support-channel-icon" style="background: rgba(91, 66, 243, 0.15); color: var(--primary-purple);">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              </div>
+              <div>
+
+            <div id="liveSupportPanel" style="display:none; margin-top:16px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:14px; padding:16px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;">
+                <div><div style="font-size:0.95rem; font-weight:800; color:var(--text-white);">Live Support</div><div id="liveSupportStatus" style="font-size:0.72rem; color:var(--text-gray);">Connecting you to the support team...</div></div>
+                <button type="button" class="icon-button" onclick="closeLiveSupport()" title="Close live support">&times;</button>
+              </div>
+              <div id="liveSupportMessages" style="display:flex; flex-direction:column; gap:8px; max-height:220px; overflow:auto; margin-bottom:10px;"></div>
+              <form onsubmit="sendLiveSupportMessage(event)" style="display:flex; gap:8px;">
+                <input id="liveSupportInput" class="form-input-field" placeholder="Type your message" required style="margin:0;" />
+                <button class="btn-primary-purple" type="submit" style="width:auto; white-space:nowrap;">Send</button>
+              </form>
+            </div>
+                <div class="support-channel-title">Live Chat</div>
+                <div class="support-channel-sub">Instant reply • 24/7</div>
+              </div>
+            </div>
+
+            <a class="support-channel-card" id="supportWhatsAppCard" target="_blank" rel="noopener">
+              <div class="support-channel-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--green-accent);">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+              </div>
+              <div>
+                <div class="support-channel-title">WhatsApp</div>
+                <div class="support-channel-sub" id="supportWhatsAppValue">Currently unavailable</div>
+              </div>
+            </a>
+
+            <a class="support-channel-card" id="supportTelegramCard" target="_blank" rel="noopener">
+              <div class="support-channel-icon" style="background: rgba(14, 165, 233, 0.15); color: #38BDF8;"><span style="font-size:1.25rem; font-weight:800;">TG</span></div>
+              <div><div class="support-channel-title">Telegram</div><div class="support-channel-sub" id="supportTelegramValue">Currently unavailable</div></div>
+            </a>
+
+            <a class="support-channel-card" id="supportEmailCard">
+              <div class="support-channel-icon" style="background: rgba(59, 130, 246, 0.15); color: #60A5FA;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+              </div>
+              <div>
+                <div class="support-channel-title">Email Us</div>
+                <div class="support-channel-sub" id="supportEmailValue">Currently unavailable</div>
+              </div>
+            </a>
+
+            <a class="support-channel-card" id="supportCallCenterCard">
+              <div class="support-channel-icon" style="background: rgba(245, 158, 11, 0.15); color: var(--yellow-accent);">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              </div>
+              <div>
+                <div class="support-channel-title">Call Center</div>
+                <div class="support-channel-sub" id="supportCallCenterValue">Currently unavailable</div>
+              </div>
+            </a>
+          </div>
+
+          <div style="margin-top:20px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:14px; padding:16px;">
+            <div style="font-size:0.95rem; font-weight:800; color:var(--text-white); margin-bottom:4px;">Send a support ticket</div>
+            <p style="font-size:0.76rem; color:var(--text-gray); margin-bottom:12px;">The admin team will review your request and update its status.</p>
+            <form onsubmit="submitSupportTicket(event)">
+              <input name="subject" class="form-input-field" placeholder="Subject" required style="margin-bottom:10px;" />
+              <textarea name="message" class="form-input-field" placeholder="Describe how we can help" minlength="10" required style="min-height:90px; resize:vertical; margin-bottom:10px;"></textarea>
+              <select name="priority" class="form-input-field" style="margin-bottom:12px;"><option>Medium</option><option>High</option><option>Low</option></select>
+              <button class="btn-primary-purple" type="submit">Send Ticket</button>
+            </form>
+          </div>
+
+          <div style="font-size: 0.9rem; font-weight: 700; color: var(--text-white); margin-bottom: 12px;">Frequently Asked Questions</div>
+
+          <!-- FAQ Accordions -->
+          <div class="faq-accordion-item" onclick="toggleFaq(this)">
+            <div class="faq-question-head">
+              <span>How does eSIM ownership and renting work?</span>
+              <svg class="faq-arrow-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="faq-answer-body">
+              When you buy an eSIM, you own it in the app and can find it in <strong>My eSIMs</strong>. When a user in another country requests an available eSIM, our backend connects them to it. If they rent your eSIM and make a payment, your share is credited to your VSIM Wallet.
+            </div>
+          </div>
+
+          <div class="faq-accordion-item" onclick="toggleFaq(this)">
+            <div class="faq-question-head">
+              <span>How do I install my eSIM QR code?</span>
+              <svg class="faq-arrow-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="faq-answer-body">
+              Go to **My eSIMs**, select your active eSIM, tap **View QR Code**, and scan it using your device's cellular/mobile settings (`Settings > Mobile Service > Add eSIM`).
+            </div>
+          </div>
+
+          <div class="faq-accordion-item" onclick="toggleFaq(this)">
+            <div class="faq-question-head">
+              <span>When do I receive daily income?</span>
+              <svg class="faq-arrow-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="faq-answer-body">
+              Daily yields are credited to your VSIM Wallet automatically at **00:00 UTC** every 24 hours for each active destination package you maintain.
+            </div>
+          </div>
+
+          <div class="faq-accordion-item" onclick="toggleFaq(this)">
+            <div class="faq-question-head">
+              <span>How do Mobile Money withdrawals work?</span>
+              <svg class="faq-arrow-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="faq-answer-body">
+              Withdrawals to MTN and Airtel Mobile Money are processed instantly. A nominal network fee of UGX 2,000 is deducted per transfer.
+            </div>
+          </div>
+
+          <div class="faq-accordion-item" onclick="toggleFaq(this)">
+            <div class="faq-question-head">
+              <span>Can I resell unused airtime?</span>
+              <svg class="faq-arrow-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="faq-answer-body">
+              Yes! Use the **Sell Airtime** screen to convert excess airtime directly into withdrawable wallet balance at competitive instant rates.
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           23. EDIT PROFILE SCREEN (Modernized)
+           ================================================================== -->
+      <section class="screen" id="screen-edit-profile">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <div class="icon-button" onclick="navigateBack()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+            <span class="header-title-text">Edit Profile</span>
+          </div>
+          <div class="icon-button" onclick="toggleTheme()" title="Toggle Theme">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <!-- Modern Profile Hero Banner Card -->
+          <div class="modern-profile-hero-card">
+            <div class="profile-hero-bg-glow"></div>
+            
+            <div class="edit-avatar-container">
+              <div class="edit-avatar-wrap">
+                <div class="edit-avatar-bubble" id="editAvatarPreview"></div>
+                <button type="button" class="edit-avatar-badge-btn" onclick="openProfilePhotoPicker()" title="Change profile photo" aria-label="Change profile photo">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                    <circle cx="12" cy="13" r="4"></circle>
+                  </svg>
+                </button>
+              </div>
+              <div class="profile-photo-dropzone" id="profilePhotoDropzone" onclick="openProfilePhotoPicker()" ondragover="event.preventDefault(); this.classList.add('dragging')" ondragleave="this.classList.remove('dragging')" ondrop="handleProfilePhotoDrop(event)">
+                <strong>Change your profile photo</strong>
+                <button type="button" class="avatar-upload-link" onclick="event.stopPropagation(); openProfilePhotoPicker()">Select image</button>
+              </div>
+              <button type="button" class="avatar-remove-link" onclick="removeProfilePhoto()">Remove current photo</button>
+            </div>
+
+            <div class="profile-hero-meta">
+              <span class="badge-green-pill" style="font-size: 0.7rem; padding: 3px 10px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-right: 4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span id="editProfileKycStatus">Unverified</span>
+              </span>
+            </div>
+          </div>
+
+          <form onsubmit="handleSaveProfile(event)">
+            <input type="file" id="profilePhotoInput" accept="image/*" style="display:none;" onchange="handleProfilePhotoChange(event)" />
+
+            <!-- Section 1: Personal Info -->
+            <div class="modern-form-section">
+              <div class="section-label-heading">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary-purple)" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <span>Personal Information</span>
+              </div>
+
+              <!-- Full Name -->
+              <div class="form-group-item">
+                <label class="form-label-text">Full Name</label>
+                <div class="auth-input-wrapper">
+                  <div class="auth-input-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  </div>
+                  <input type="text" id="editNameInput" class="auth-input-clean" value="" placeholder="Enter full name" required />
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Section 2: Contact & Location -->
+            <div class="modern-form-section">
+              <div class="section-label-heading">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary-purple)" stroke-width="2">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                </svg>
+                <span>Contact & Region</span>
+              </div>
+
+              <!-- Phone Number -->
+              <div class="form-group-item">
+                <label class="form-label-text">Phone Number</label>
+                <div class="auth-input-wrapper">
+                  <div class="auth-input-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                    </svg>
+                  </div>
+                  <input type="tel" id="editPhoneInput" class="auth-input-clean" value="" placeholder="Enter phone number" required />
+                </div>
+              </div>
+
+              <!-- Country of Residence -->
+              <div class="form-group-item">
+                <label class="form-label-text">Country of Residence</label>
+                <div class="auth-input-wrapper readonly-field">
+                  <div class="auth-input-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="2" y1="12" x2="22" y2="12"></line>
+                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                    </svg>
+                  </div>
+                  <input type="text" class="auth-input-clean" value="Uganda 🇺🇬" readonly />
+                  <span class="readonly-lock-badge" title="Region set by KYC">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Password Security Trigger Card -->
+            <div class="security-card-banner" onclick="navigateTo('screen-reset-password')">
+              <div class="security-card-left">
+                <div class="security-card-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                </div>
+                <div>
+                  <div class="security-card-title">Change Password</div>
+                  <div class="security-card-desc">Update your security & login credentials</div>
+                </div>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-gray)" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+            <button type="button" class="passkey-setup-button" onclick="event.stopPropagation(); registerPasskey()">Set up passkey</button>
+
+            <!-- Action Buttons Row -->
+            <div class="edit-profile-actions">
+              <button type="submit" class="btn-primary-purple" aria-live="polite">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Save Changes</span>
+              </button>
+              <button type="button" class="btn-ghost-dark" onclick="navigateBack()">Cancel</button>
+            </div>
+
+          </form>
+        </div>
+      </section>
+
+
+      <!-- ==================================================================
+           REFERRAL & AFFILIATE DASHBOARD SCREEN
+           ================================================================== -->
+      <section class="screen" id="screen-referral">
+        <div class="app-topbar">
+          <div class="header-title-box">
+            <div class="icon-button" onclick="navigateBack()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </div>
+            <span class="header-title-text">Referral & Affiliate</span>
+          </div>
+        </div>
+
+        <div class="screen-body">
+          <div class="card-wallet-hero" style="margin-bottom: 12px;">
+            <div>
+              <div class="balance-label">Total Earnings</div>
+              <div class="balance-num" id="refTotalEarnings">UGX 0</div>
+              <div style="font-size: 0.74rem; color: rgba(255,255,255,0.7); margin-top: 2px;">This Month</div>
+            </div>
+            <div class="badge-green-pill">+12%</div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+            <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 12px; text-align: center; box-shadow: var(--card-shadow);">
+              <div id="refReferralCount" style="font-size: 1.35rem; font-weight: 800; color: var(--text-white);">0</div>
+              <div style="font-size: 0.74rem; color: var(--text-gray); margin-top: 2px;">Total Referrals</div>
+            </div>
+            <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 12px; text-align: center; box-shadow: var(--card-shadow);">
+              <div id="refActiveCount" style="font-size: 1.35rem; font-weight: 800; color: var(--green-accent);">0</div>
+              <div style="font-size: 0.74rem; color: var(--text-gray); margin-top: 2px;">Active Referrals</div>
+            </div>
+          </div>
+
+          <label class="form-label-text">Your Referral Code</label>
+          <div style="background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <span id="copyRefCode" style="font-family: monospace; font-size: 0.92rem; color: var(--text-white);"></span>
+            <div class="icon-button" style="width: 32px; height: 32px; border-radius: 8px;" onclick="copyClipboard('copyRefCode', 'Referral Code Copied!')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </div>
+          </div>
+
+          <label class="form-label-text">Your Affiliate Link</label>
+          <div style="background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+            <span id="copyRefLink" style="font-family: monospace; font-size: 0.85rem; color: var(--text-white); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;"></span>
+            <div class="icon-button" style="width: 32px; height: 32px; border-radius: 8px;" onclick="copyClipboard('copyRefLink', 'Affiliate link copied!')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </div>
+          </div>
+
+          <button class="btn-primary-purple" onclick="shareRef()" style="margin-bottom: 16px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+            Share & Invite
+          </button>
+
+          <div class="menu-card-group">
+            <div class="menu-row-item" onclick="showReferralEarnings()">
+              <div class="menu-row-left">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-gray)" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                <span>Referral Earnings</span>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-gray)" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+            <div class="menu-row-item" onclick="showReferralHowItWorks()">
+              <div class="menu-row-left">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-gray)" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                <span>How It Works</span>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-gray)" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+
+    <!-- ==================================================================
+         BOTTOM NAVIGATION BAR (Matching the bottom strip in Figma)
+         ================================================================== -->
+    <nav class="bottom-nav-bar" id="bottomNavBar">
+      <!-- 1. Home -->
+      <button class="nav-tab-button" data-target="screen-home" onclick="handleBottomTab('screen-home', this)">
+        <div class="tab-icon-box">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+        </div>
+        <span class="tab-label-text">Home</span>
+      </button>
+
+      <!-- 2. eSIMs -->
+      <button class="nav-tab-button" data-target="screen-esims" onclick="handleBottomTab('screen-esims', this)">
+        <div class="tab-icon-box">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="5" y="2" width="14" height="20" rx="2"></rect>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+            <rect x="8" y="6" width="8" height="8" rx="1"></rect>
+          </svg>
+        </div>
+        <span class="tab-label-text">eSIMs</span>
+      </button>
+
+      <!-- 3. Airtime -->
+      <button class="nav-tab-button" data-target="screen-airtime" onclick="handleBottomTab('screen-airtime', this)">
+        <div class="tab-icon-box">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="17 1 21 5 17 9"></polyline>
+            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+            <polyline points="7 23 3 19 7 15"></polyline>
+            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+          </svg>
+        </div>
+        <span class="tab-label-text">Airtime</span>
+      </button>
+
+      <!-- 4. Wallet -->
+      <button class="nav-tab-button" data-target="screen-wallet" onclick="handleBottomTab('screen-wallet', this)">
+        <div class="tab-icon-box">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+            <line x1="2" y1="10" x2="22" y2="10"></line>
+          </svg>
+        </div>
+        <span class="tab-label-text">Wallet</span>
+      </button>
+
+      <!-- 5. Profile -->
+      <button class="nav-tab-button" data-target="screen-profile" onclick="handleBottomTab('screen-profile', this)">
+        <div class="tab-icon-box">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <span class="tab-label-text">Profile</span>
+      </button>
+    </nav>
+
+
+    <!-- ==================================================================
+         QR CODE MODAL DIALOG POPUP
+         ================================================================== -->
+    <div class="modal-overlay-backdrop" id="qrModal" onclick="closeOnBackdrop(event)">
+      <div class="modal-dialog-box qr-dialog-box" onclick="event.stopPropagation()">
+        
+        <!-- Dialog Header -->
+        <div class="modal-dialog-header">
+          <div>
+            <span class="modal-dialog-title">eSIM Activation Details</span>
+            <span class="package-modal-subtitle">Scan QR or enter the activation code in settings</span>
+          </div>
+          <button class="modal-close-btn" type="button" onclick="closeQRModalSheet()" aria-label="Close dialog">✕</button>
+        </div>
+
+        <div class="modal-dialog-body" style="text-align: center;">
+          <!-- QR Frame -->
+          <div class="qr-code-wrapper">
+            <svg viewBox="0 0 100 100" width="100%" height="100%" shape-rendering="crispEdges">
+              <rect width="100" height="100" fill="#FFFFFF"/>
+              <rect x="10" y="10" width="24" height="24" fill="#080B11"/>
+              <rect x="14" y="14" width="16" height="16" fill="#FFFFFF"/>
+              <rect x="18" y="18" width="8" height="8" fill="#080B11"/>
+              <rect x="66" y="10" width="24" height="24" fill="#080B11"/>
+              <rect x="70" y="14" width="16" height="16" fill="#FFFFFF"/>
+              <rect x="74" y="18" width="8" height="8" fill="#080B11"/>
+              <rect x="10" y="66" width="24" height="24" fill="#080B11"/>
+              <rect x="14" y="70" width="16" height="16" fill="#FFFFFF"/>
+              <rect x="18" y="74" width="8" height="8" fill="#080B11"/>
+              <rect x="42" y="12" width="6" height="6" fill="#080B11"/>
+              <rect x="52" y="12" width="6" height="6" fill="#080B11"/>
+              <rect x="42" y="24" width="6" height="6" fill="#080B11"/>
+              <rect x="52" y="24" width="6" height="6" fill="#080B11"/>
+              <rect x="12" y="44" width="6" height="6" fill="#080B11"/>
+              <rect x="24" y="44" width="6" height="6" fill="#080B11"/>
+              <rect x="38" y="40" width="8" height="8" fill="#080B11"/>
+              <rect x="50" y="40" width="8" height="8" fill="#080B11"/>
+              <rect x="64" y="44" width="8" height="8" fill="#080B11"/>
+              <rect x="76" y="44" width="6" height="6" fill="#080B11"/>
+              <rect x="42" y="60" width="6" height="6" fill="#080B11"/>
+              <rect x="54" y="60" width="6" height="6" fill="#080B11"/>
+              <rect x="66" y="60" width="6" height="6" fill="#080B11"/>
+              <rect x="44" y="76" width="6" height="6" fill="#080B11"/>
+              <rect x="58" y="76" width="6" height="6" fill="#080B11"/>
+              <rect x="72" y="76" width="6" height="6" fill="#080B11"/>
+            </svg>
+          </div>
+
+          <!-- Credentials Box -->
+          <div class="qr-credentials-card">
+            <div class="qr-credential-row">
+              <span class="qr-credential-label">SM-DP+ Server Address</span>
+              <span class="qr-credential-value" id="qrSmdpAddress">rsp.vsim-global.net</span>
+            </div>
+            <div class="qr-credential-divider"></div>
+            <div class="qr-credential-row">
+              <span class="qr-credential-label">Matching / Activation Code</span>
+              <span class="qr-credential-value" id="qrActivationCode">$LPA:1$rsp.vsim$99440723</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dialog Footer Actions -->
+        <div class="modal-dialog-footer">
+          <button type="button" class="btn-secondary" onclick="closeQRModalSheet()">Close</button>
+          <button type="button" class="btn-primary-purple" onclick="copyPlain('LPA:1$rsp.vsim$99440723', 'Activation Code Copied!')" style="flex: 1;">
+            <span>Copy Activation Code</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
