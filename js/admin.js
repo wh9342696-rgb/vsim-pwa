@@ -1257,24 +1257,41 @@ function renderTopPackagesTable() {
 }
 
 // Render Bridge Devices List
+function getBridgeConnectionState(device) {
+  const status = String(device.status || '').toLowerCase();
+  if (status === 'disabled') return { label: 'Disabled', tone: 'var(--text-muted)' };
+  if (status === 'revoked') return { label: 'Revoked', tone: 'var(--red-accent)' };
+  if (status === 'decommissioned') return { label: 'Decommissioned', tone: 'var(--text-muted)' };
+  if (status === 'active' && device.last_heartbeat) {
+    const heartbeatAge = Date.now() - new Date(device.last_heartbeat).getTime();
+    if (Number.isFinite(heartbeatAge) && heartbeatAge <= 120000) return { label: 'App connected', tone: 'var(--accent-green)' };
+    return { label: 'App inactive', tone: 'var(--yellow-accent)' };
+  }
+  if (status === 'provisioning') return { label: 'Waiting for bridge app', tone: 'var(--yellow-accent)' };
+  return { label: 'Registered, not connected', tone: 'var(--text-muted)' };
+}
+
 function renderBridgeDevicesList() {
   const container = document.getElementById('bridgeDevicesList');
   if (!container) return;
 
   const devices = (AdminStore.bridgeDevices || []).slice(0, 5);
 
-  container.innerHTML = devices.map(d => `
+  container.innerHTML = devices.map(d => {
+    const connection = getBridgeConnectionState(d);
+    return `
     <div class="bridge-device-card-item">
       <div class="bridge-left-info">
         <div class="bridge-network-badge">B</div>
         <div>
           <div class="bridge-name-text">${d.device_id}</div>
-          <div class="bridge-phone-sub">${d.phone}</div>
+          <div class="bridge-phone-sub">${d.provider || d.network || 'Provider not assigned'} - ${connection.label}</div>
         </div>
       </div>
-      <span class="status-pill ${d.status}">${d.status}</span>
+      <span class="status-pill ${String(d.status || 'unknown').toLowerCase()}" style="color:${connection.tone};">${connection.label}</span>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 // Render Activity Logs Stream
@@ -1701,7 +1718,10 @@ function renderBridgeGrid() {
   const container = document.getElementById('fullBridgeGrid');
   if (!container) return;
 
-  container.innerHTML = AdminStore.bridgeDevices.map(d => `
+  container.innerHTML = AdminStore.bridgeDevices.map(d => {
+    const connection = getBridgeConnectionState(d);
+    const registeredLabel = d.created_at ? `Registered ${formatWorldTime(d.created_at)}` : 'Registered device';
+    return `
     <div class="dashboard-widget-card" style="padding: 16px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <div style="display: flex; align-items: center; gap: 10px;">
@@ -1711,12 +1731,14 @@ function renderBridgeGrid() {
             <div style="font-size: 0.76rem; color: var(--text-muted);">${d.phone}</div>
           </div>
         </div>
-        <span class="status-pill ${d.status}">${d.status}</span>
+        <span class="status-pill ${String(d.status || 'unknown').toLowerCase()}" style="color:${connection.tone};">${connection.label}</span>
       </div>
       <div style="font-size: 0.8rem; color: var(--text-gray); margin-bottom: 14px;">
+        <div>Device registration: <strong style="color: var(--text-white);">${registeredLabel}</strong></div>
+        <div style="margin-top:2px;">Bridge app: <strong style="color:${connection.tone};">${connection.label}</strong></div>
+        <div style="margin-top:2px;">App version: <strong style="color: var(--text-white);">${d.app_version || 'Not reported'}</strong></div>
         <div>MTN binding: <strong style="color: var(--text-white);">${d.mtn_merchant_id || (String(d.provider || '').toUpperCase() === 'MTN' ? d.merchant_id : 'Not assigned')}</strong></div>
         <div style="margin-top:2px;">Airtel binding: <strong style="color: var(--text-white);">${d.airtel_merchant_id || (String(d.provider || '').toUpperCase() === 'AIRTEL' ? d.merchant_id : 'Not assigned')}</strong></div>
-        <div style="margin-top:2px;">Connection: <strong style="color: ${d.status === 'active' ? 'var(--accent-green)' : 'var(--text-white)'};">${d.status === 'active' ? 'Granted and online' : d.status === 'provisioning' ? 'Provisioned, waiting for app' : 'Not active'}</strong></div>
         <div style="margin-top:2px;">Last heartbeat: <strong>${formatWorldTime(d.last_heartbeat)}</strong></div>
         <div>SIM Balance: <strong style="color: var(--text-white);">UGX ${(d.sim_balance || 1500000).toLocaleString()}</strong></div>
         <div style="margin-top:2px;">Ping Latency: <strong>${d.ping_ms || 40} ms</strong></div>
@@ -1732,7 +1754,8 @@ function renderBridgeGrid() {
         <button class="btn-action-small view" onclick="showToast('USSD ping sent to ${d.device_id}', 'success')">Ping USSD</button>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function toggleBridgeSecret(id) {
