@@ -106,6 +106,7 @@ const AdminAPI = (() => {
     updateRenewalSchedule: (id, renewal_schedule) => request(`/packages/${id}/renewal-prices`, { method: 'PUT', body: JSON.stringify({ renewal_schedule }) }),
     deletePackage: id => request(`/packages/${id}`, { method: 'DELETE' }),
     getBridgeDevices: () => request('/bridge-devices'),
+    getBridgeEnrollmentQr: id => request(`/bridge-devices/${id}/enrollment-qr`),
     toggleBridgeStatus: (id, status) => request(`/bridge-devices/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
     addBridgeDevice: data => request('/bridge-devices', { method: 'POST', body: JSON.stringify(data) }),
     provisionBridge: (id, data) => request(`/bridge-devices/${id}/provision`, { method: 'POST', body: JSON.stringify(data) }),

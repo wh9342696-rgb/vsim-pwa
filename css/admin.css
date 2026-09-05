@@ -1190,6 +1190,32 @@ html, body {
   font-size: 0.72rem;
 }
 
+.bridge-qr-dialog {
+  max-width: 430px;
+}
+
+.bridge-qr-body {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.bridge-qr-body p,
+.bridge-qr-body small {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.bridge-enrollment-qr {
+  width: min(320px, 80vw);
+  aspect-ratio: 1;
+  padding: 10px;
+  background: #fff;
+  border-radius: var(--radius-md);
+}
+
 #fullBridgeGrid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;

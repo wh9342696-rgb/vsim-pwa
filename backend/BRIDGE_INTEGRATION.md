@@ -1,0 +1,69 @@
+# VSIM Bridge Integration
+
+The Android Bridge never connects to PostgreSQL and never chooses a user wallet. It sends normalized provider events to the API.
+
+## Production environment
+
+Set these variables on the API server:
+
+```env
+PORT=3000
+APP_URL=https://your-domain.com
+JWT_SECRET=<long-random-secret>
+DB_HOST=<private-postgres-host>
+DB_PORT=5432
+DB_NAME=vsim_db
+DB_USER=<database-user>
+DB_PASSWORD=<database-password>
+```
+
+Expose only the API through HTTPS. Do not expose PostgreSQL to the Android device.
+
+## Provisioning
+
+1. Admin creates a bridge device from the Admin Bridge Devices area.
+2. Admin provisions it with provider and merchant ID.
+3. The API returns a one-time credential. Store it securely in the Android keystore.
+4. The device authenticates and receives a 12-hour bearer token.
+5. A revoked or disabled device cannot authenticate or submit events.
+
+## API contract
+
+Base path: `/api/v1/bridge`
+
+- `POST /register`: `{ "bridgeDeviceId": "..." }`
+- `POST /authenticate`: `{ "bridgeDeviceId": "...", "credential": "..." }`
+- QR enrollment payload: JSON with `type: "vsim-bridge-enrollment"`, `apiBase`, `deviceId`, and `deviceSecret`; the app can scan this payload and call `/authenticate`.
+- `GET /config`: bearer token required
+- `POST /heartbeat`: `{ "appVersion": "1.0.0", "queueSize": 0 }`
+- `POST /events`: normalized event, bearer token required
+- `POST /sync`: bearer token required
+- `POST /acknowledge`: bearer token required
+- `GET /status`: bearer token required
+
+Event body:
+
+```json
+{
+  "eventId": "device-event-id",
+  "provider": "MTN",
+  "merchantId": "merchant-id",
+  "transactionReference": "provider-reference",
+  "transactionType": "deposit",
+  "amount": 5000,
+  "currency": "UGX",
+  "providerTimestamp": "2026-08-21T12:00:00.000Z",
+  "metadata": { "sender": "masked-value" }
+}
+```
+
+Deposit events are matched only against one unambiguous pending deposit with the same amount and authorized merchant/provider. The bridge cannot specify a wallet user. Unmatched or ambiguous events are stored as `UNMATCHED` or `REVIEW_REQUIRED`. Repeated provider identities return an idempotent acknowledgement and do not create another wallet credit.
+
+## Statuses
+
+Devices: `provisioning`, `active`, `disabled`, `revoked`, `decommissioned`.
+Events: `MATCHED`, `UNMATCHED`, `REVIEW_REQUIRED` and duplicate acknowledgements.
+
+## Current limitations
+
+Redis coordination, reversal/chargeback workflows, and automated test suites are not yet configured in this repository. PostgreSQL remains the financial source of truth; no Redis dependency is required for correctness.

@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { statfs } from 'node:fs/promises';
+import QRCode from 'qrcode';
 import { query } from '../config/db.js';
 import { createUniqueReference } from '../utils/reference.js';
 import { emitDataChanged } from '../realtime.js';
@@ -1047,6 +1048,28 @@ router.get('/bridge-devices', adminAuth, async (req, res) => {
     res.json({ devices: result.rows.map(device => ({ ...device, device_secret: decryptBridgeSecret(device.device_secret) })) });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch bridge devices' });
+  }
+});
+
+router.get('/bridge-devices/:id/enrollment-qr', adminAuth, ensureSuperAdmin, async (req, res) => {
+  try {
+    const result = await query('SELECT id, device_id, device_secret, status FROM bridge_devices WHERE id = $1', [req.params.id]);
+    const device = result.rows[0];
+    if (!device) return res.status(404).json({ error: 'Bridge device not found' });
+    const deviceSecret = decryptBridgeSecret(device.device_secret);
+    if (!deviceSecret) return res.status(409).json({ error: 'Bridge device has no secret. Provision it first.' });
+    const payload = JSON.stringify({
+      type: 'vsim-bridge-enrollment',
+      version: 1,
+      apiBase: `${process.env.PUBLIC_API_BASE || 'https://api.vsime.uk/api/v1'}/bridge`,
+      deviceId: device.device_id,
+      deviceSecret
+    });
+    const qrDataUrl = await QRCode.toDataURL(payload, { errorCorrectionLevel: 'M', margin: 2, width: 320 });
+    res.json({ deviceId: device.device_id, status: device.status, payload, qrDataUrl });
+  } catch (err) {
+    console.error('Bridge enrollment QR error:', err);
+    res.status(500).json({ error: 'Failed to generate bridge enrollment QR' });
   }
 });
 

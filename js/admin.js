@@ -1837,12 +1837,37 @@ function renderBridgeGrid() {
       </div>
       <div class="bridge-device-actions">
         <button class="btn-action-small view" style="flex: 1;" onclick="provisionBridgeDevice(${d.id})">${d.mtn_merchant_id || d.airtel_merchant_id || d.merchant_id ? 'Update Binding / Secret' : 'Provision and Bind'}</button>
+        <button class="btn-action-small view" onclick="showBridgeEnrollmentQr(${d.id})">Scan to connect</button>
         <button class="btn-action-small view" onclick="setBridgeLifecycle(${d.id}, '${lifecycle === 'disabled' ? 'active' : 'disabled'}')">${lifecycle === 'disabled' ? 'Enable' : 'Disable'}</button>
         <button class="btn-action-small view" onclick="showToast('USSD ping sent to ${deviceId}', 'success')">Ping USSD</button>
       </div>
     </article>
   `;
   }).join('');
+}
+
+async function showBridgeEnrollmentQr(id) {
+  try {
+    const result = await AdminAPI.getBridgeEnrollmentQr(id);
+    const existing = document.getElementById('bridgeEnrollmentQrOverlay');
+    existing?.remove();
+    document.body.insertAdjacentHTML('beforeend', `
+      <div class="modal-overlay-backdrop open" id="bridgeEnrollmentQrOverlay" onclick="if (event.target === this) closeBridgeEnrollmentQr()">
+        <div class="modal-dialog-box bridge-qr-dialog">
+          <div class="modal-dialog-header"><span class="modal-dialog-title">Scan to connect bridge app</span><button class="modal-close-btn" type="button" onclick="closeBridgeEnrollmentQr()">✕</button></div>
+          <div class="modal-dialog-body bridge-qr-body">
+            <p>Scan this one-device QR code in the Android bridge app. It contains the backend URL, device ID, and device secret.</p>
+            <img src="${result.qrDataUrl}" alt="Bridge enrollment QR code" class="bridge-enrollment-qr" />
+            <strong>${escapeDialogHtml(result.deviceId)}</strong>
+            <small>Keep this code private. Regenerate the device secret if it is exposed.</small>
+          </div>
+        </div>
+      </div>`);
+  } catch (error) { showToast(error.message || 'Could not generate bridge QR', 'error'); }
+}
+
+function closeBridgeEnrollmentQr() {
+  document.getElementById('bridgeEnrollmentQrOverlay')?.remove();
 }
 
 function toggleBridgeSecret(id) {
