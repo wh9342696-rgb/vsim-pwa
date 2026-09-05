@@ -1158,6 +1158,155 @@ html, body {
   justify-content: center;
 }
 
+.bridge-device-review-card {
+  min-width: 0;
+  padding: 18px;
+  background: linear-gradient(145deg, var(--bg-card), var(--bg-card-secondary));
+  border: 1px solid var(--border-subtle);
+  border-top: 3px solid var(--primary-purple);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+}
+
+.bridge-device-review-header,
+.bridge-device-identity,
+.bridge-device-review-status,
+.bridge-device-secret-row,
+.bridge-device-actions {
+  display: flex;
+  align-items: center;
+}
+
+.bridge-device-review-header,
+.bridge-device-secret-row {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bridge-device-identity {
+  min-width: 0;
+  gap: 10px;
+}
+
+.bridge-network-badge-large {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  font-size: 0.82rem;
+}
+
+.bridge-device-kicker,
+.bridge-device-detail span,
+.bridge-device-secret-label {
+  color: var(--text-muted);
+  font-size: 0.67rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bridge-device-title {
+  margin: 2px 0 0;
+  color: var(--text-white);
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.bridge-device-subtitle {
+  color: var(--text-muted);
+  font-size: 0.73rem;
+  margin-top: 3px;
+}
+
+.bridge-device-review-status {
+  gap: 10px;
+  margin: 16px 0 12px;
+  padding: 9px 10px;
+  color: var(--text-gray);
+  background: var(--bg-card-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 0.73rem;
+}
+
+.bridge-device-review-status span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bridge-device-review-status strong {
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+}
+
+.bridge-device-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  background: var(--border-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.bridge-device-detail {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 9px 10px;
+  background: var(--bg-card);
+}
+
+.bridge-device-detail strong {
+  color: var(--text-white);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.bridge-device-secret-row {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.bridge-device-secret-row code {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-white);
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
+.bridge-device-secret-actions,
+.bridge-device-actions {
+  gap: 7px;
+}
+
+.bridge-device-actions {
+  margin-top: 14px;
+}
+
+@media (max-width: 560px) {
+  .bridge-device-review-header,
+  .bridge-device-secret-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .bridge-device-review-header .status-pill {
+    align-self: flex-start;
+  }
+
+  .bridge-device-actions {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .bridge-device-actions button {
+    flex: 1 1 120px !important;
+  }
+}
+
 .bridge-name-text {
   font-weight: 700;
   font-size: 0.76rem;

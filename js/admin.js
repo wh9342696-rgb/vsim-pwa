@@ -1747,39 +1747,46 @@ function renderBridgeGrid() {
     const deviceId = d.device_id || d.deviceId || 'Unknown device';
     const network = d.provider || d.network || 'Provider not assigned';
     const phone = d.phone || d.msisdn || 'No phone assigned';
+    const mtnBinding = d.mtn_merchant_id || (String(d.provider || '').toUpperCase() === 'MTN' ? d.merchant_id : '') || 'Not assigned';
+    const airtelBinding = d.airtel_merchant_id || (String(d.provider || '').toUpperCase() === 'AIRTEL' ? d.merchant_id : '') || 'Not assigned';
+    const lifecycle = String(d.status || 'unknown').toLowerCase();
     return `
-    <div class="dashboard-widget-card" style="padding: 16px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div class="bridge-network-badge" style="width: 32px; height: 32px;">B</div>
+    <article class="bridge-device-review-card">
+      <div class="bridge-device-review-header">
+        <div class="bridge-device-identity">
+          <div class="bridge-network-badge bridge-network-badge-large">B</div>
           <div>
-            <div style="font-weight: 800; font-size: 0.9rem;">${deviceId}</div>
-            <div style="font-size: 0.76rem; color: var(--text-muted);">${network} - ${phone}</div>
+            <div class="bridge-device-kicker">Registered bridge device</div>
+            <h3 class="bridge-device-title">${deviceId}</h3>
+            <div class="bridge-device-subtitle">${network} <span aria-hidden="true">-</span> ${phone}</div>
           </div>
         </div>
-        <span class="status-pill ${String(d.status || 'unknown').toLowerCase()}" style="color:${connection.tone};">${connection.label}</span>
+        <span class="status-pill ${lifecycle}" style="color:${connection.tone};">${connection.label}</span>
       </div>
-      <div style="font-size: 0.8rem; color: var(--text-gray); margin-bottom: 14px;">
-        <div>Device registration: <strong style="color: var(--text-white);">${registeredLabel}</strong></div>
-        <div style="margin-top:2px;">Bridge app: <strong style="color:${connection.tone};">${connection.label}</strong></div>
-        <div style="margin-top:2px;">App version: <strong style="color: var(--text-white);">${d.app_version || 'Not reported'}</strong></div>
-        <div>MTN binding: <strong style="color: var(--text-white);">${d.mtn_merchant_id || (String(d.provider || '').toUpperCase() === 'MTN' ? d.merchant_id : 'Not assigned')}</strong></div>
-        <div style="margin-top:2px;">Airtel binding: <strong style="color: var(--text-white);">${d.airtel_merchant_id || (String(d.provider || '').toUpperCase() === 'AIRTEL' ? d.merchant_id : 'Not assigned')}</strong></div>
-        <div style="margin-top:2px;">Last heartbeat: <strong>${formatWorldTime(d.last_heartbeat)}</strong></div>
-        <div>SIM Balance: <strong style="color: var(--text-white);">UGX ${(d.sim_balance || 1500000).toLocaleString()}</strong></div>
-        <div style="margin-top:2px;">Ping Latency: <strong>${d.ping_ms || 40} ms</strong></div>
-        <div class="bridge-secret-row">
-          <span>Device Secret:</span>
-          <code id="bridgeSecretValue-${d.id}" data-secret="${escapeDialogHtml(d.device_secret || '')}">${d.device_secret ? '****************' : 'Not generated'}</code>
+      <div class="bridge-device-review-status">
+        <span><strong>Bridge app</strong>${connection.label}</span>
+        <span><strong>Registered</strong>${registeredLabel.replace(/^Registered /, '')}</span>
+      </div>
+      <div class="bridge-device-detail-grid">
+        <div class="bridge-device-detail"><span>App version</span><strong>${d.app_version || 'Not reported'}</strong></div>
+        <div class="bridge-device-detail"><span>Last heartbeat</span><strong>${formatWorldTime(d.last_heartbeat)}</strong></div>
+        <div class="bridge-device-detail"><span>SIM balance</span><strong>UGX ${Number(d.sim_balance || 1500000).toLocaleString()}</strong></div>
+        <div class="bridge-device-detail"><span>Ping latency</span><strong>${d.ping_ms || 40} ms</strong></div>
+        <div class="bridge-device-detail"><span>MTN merchant</span><strong>${mtnBinding}</strong></div>
+        <div class="bridge-device-detail"><span>Airtel merchant</span><strong>${airtelBinding}</strong></div>
+      </div>
+      <div class="bridge-device-secret-row">
+        <div><span class="bridge-device-secret-label">Device secret</span><code id="bridgeSecretValue-${d.id}" data-secret="${escapeDialogHtml(d.device_secret || '')}">${d.device_secret ? '****************' : 'Not generated'}</code></div>
+        <div class="bridge-device-secret-actions">
           ${d.device_secret ? `<button class="btn-action-small view" type="button" onclick="toggleBridgeSecret(${d.id})" id="bridgeSecretToggle-${d.id}">Show</button><button class="btn-action-small view" type="button" onclick="copyBridgeSecret(${d.id})">Copy</button>` : ''}
         </div>
       </div>
-      <div style="display: flex; gap: 8px;">
+      <div class="bridge-device-actions">
         <button class="btn-action-small view" style="flex: 1;" onclick="provisionBridgeDevice(${d.id})">${d.mtn_merchant_id || d.airtel_merchant_id || d.merchant_id ? 'Update Binding / Secret' : 'Provision and Bind'}</button>
-        <button class="btn-action-small view" onclick="setBridgeLifecycle(${d.id}, '${d.status === 'disabled' ? 'active' : 'disabled'}')">${d.status === 'disabled' ? 'Enable' : 'Disable'}</button>
+        <button class="btn-action-small view" onclick="setBridgeLifecycle(${d.id}, '${lifecycle === 'disabled' ? 'active' : 'disabled'}')">${lifecycle === 'disabled' ? 'Enable' : 'Disable'}</button>
         <button class="btn-action-small view" onclick="showToast('USSD ping sent to ${deviceId}', 'success')">Ping USSD</button>
       </div>
-    </div>
+    </article>
   `;
   }).join('');
 }
