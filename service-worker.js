@@ -1,11 +1,11 @@
 
-const CACHE = 'vsim-v15';
+const CACHE = 'vsim-v16-kyc-mobile';
 const ASSETS = [
   './',
   './index.html',
-  './css/app.css',
-  './js/app.js',
-  './js/pwa-register.js',
+  './css/app.css?v=20260906-kyc-mobile',
+  './js/app.js?v=20260906-kyc-mobile',
+  './js/pwa-register.js?v=20260906-kyc-mobile',
   './icons/vsim.svg',
   './manifest.json'
 ];
