@@ -58,7 +58,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
     // Build canonical affiliate link based on origin/host or environment
     const reqHost = req.get('host');
     const protocol = String(req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0].trim();
-    const configuredUrl = String(process.env.APP_URL || '').trim().replace(/\/+$/, '');
+    const configuredUrl = String(process.env.FRONTEND_URL || process.env.APP_URL || '').trim().replace(/\/+$/, '');
     const baseUrl = configuredUrl || `${protocol}://${reqHost}`;
     const referralToken = await getOrCreateReferralToken(req.user.id);
     const affiliateLink = `${baseUrl}/?ref=${encodeURIComponent(referralToken)}`;
