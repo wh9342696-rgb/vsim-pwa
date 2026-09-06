@@ -7,6 +7,7 @@ import { emitDataChanged } from '../realtime.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
+const HEARTBEAT_TIMEOUT_MS = 90 * 1000;
 
 const eventSchema = z.object({
   eventId: z.string().min(6).max(160).optional(),
@@ -185,6 +186,9 @@ router.post('/events', bridgeAuth, async (req, res) => {
   const parsed = eventSchema.safeParse(req.body || {});
   if (!parsed.success) return res.status(400).json({ error: 'INVALID_EVENT', details: parsed.error.issues.map(issue => issue.path.join('.')) });
   const event = parsed.data;
+  if (event.transactionType === 'deposit' && event.currency !== 'UGX') {
+    return res.status(400).json({ error: 'UNSUPPORTED_CURRENCY' });
+  }
   const eventProvider = String(event.provider || '').toUpperCase();
   const boundMerchant = eventProvider === 'MTN' ? req.bridge.mtn_merchant_id : eventProvider === 'AIRTEL' ? req.bridge.airtel_merchant_id : req.bridge.merchant_id;
   if (String(boundMerchant || req.bridge.merchant_id || '') !== String(event.merchantId)) return res.status(403).json({ error: 'MERCHANT_NOT_AUTHORIZED' });
@@ -254,7 +258,12 @@ router.post('/sync', bridgeAuth, async (req, res) => res.json({ acknowledged: tr
 router.post('/acknowledge', bridgeAuth, async (req, res) => res.json({ acknowledged: true }));
 
 router.get('/status', bridgeAuth, async (req, res) => {
-  res.json({ deviceId: req.bridge.device_id, status: req.bridge.status, provider: req.bridge.provider, merchantId: req.bridge.merchant_id, lastHeartbeat: req.bridge.last_heartbeat, lastSync: req.bridge.last_sync, appVersion: req.bridge.app_version, simBalance: Number(req.bridge.sim_balance || 0), pingMs: req.bridge.ping_ms, simLines: { MTN: req.bridge.mtn_sim_phone || null, AIRTEL: req.bridge.airtel_sim_phone || null } });
+  const lastHeartbeat = req.bridge.last_heartbeat ? new Date(req.bridge.last_heartbeat).getTime() : 0;
+  const heartbeatFresh = Number.isFinite(lastHeartbeat) && Date.now() - lastHeartbeat <= HEARTBEAT_TIMEOUT_MS;
+  const status = ['revoked', 'disabled', 'decommissioned'].includes(req.bridge.status)
+    ? req.bridge.status
+    : heartbeatFresh ? 'active' : 'offline';
+  res.json({ deviceId: req.bridge.device_id, status, provider: req.bridge.provider, merchantId: req.bridge.merchant_id, lastHeartbeat: req.bridge.last_heartbeat, lastSync: req.bridge.last_sync, appVersion: req.bridge.app_version, simBalance: Number(req.bridge.sim_balance || 0), pingMs: req.bridge.ping_ms, simLines: { MTN: req.bridge.mtn_sim_phone || null, AIRTEL: req.bridge.airtel_sim_phone || null } });
 });
 
 export default router;

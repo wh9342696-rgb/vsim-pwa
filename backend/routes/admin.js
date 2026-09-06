@@ -471,7 +471,12 @@ router.get('/stats', adminAuth, async (req, res) => {
     const depositsTotal = await query(`SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count FROM payment_requests WHERE status = 'completed'`);
     const pendingPayouts = await query(`SELECT SUM(amount) AS total, COUNT(*) AS count FROM withdrawals WHERE status = 'pending'`);
     const paidPayouts = await query(`SELECT SUM(amount) AS total, COUNT(*) AS count FROM withdrawals WHERE status = 'paid'`);
-    const bridgeOnline = await query(`SELECT COUNT(*) AS online FROM bridge_devices WHERE status = 'online'`);
+    const bridgeOnline = await query(`
+      SELECT COUNT(*) AS online
+      FROM bridge_devices
+      WHERE status = 'active'
+        AND last_heartbeat >= CURRENT_TIMESTAMP - INTERVAL '2 minutes'
+    `);
     const packages = await query(`SELECT COALESCE(SUM(revenue), 0) AS revenue, COALESCE(SUM(sold_count), 0) AS sold FROM esim_packages`);
     const investmentRows = await query(
       `SELECT ue.status, COALESCE(SUM(COALESCE(ep.price, 0)), 0) AS amount
