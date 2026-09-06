@@ -138,7 +138,7 @@ router.post(['/signup', '/register'], async (req, res) => {
       if (codeExists.rows.length === 0) break;
     } while (true);
 
-    const normalizedReferralCode = referralCode?.trim().toUpperCase() || null;
+    const normalizedReferralCode = referralCode?.trim() || null;
     let referredBy = null;
     let referrerUser = null;
     if (normalizedReferralCode) {
