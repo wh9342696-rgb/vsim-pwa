@@ -154,10 +154,10 @@ const adminApiLimiter = rateLimit({
 });
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 80,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  message: { error: 'Too many authentication attempts, please try again later.' }
+  message: { error: 'Too many authentication attempts, please wait a few minutes and try again.' }
 });
 
 app.use(['/api/v1/auth/login', '/api/auth/login', '/api/v1/auth/passkey/login/options', '/api/auth/passkey/login/options', '/api/v1/admin/login', '/api/admin/login'], authLimiter);
