@@ -874,7 +874,7 @@
                 </div>
 
                 <div class="merchant-code-spotlight">
-                  <div class="code-spotlight-label">Merchant Number / Code</div>
+                  <div class="code-spotlight-label">Pay to merchant number</div>
                   <div class="code-spotlight-val-row">
                     <span id="merchantCode" class="spotlight-code-text">------</span>
                     <button type="button" class="btn-spotlight-copy" id="copyCodeBtn" onclick="copyModalField('code')">
@@ -885,6 +885,7 @@
                   <div class="merchant-meta-sub" id="merchantNameWrapper">
                     <span id="merchantName"></span>
                     <span id="merchantAccount" class="merchant-sub-account"></span>
+                    <span id="merchantBridgeDevice" class="merchant-sub-account"></span>
                   </div>
                 </div>
               </div>
@@ -901,7 +902,7 @@
                   <p id="merchantInstructions" class="instruction-text"></p>
                 </div>
                 <div class="direction-ref-row">
-                  <span class="ref-hint">Reference: <strong id="merchantReference" style="font-family: monospace; color: var(--text-white);">VSIM-000000</strong></span>
+                  <span class="ref-hint">Unique transaction reference: <strong id="merchantReference" style="font-family: monospace; color: var(--text-white);">VSIM-000000</strong></span>
                   <button type="button" class="btn-mini-copy" id="copyRefBtn" onclick="copyModalField('ref')">Copy Ref</button>
                 </div>
               </div>

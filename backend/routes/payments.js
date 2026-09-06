@@ -61,70 +61,44 @@ router.get('/assigned-merchant', async (req, res) => {
   try {
     const { network, amount, packageId } = req.query;
 
-    // Fetch active merchants ordered by priority and transaction load.
-    let merchantsRes = await query(`SELECT * FROM merchants WHERE status = 'active' ORDER BY priority ASC, total_transactions ASC, total_volume ASC, id ASC`);
-    
-    if (merchantsRes.rows.length === 0) {
-      return res.status(503).json({ 
-        success: false,
-        error: 'No active mobile money merchant is currently available. Please try another payment method or contact support.' 
-      });
-    }
-
-    let merchants = merchantsRes.rows;
-
-    // Filter by network preference if specified (MTN / Airtel / Universal)
-    if (network && String(network).toLowerCase() !== 'all') {
-      const netFilter = merchants.filter(m => 
-        String(m.network).toLowerCase() === String(network).toLowerCase() || 
-        String(m.network).toLowerCase() === 'all'
-      );
-      if (netFilter.length > 0) {
-        merchants = netFilter;
-      } else {
-        return res.status(404).json({
-          success: false,
-          error: `No active mobile money merchant found for ${network}. Please choose another network or payment method.`
-        });
-      }
-    }
-
-    // Recompute after network filtering so newly added eligible merchants participate immediately.
-    merchants.sort((left, right) =>
-      Number(left.priority || 0) - Number(right.priority || 0) ||
-      Number(left.total_transactions || 0) - Number(right.total_transactions || 0) ||
-      Number(left.total_volume || 0) - Number(right.total_volume || 0) ||
-      Number(left.id || 0) - Number(right.id || 0)
+    const requestedNetwork = String(network || 'MTN').toUpperCase();
+    const bindingColumn = requestedNetwork === 'AIRTEL' ? 'airtel_merchant_id' : 'mtn_merchant_id';
+    const bridgeResult = await query(
+      `SELECT bd.*, m.id AS merchant_id, m.name, m.merchant_code, m.account_name, m.phone AS merchant_phone, m.network, m.instructions
+       FROM bridge_devices bd
+       LEFT JOIN merchants m ON m.merchant_code = CASE WHEN $1 = 'AIRTEL' THEN bd.airtel_merchant_id ELSE bd.mtn_merchant_id END
+       WHERE bd.status = 'active'
+         AND bd.last_heartbeat >= CURRENT_TIMESTAMP - INTERVAL '2 minutes'
+         AND NULLIF(bd.${bindingColumn}, '') IS NOT NULL
+       ORDER BY bd.last_heartbeat DESC, bd.id ASC
+       LIMIT 1`,
+      [requestedNetwork]
     );
-    const bestPriority = Number(merchants[0].priority || 0);
-    const bestTransactions = Number(merchants[0].total_transactions || 0);
-    const bestVolume = Number(merchants[0].total_volume || 0);
-    const leastLoaded = merchants.filter(merchant =>
-      Number(merchant.priority || 0) === bestPriority &&
-      Number(merchant.total_transactions || 0) === bestTransactions &&
-      Number(merchant.total_volume || 0) === bestVolume
+    const assignedBridge = bridgeResult.rows[0];
+    if (!assignedBridge) {
+      return res.status(503).json({ success: false, error: `No active ${requestedNetwork} bridge merchant is currently available.` });
+    }
+    const merchantCode = requestedNetwork === 'AIRTEL' ? assignedBridge.airtel_merchant_id : assignedBridge.mtn_merchant_id;
+    const refCode = await createUniqueReference('VSIM', async candidate =>
+      (await query('SELECT id FROM payment_requests WHERE reference = $1', [candidate])).rows.length > 0
     );
-    const cursorKey = String(network || 'all').toUpperCase();
-    const cursor = merchantCursors.get(cursorKey) || 0;
-    const assignedMerchant = leastLoaded[cursor % leastLoaded.length];
-    merchantCursors.set(cursorKey, cursor + 1);
-    const refCode = `VSIM-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    const isMTN = String(assignedMerchant.network).toUpperCase().includes('MTN');
+    const isMTN = requestedNetwork === 'MTN';
     const defaultInstructions = isMTN
-      ? `Dial *165*3# -> Enter Merchant Code ${assignedMerchant.merchant_code} -> Enter Amount -> Enter Reference ${refCode} -> Confirm PIN`
-      : `Dial *185*9# -> Enter Merchant ID ${assignedMerchant.merchant_code} -> Enter Amount -> Enter Reference ${refCode} -> Confirm PIN`;
+      ? `Dial *165*3# -> Enter Merchant Code ${merchantCode} -> Enter Amount -> Enter Reference ${refCode} -> Confirm PIN`
+      : `Dial *185*9# -> Enter Merchant ID ${merchantCode} -> Enter Amount -> Enter Reference ${refCode} -> Confirm PIN`;
 
     res.json({
       success: true,
       merchant: {
-        id: assignedMerchant.id,
-        name: assignedMerchant.name,
-        merchant_code: assignedMerchant.merchant_code,
-        network: (assignedMerchant.network || 'MTN').toUpperCase(),
-        account_name: assignedMerchant.account_name || assignedMerchant.name,
-        phone: assignedMerchant.phone || '+256 700 000 000',
-        instructions: assignedMerchant.instructions || defaultInstructions
+        id: assignedBridge.merchant_id,
+        name: assignedBridge.name || `${requestedNetwork} Bridge Merchant`,
+        merchant_code: merchantCode,
+        network: requestedNetwork,
+        account_name: assignedBridge.account_name || assignedBridge.name || merchantCode,
+        phone: assignedBridge.merchant_phone || '',
+        bridgeDeviceId: assignedBridge.device_id,
+        instructions: assignedBridge.instructions || defaultInstructions
       },
       reference: refCode,
       amount: parseFloat(amount) || 0
@@ -147,8 +121,21 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
     }
 
     const payerPhone = momoNumber || phone || 'Not provided';
+    const requestedNetwork = String(network || 'MTN').toUpperCase();
+    const bindingColumn = requestedNetwork === 'AIRTEL' ? 'airtel_merchant_id' : 'mtn_merchant_id';
+    const assignedBridge = await query(
+      `SELECT id FROM bridge_devices
+       WHERE status = 'active'
+         AND last_heartbeat >= CURRENT_TIMESTAMP - INTERVAL '2 minutes'
+         AND NULLIF(${bindingColumn}, '') = $1
+       LIMIT 1`,
+      [String(merchantCode || '').trim()]
+    );
+    if (!assignedBridge.rows.length) {
+      return res.status(409).json({ success: false, error: 'Merchant is not currently assigned to an active bridge device.' });
+    }
     const txRef = reference || await createUniqueReference('VSIM', async candidate => (await query('SELECT id FROM payment_requests WHERE reference = $1', [candidate])).rows.length > 0);
-    const mCode = merchantCode || 'VSIM-M001';
+    const mCode = String(merchantCode).trim();
 
     const existingPayment = await query('SELECT user_id, package_id, target_esim_id, status, created_at FROM payment_requests WHERE reference = $1', [txRef]);
     if (existingPayment.rows.length) {

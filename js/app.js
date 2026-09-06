@@ -1182,6 +1182,7 @@ function applyMerchantData(res, network) {
   const codeElem = document.getElementById('merchantCode');
   const refElem = document.getElementById('merchantReference');
   const instElem = document.getElementById('merchantInstructions');
+  const bridgeElem = document.getElementById('merchantBridgeDevice');
 
   if (nameElem) nameElem.textContent = m.name;
   if (accountElem) accountElem.textContent = m.account_name ? `${m.account_name} (${m.phone || '-'})` : (m.phone || '');
@@ -1193,6 +1194,7 @@ function applyMerchantData(res, network) {
   if (codeElem) codeElem.textContent = m.merchant_code;
   if (refElem) refElem.textContent = res.reference;
   if (instElem) instElem.textContent = m.instructions || 'Send the exact amount and confirm with your PIN.';
+  if (bridgeElem) bridgeElem.textContent = m.bridgeDeviceId ? `Assigned bridge: ${m.bridgeDeviceId}` : '';
 
   if (loading) loading.style.display = 'none';
   if (errorBox) errorBox.style.display = 'none';
