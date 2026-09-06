@@ -112,6 +112,7 @@ const AdminAPI = (() => {
     provisionBridge: (id, data) => request(`/bridge-devices/${id}/provision`, { method: 'POST', body: JSON.stringify(data) }),
     regenerateBridgeSecret: id => request(`/bridge-devices/${id}/regenerate-secret`, { method: 'POST' }),
     setBridgeLifecycle: (id, status) => request(`/bridge-devices/${id}/lifecycle`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+    unprovisionBridge: id => request(`/bridge-devices/${id}/unprovision`, { method: 'POST' }),
     getBridgeEvents: () => request('/bridge-events'),
     getLogs: () => request('/logs'),
     sendBroadcast: data => request('/notifications/broadcast', { method: 'POST', body: JSON.stringify(data) }),

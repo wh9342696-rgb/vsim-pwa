@@ -1845,6 +1845,7 @@ function renderBridgeGrid() {
         <button class="btn-action-small view" style="flex: 1;" onclick="provisionBridgeDevice(${d.id})">${d.mtn_merchant_id || d.airtel_merchant_id || d.merchant_id ? 'Update Binding / Secret' : 'Provision and Bind'}</button>
         <button class="btn-action-small view" onclick="showBridgeEnrollmentQr(${d.id})">Scan to connect</button>
         <button class="btn-action-small view" onclick="setBridgeLifecycle(${d.id}, '${lifecycle === 'disabled' ? 'active' : 'disabled'}')">${lifecycle === 'disabled' ? 'Enable' : 'Disable'}</button>
+        <button class="btn-action-small view" onclick="unprovisionBridgeDevice(${d.id})">Unprovision</button>
         <button class="btn-action-small view" onclick="showToast('USSD ping sent to ${deviceId}', 'success')">Ping USSD</button>
       </div>
     </article>
@@ -1941,6 +1942,23 @@ async function provisionBridgeDevice(id) {
 
 async function setBridgeLifecycle(id, status) {
   try { await AdminAPI.setBridgeLifecycle(id, status); showToast(`Bridge marked ${status}`, 'success'); await loadAllData(); } catch (error) { showToast(error.message || 'Could not update bridge status', 'error'); }
+}
+
+async function unprovisionBridgeDevice(id) {
+  const confirmed = await showCustomConfirm({
+    title: 'Unprovision bridge device',
+    message: 'This revokes the current app credential and clears merchant bindings and telemetry. The device must be provisioned again before reconnecting.',
+    confirmText: 'Unprovision',
+    isDanger: true
+  });
+  if (!confirmed) return;
+  try {
+    await AdminAPI.unprovisionBridge(id);
+    showToast('Bridge device unprovisioned', 'success');
+    await loadAllData();
+  } catch (error) {
+    showToast(error.message || 'Could not unprovision bridge device', 'error');
+  }
 }
 
 // Full Logs View

@@ -1120,6 +1120,28 @@ router.patch('/bridge-devices/:id/lifecycle', adminAuth, ensureSuperAdmin, async
   res.json({ device: result.rows[0] });
 });
 
+router.post('/bridge-devices/:id/unprovision', adminAuth, ensureSuperAdmin, async (req, res) => {
+  try {
+    const result = await query(
+      `UPDATE bridge_devices
+       SET status = 'provisioning', revoked_at = CURRENT_TIMESTAMP,
+           provider = NULL, merchant_id = NULL, mtn_merchant_id = NULL, airtel_merchant_id = NULL,
+           sim_balance = NULL, ping_ms = NULL, last_heartbeat = NULL, last_sync = NULL,
+           app_version = NULL, mtn_sim_phone = NULL, airtel_sim_phone = NULL,
+           device_secret = NULL, credential_hash = NULL
+       WHERE id = $1
+       RETURNING id, device_id, status, provider, merchant_id, mtn_merchant_id, airtel_merchant_id,
+                 sim_balance, ping_ms, last_heartbeat, last_sync, app_version, mtn_sim_phone, airtel_sim_phone`,
+      [req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Bridge device not found' });
+    res.json({ device: result.rows[0], message: 'Bridge device unprovisioned. Provision it again before reconnecting.' });
+  } catch (err) {
+    console.error('Bridge unprovision error:', err);
+    res.status(500).json({ error: 'Failed to unprovision bridge device' });
+  }
+});
+
 router.get('/bridge-events', adminAuth, async (req, res) => {
   const result = await query('SELECT * FROM bridge_events ORDER BY received_at DESC LIMIT 100');
   res.json({ events: result.rows });
