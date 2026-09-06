@@ -439,7 +439,7 @@ async function fetchBackendDataInternal() {
       const totalReferrals = Number(stats.totalReferrals || stats.total_referrals || 0);
       const activeReferrals = Number(stats.activeReferrals || stats.active_referrals || 0);
       const referralCode = stats.referralCode || '';
-      const affiliateLink = stats.affiliateLink || `${window.location.origin}/?ref=${referralCode}`;
+      const affiliateLink = stats.affiliateLink || (referralCode ? `${window.location.origin}/?ref=${encodeURIComponent(referralCode)}` : '');
       appState.profile.referralCode = referralCode;
       appState.profile.affiliateLink = affiliateLink;
 
