@@ -2468,7 +2468,7 @@ function initReferralHandler() {
     }
 
     if (refCode) {
-      refCode = refCode.trim().toUpperCase();
+      refCode = refCode.trim();
       sessionStorage.setItem('vsim_pending_ref', refCode);
     }
 
