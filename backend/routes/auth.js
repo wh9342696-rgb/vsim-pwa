@@ -28,6 +28,11 @@ async function resolveReferralCode(value) {
     [rawValue]
   );
   if (tokenResult.rows[0]) return tokenResult.rows[0];
+  const legacyClientTokenResult = await query(
+    'SELECT u.id, u.name, u.phone, u.referral_code FROM referral_tokens rt JOIN users u ON u.id = rt.user_id WHERE LOWER(rt.token) = LOWER($1)',
+    [rawValue]
+  );
+  if (legacyClientTokenResult.rows[0]) return legacyClientTokenResult.rows[0];
   const codeResult = await query('SELECT id, name, phone, referral_code FROM users WHERE UPPER(referral_code) = $1', [rawValue.toUpperCase()]);
   return codeResult.rows[0] || null;
 }
