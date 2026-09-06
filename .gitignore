@@ -1,6 +1,7 @@
 # Dependencies and local tooling
 node_modules/
-backend/
+backend/node_modules/
+backend/.env*
 frontend.tar.gz
 
 # Environment and secrets
