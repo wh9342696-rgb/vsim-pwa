@@ -53,4 +53,20 @@ Example config: nginx.conf.example
 
 ## Restart strategy
 
-Use a process manager such as PM2 or Windows service management to restart the app automatically after crashes.
+Production uses Docker Compose with `restart: unless-stopped` for API and PostgreSQL crash recovery. Install
+`vsim-docker.service` as a systemd unit to bring the Compose stack up automatically after a VPS reboot:
+
+```bash
+sudo install -m 644 vsim-docker.service /etc/systemd/system/vsim-docker.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now vsim-docker.service
+```
+
+Useful commands:
+
+```bash
+sudo systemctl status vsim-docker.service
+sudo docker compose --env-file /var/www/vsim/.env.docker ps
+sudo docker compose --env-file /var/www/vsim/.env.docker logs --tail=100 api
+sudo systemctl restart vsim-docker.service
+```
