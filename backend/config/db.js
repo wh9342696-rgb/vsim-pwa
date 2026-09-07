@@ -309,6 +309,10 @@ async function initializePostgresSchema() {
   await pool.query('ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS processed_at TIMESTAMP');
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS package_id TEXT');
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS target_esim_id INTEGER');
+  await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS customer_reference TEXT');
+  await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS reviewed_by INTEGER REFERENCES admin_users(id)');
+  await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP');
+  await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS rejection_reason TEXT');
   await pool.query("ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'PAYMENT_AWAITING_VERIFICATION'");
   await pool.query("ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS order_status TEXT DEFAULT 'NOT_APPLICABLE'");
   await pool.query("ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS provisioning_status TEXT DEFAULT 'NOT_APPLICABLE'");
@@ -322,6 +326,7 @@ async function initializePostgresSchema() {
   await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS user_esims_iccid_unique ON user_esims (iccid) WHERE iccid IS NOT NULL');
   await pool.query('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS admin_id INTEGER REFERENCES admin_users(id)');
   await pool.query('ALTER TABLE notifications ALTER COLUMN user_id DROP NOT NULL').catch(() => {});
+  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS payment_requests_customer_reference_unique ON payment_requests (customer_reference) WHERE customer_reference IS NOT NULL AND customer_reference <> \'\'');
 
   const usersWithoutReferral = await pool.query("SELECT id FROM users WHERE referral_code IS NULL OR referral_code = '' ORDER BY id");
   for (const user of usersWithoutReferral.rows) {
@@ -593,6 +598,10 @@ if (databaseDriver === 'postgres') {
       merchant TEXT DEFAULT 'VSIM-M001',
       network TEXT DEFAULT 'MTN',
       reference TEXT,
+      customer_reference TEXT,
+      reviewed_by INTEGER,
+      reviewed_at DATETIME,
+      rejection_reason TEXT,
       status TEXT DEFAULT 'completed',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -750,6 +759,10 @@ if (databaseDriver === 'postgres') {
   try { sqlite.exec('ALTER TABLE user_esims ADD COLUMN renewal_count INTEGER DEFAULT 0'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN package_id TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN target_esim_id INTEGER'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
+  try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN customer_reference TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
+  try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN reviewed_by INTEGER'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
+  try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN reviewed_at DATETIME'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
+  try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN rejection_reason TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec("ALTER TABLE payment_requests ADD COLUMN payment_status TEXT DEFAULT 'PAYMENT_AWAITING_VERIFICATION'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec("ALTER TABLE payment_requests ADD COLUMN order_status TEXT DEFAULT 'NOT_APPLICABLE'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec("ALTER TABLE payment_requests ADD COLUMN provisioning_status TEXT DEFAULT 'NOT_APPLICABLE'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
@@ -763,6 +776,7 @@ if (databaseDriver === 'postgres') {
   try { sqlite.exec('ALTER TABLE withdrawals ADD COLUMN reference TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE withdrawals ADD COLUMN processed_by INTEGER'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE withdrawals ADD COLUMN processed_at DATETIME'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
+  try { sqlite.exec("CREATE UNIQUE INDEX IF NOT EXISTS payment_requests_customer_reference_unique ON payment_requests (customer_reference) WHERE customer_reference IS NOT NULL AND customer_reference <> ''"); } catch (error) { if (!String(error.message).includes('already exists')) throw error; }
   for (const column of ['provider TEXT', 'merchant_id TEXT', 'app_version TEXT', 'credential_hash TEXT', 'device_secret TEXT', 'revoked_at DATETIME', 'last_sync DATETIME']) {
     try { sqlite.exec(`ALTER TABLE bridge_devices ADD COLUMN ${column}`); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   }

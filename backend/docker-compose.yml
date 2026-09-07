@@ -41,6 +41,7 @@ services:
       - /tmp:rw,noexec,nosuid,size=64m
     volumes:
       - api-data:/app/database
+      - ./frontend:/frontend:ro
 
   db:
     image: postgres:16-alpine

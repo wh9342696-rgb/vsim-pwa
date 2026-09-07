@@ -79,6 +79,7 @@ const AdminAPI = (() => {
     markNotificationRead: id => request(`/notifications/${id}/read`, { method: 'POST' }),
     markAllNotificationsRead: () => request('/notifications/read-all', { method: 'POST' }),
     getDeposits: params => request(`/deposits${query(params || {})}`).then(result => ({ deposits: (result.deposits || []).map(normalizeDeposit) })),
+    processDeposit: (id, action, reason = '') => request(`/deposits/${id}/action`, { method: 'POST', body: JSON.stringify({ action, reason }) }),
     getWithdrawals: params => request(`/withdrawals${query(params || {})}`).then(result => ({ withdrawals: (result.withdrawals || []).map(normalizeWithdrawal) })),
     getAirtimePurchases: () => request('/airtime-purchases'),
     processAirtimePurchase: (id, action) => request(`/airtime-purchases/${id}/action`, { method: 'POST', body: JSON.stringify({ action }) }),

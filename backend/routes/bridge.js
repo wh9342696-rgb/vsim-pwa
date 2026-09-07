@@ -37,7 +37,7 @@ function formatDataGb(value, unit = 'GB') {
   return `${Number((value * (multipliers[unit] || 1)).toFixed(2))} ${unit}`;
 }
 
-async function fulfillVerifiedPurchase(payment) {
+export async function fulfillVerifiedPurchase(payment) {
   if (!payment.package_id || !payment.user_id) {
     await query(
       `UPDATE payment_requests

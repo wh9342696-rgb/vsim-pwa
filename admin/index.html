@@ -16,10 +16,18 @@
   <link rel="apple-touch-icon" href="/icons/vsim-admin.svg" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="VSIM Admin" />
-  <link rel="stylesheet" href="/css/admin.css?v=f90d5cd" />
+  <link rel="stylesheet" href="/css/admin.css?v=20260906-admin-install-2" />
   <script src="/js/pwa-register.js" defer></script>
 </head>
 <body data-service-worker="admin-sw.js">
+  <aside class="admin-pwa-install-prompt" id="adminPwaInstallPrompt" hidden aria-live="polite">
+    <div class="admin-pwa-install-copy">
+      <strong id="adminPwaInstallTitle">Install VSIM Admin as an app</strong>
+      <span id="adminPwaInstallText">Use VSIM Admin from your home screen without browser controls.</span>
+    </div>
+    <button type="button" id="installAdminPwaPromptBtn" onclick="installAdminPwa()">Install</button>
+    <button type="button" class="admin-pwa-install-close" onclick="dismissAdminPwaPrompt()" aria-label="Dismiss install prompt">&times;</button>
+  </aside>
   <script>
     (() => {
       const blockKeys = ['F12', 'I', 'J', 'C', 'U'];
@@ -1038,6 +1046,16 @@
         </section>
 
 
+        <section class="admin-view-screen" id="view-deposits">
+          <div class="dashboard-greeting-bar">
+            <div><h2 class="dashboard-greeting-title">Pending Mobile Money Payments</h2><p class="dashboard-greeting-sub">Verify the merchant account before approving fulfillment. Customer references are evidence only.</p></div>
+          </div>
+          <div class="dashboard-widget-card"><div class="widget-card-body" style="padding: 0;"><div class="table-responsive-wrapper"><table class="admin-data-table">
+            <thead><tr><th>ID</th><th>Customer</th><th>Type</th><th>Amount</th><th>Customer Ref</th><th>Submitted</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="fullDepositsTbody"></tbody>
+          </table></div></div></div>
+        </section>
+
         <!-- ================================================================
              VIEW: WITHDRAWALS (PAYOUTS)
              ================================================================ -->
@@ -1933,6 +1951,6 @@
 
   <!-- Script Imports -->
   <script src="/js/admin-api.js?v=de7a90b"></script>
-  <script src="/js/admin.js?v=de7a90b"></script>
+  <script src="/js/admin.js?v=20260906-admin-install-6"></script>
 </body>
 </html>

@@ -914,6 +914,12 @@
                   <input id="merchantPayerPhone" class="modal-form-input modern-payer-input" placeholder="e.g. 0784 567 890" />
                 </div>
               </div>
+              <div class="payer-input-container">
+                <label class="payer-input-label">Mobile Money Transaction ID (optional)</label>
+                <div class="payer-input-box">
+                  <input id="merchantCustomerReference" class="modal-form-input modern-payer-input" maxlength="160" placeholder="Enter the SMS transaction ID after paying" />
+                </div>
+              </div>
             </div>
 
             <!-- 4. Success Receipt State -->
@@ -923,8 +929,8 @@
                   <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
               </div>
-              <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--text-white); margin-top: 10px;">Bundle renewed</h3>
-              <p style="font-size: 0.78rem; color: var(--text-gray); margin-top: 4px;">Your data has been added and your eSIM is active again.</p>
+              <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--text-white); margin-top: 10px;">Payment submitted</h3>
+              <p style="font-size: 0.78rem; color: var(--text-gray); margin-top: 4px;">Your payment is awaiting verification. Your eSIM will update after approval.</p>
               <div class="success-receipt-card">
                 <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 6px;">
                   <span style="color: var(--text-muted);">Reference:</span>
@@ -932,7 +938,7 @@
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 6px;">
                   <span style="color: var(--text-muted);">Status:</span>
-                  <span class="badge-tag-income">Verified</span>
+                  <span class="badge-tag-income">Pending verification</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 6px;">
                   <span style="color: var(--text-muted);">Data added:</span>
@@ -940,7 +946,7 @@
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 0.78rem;">
                   <span style="color: var(--text-muted);">eSIM Status:</span>
-                  <strong style="color: var(--accent-green);">Active · Progress started</strong>
+                  <strong style="color: var(--text-muted);">Awaiting approval</strong>
                 </div>
               </div>
             </div>

@@ -74,7 +74,8 @@ router.post('/request-buy', authenticateToken, async (req, res) => {
     );
     if (!merchantRes.rows.length) return res.status(503).json({ error: `No active ${normalizedNetwork} payment merchant is available` });
 
-    const paymentAmount = Math.round(airtimeAmount);
+    const markupPercent = await getAirtimeRate('airtime_buy_markup_percent', 0);
+    const paymentAmount = Math.round(airtimeAmount * (1 + markupPercent / 100));
     const merchantNumber = merchantRes.rows[0].phone || merchantRes.rows[0].merchant_code;
     const reference = await createUniqueReference('AIR-BUY', async candidate => (await query('SELECT id FROM airtime_purchase_requests WHERE reference = $1', [candidate])).rows.length > 0);
     res.json({ airtimeAmount, paymentAmount, merchantNumber, reference, phone: recipientPhone, network: normalizedNetwork });
@@ -91,6 +92,9 @@ router.post('/confirm-buy', authenticateToken, async (req, res) => {
     if (!Number.isFinite(airtimeAmount) || !Number.isFinite(depositAmount) || !phone || !merchantNumber || !reference) {
       return res.status(400).json({ error: 'Complete the payment details before submitting' });
     }
+    const markupPercent = await getAirtimeRate('airtime_buy_markup_percent', 0);
+    const expectedDeposit = Math.round(airtimeAmount * (1 + markupPercent / 100));
+    if (depositAmount !== expectedDeposit) return res.status(400).json({ error: `Payment amount must be UGX ${expectedDeposit.toLocaleString()}` });
     const duplicate = await query('SELECT id FROM airtime_purchase_requests WHERE reference = $1', [reference]);
     if (duplicate.rows.length) return res.status(409).json({ error: 'This payment reference has already been submitted' });
     await query(
@@ -144,6 +148,9 @@ router.post('/confirm-sell', authenticateToken, async (req, res) => {
     if (!Number.isFinite(airtimeAmount) || !Number.isFinite(cashAmount) || !payoutPhone || !merchantNumber || !reference) {
       return res.status(400).json({ error: 'Complete the airtime transfer details before submitting' });
     }
+    const payoutPercent = await getAirtimeRate('airtime_sell_payout_percent', 90);
+    const expectedPayout = Math.round(airtimeAmount * payoutPercent / 100);
+    if (cashAmount !== expectedPayout) return res.status(400).json({ error: `Payout amount must be UGX ${expectedPayout.toLocaleString()}` });
     const duplicate = await query('SELECT id FROM airtime_sale_requests WHERE reference = $1', [reference]);
     if (duplicate.rows.length) return res.status(409).json({ error: 'This sale reference has already been submitted' });
     await query(

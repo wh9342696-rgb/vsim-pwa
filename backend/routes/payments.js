@@ -16,6 +16,7 @@ const confirmDepositSchema = z.object({
   merchantCode: z.string().optional(),
   network: z.string().optional(),
   reference: z.string().optional(),
+  customerReference: z.string().trim().max(160).optional(),
   packageId: z.string().optional(),
   targetEsimId: z.union([z.number(), z.string()]).optional(),
   targetEsimIccid: z.string().optional(),
@@ -112,7 +113,7 @@ router.get('/assigned-merchant', async (req, res) => {
 // 2. User Submits Deposit / Purchase Confirmation to Merchant
 router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, res) => {
   try {
-    const { amount, phone, momoNumber, merchantId, merchantCode, network, reference, packageId, targetEsimId, targetEsimIccid, renewal = false, type = 'esim_purchase' } = req.body;
+    const { amount, phone, momoNumber, merchantId, merchantCode, network, reference, customerReference, packageId, targetEsimId, targetEsimIccid, renewal = false, type = 'esim_purchase' } = req.body;
     const num = parseFloat(amount);
     const isRenewal = Boolean(renewal || targetEsimId || targetEsimIccid);
 
@@ -136,6 +137,11 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
     }
     const txRef = reference || await createUniqueReference('VSIM', async candidate => (await query('SELECT id FROM payment_requests WHERE reference = $1', [candidate])).rows.length > 0);
     const mCode = String(merchantCode).trim();
+
+    if (customerReference) {
+      const usedReference = await query('SELECT id, user_id, status FROM payment_requests WHERE customer_reference = $1', [customerReference]);
+      if (usedReference.rows.length) return res.status(409).json({ success: false, error: 'This Mobile Money transaction ID has already been submitted.' });
+    }
 
     const existingPayment = await query('SELECT user_id, package_id, target_esim_id, status, created_at FROM payment_requests WHERE reference = $1', [txRef]);
     if (existingPayment.rows.length) {
@@ -192,6 +198,9 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
     if (isRenewal && (!userId || (!targetEsimId && !targetEsimIccid))) {
       return res.status(400).json({ success: false, error: 'Renewal must include the existing eSIM and signed-in user.' });
     }
+    if (packageId && !userId) {
+      return res.status(401).json({ success: false, error: 'Sign in before submitting an eSIM payment.' });
+    }
 
     let resolvedTargetEsimId = null;
     if (isRenewal) {
@@ -206,12 +215,26 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
       }
     }
 
+    if (packageId) {
+      const packageResult = await query('SELECT * FROM esim_packages WHERE id = $1', [packageId]);
+      if (!packageResult.rows.length) return res.status(400).json({ success: false, error: 'Selected package is no longer available.' });
+      let renewalCount = 0;
+      if (resolvedTargetEsimId) {
+        const esimResult = await query('SELECT renewal_count FROM user_esims WHERE id = $1 AND user_id = $2', [resolvedTargetEsimId, userId]);
+        renewalCount = Number(esimResult.rows[0]?.renewal_count || 0);
+      }
+      const expectedAmount = getRenewalPrice(packageResult.rows[0], renewalCount);
+      if (Math.abs(num - expectedAmount) > 0.01) {
+        return res.status(400).json({ success: false, error: `Payment amount must be UGX ${expectedAmount.toLocaleString()}.` });
+      }
+    }
+
     // Reporting a payment only creates a verification request. The bridge and
     // backend verification path are the only code allowed to fulfill it.
     await query(
-      `INSERT INTO payment_requests (user_id, phone, amount, merchant, network, reference, package_id, target_esim_id, status, payment_status, order_status, provisioning_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PAYMENT_AWAITING_VERIFICATION', 'PAYMENT_AWAITING_VERIFICATION', $9, $10)`,
-      [userId, payerPhone, num, mCode, network || 'MTN', txRef, packageId || null, resolvedTargetEsimId,
+      `INSERT INTO payment_requests (user_id, phone, amount, merchant, network, reference, customer_reference, package_id, target_esim_id, status, payment_status, order_status, provisioning_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PAYMENT_AWAITING_VERIFICATION', 'PAYMENT_AWAITING_VERIFICATION', $10, $11)`,
+      [userId, payerPhone, num, mCode, network || 'MTN', txRef, customerReference || null, packageId || null, resolvedTargetEsimId,
         packageId ? 'PENDING_PAYMENT' : 'NOT_APPLICABLE', packageId ? 'NOT_STARTED' : 'NOT_APPLICABLE']
     );
 

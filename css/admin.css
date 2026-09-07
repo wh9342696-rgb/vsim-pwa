@@ -2639,3 +2639,73 @@ button,
     scroll-behavior: auto !important;
   }
 }
+
+.admin-pwa-install-prompt {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(360px, calc(100vw - 36px));
+  padding: 14px 16px;
+  color: var(--text-white);
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--card-shadow);
+}
+
+.admin-pwa-install-prompt[hidden] {
+  display: none;
+}
+
+.admin-pwa-install-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-pwa-install-copy strong {
+  font-size: 0.85rem;
+}
+
+.admin-pwa-install-copy span {
+  color: var(--text-gray);
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.admin-pwa-install-prompt button {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 9px 13px;
+  color: #fff;
+  background: var(--primary-gradient);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-pwa-install-close {
+  padding: 0 2px !important;
+  color: var(--text-gray) !important;
+  background: transparent !important;
+  font-size: 1.1rem !important;
+  font-weight: 400 !important;
+}
+
+.admin-pwa-install-prompt button[hidden] {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  .admin-pwa-install-prompt {
+    right: 12px;
+    bottom: 12px;
+    width: calc(100vw - 24px);
+  }
+}

@@ -167,10 +167,11 @@ app.use('/api', (req, res, next) => {
   const path = req.path || '';
   const isPublicCatalog = req.method === 'GET' && path === '/v1/esims/packages';
   const isPublicSupportConfig = req.method === 'GET' && path === '/v1/support/config';
+  const isLoginRequest = req.method === 'POST' && path === '/v1/auth/login';
   const isRealtimeRoute = path === '/v1/realtime';
   const isAdminRoute = path === '/v1/admin' || path.startsWith('/v1/admin/');
 
-  if (isPublicCatalog || isPublicSupportConfig || isRealtimeRoute || isAdminRoute) {
+  if (isPublicCatalog || isPublicSupportConfig || isLoginRequest || isRealtimeRoute || isAdminRoute) {
     return next();
   }
 

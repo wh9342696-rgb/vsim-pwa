@@ -1372,6 +1372,7 @@ async function confirmMobileMoneyPayment() {
     showToast('Please enter your Mobile Money phone number', 'error');
     return;
   }
+  const customerReference = (document.getElementById('merchantCustomerReference')?.value || '').trim();
 
   const confirmBtn = document.getElementById('confirmMerchantPaymentBtn');
   const spinner = document.getElementById('confirmSpinner');
@@ -1387,6 +1388,7 @@ async function confirmMobileMoneyPayment() {
       merchantCode: currentAssignedMerchant.merchant.merchant_code,
       network: currentAssignedMerchant.merchant.network,
       reference: currentAssignedMerchant.reference,
+      customerReference,
       packageId: appState.selectedPkg ? appState.selectedPkg.id : '',
       targetEsimId: appState.targetEsimId,
       targetEsimIccid: appState.targetEsimIccid,

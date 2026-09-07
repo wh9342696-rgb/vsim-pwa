@@ -8,6 +8,7 @@ import { query } from '../config/db.js';
 import { createUniqueReference } from '../utils/reference.js';
 import { emitDataChanged } from '../realtime.js';
 import { encryptBridgeSecret, decryptBridgeSecret, hashBridgeSecret } from '../utils/bridge-secret.js';
+import { fulfillVerifiedPurchase } from './bridge.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -680,17 +681,18 @@ router.put('/settings', adminAuth, ensureSuperAdmin, async (req, res) => {
 router.get('/deposits', adminAuth, ensureSuperAdmin, async (req, res) => {
   try {
     const { status, limit = 50, search } = req.query;
-    let sql = 'SELECT * FROM payment_requests';
+    let sql = `SELECT p.*, u.name AS user_name, u.phone AS user_phone
+           FROM payment_requests p LEFT JOIN users u ON u.id = p.user_id`;
     const params = [];
 
     const conditions = [];
     if (status && status !== 'all') {
       params.push(status);
-      conditions.push(`status = $${params.length}`);
+      conditions.push(`p.status = $${params.length}`);
     }
     if (search) {
       params.push(`%${search}%`);
-      conditions.push(`(phone LIKE $${params.length} OR merchant LIKE $${params.length} OR reference LIKE $${params.length})`);
+      conditions.push(`(p.phone LIKE $${params.length} OR p.merchant LIKE $${params.length} OR p.reference LIKE $${params.length} OR p.customer_reference LIKE $${params.length} OR u.name LIKE $${params.length})`);
     }
 
     if (conditions.length > 0) {
@@ -703,6 +705,51 @@ router.get('/deposits', adminAuth, ensureSuperAdmin, async (req, res) => {
     res.json({ deposits: result.rows });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch deposits' });
+  }
+});
+
+router.post('/deposits/:id/action', adminAuth, ensureSuperAdmin, async (req, res) => {
+  try {
+    const action = req.body?.action;
+    if (!['approve', 'reject'].includes(action)) return res.status(400).json({ error: 'Choose approve or reject' });
+    const requestResult = await query(
+      `UPDATE payment_requests
+       SET status = $1, reviewed_by = $2, reviewed_at = CURRENT_TIMESTAMP,
+           rejection_reason = $3
+       WHERE id = $4 AND status IN ('pending', 'PAYMENT_AWAITING_VERIFICATION')
+       RETURNING *`,
+      [action === 'approve' ? 'PROCESSING' : 'rejected', req.admin.id, action === 'reject' ? String(req.body?.reason || 'Payment was rejected') : null, req.params.id]
+    );
+    const payment = requestResult.rows[0];
+    if (!payment) return res.status(409).json({ error: 'Payment is already processed or does not exist' });
+
+    if (action === 'reject') {
+      await query('UPDATE payment_requests SET payment_status = \'REJECTED\', order_status = CASE WHEN package_id IS NULL THEN order_status ELSE \'PAYMENT_REJECTED\' END WHERE id = $1', [payment.id]);
+      if (payment.user_id) await query('INSERT INTO notifications (user_id, title, message, category) VALUES ($1, $2, $3, \'wallet\')', [payment.user_id, 'Payment Rejected', `Your payment request ${payment.reference} was rejected.`,]);
+      return res.json({ message: 'Payment rejected', status: 'rejected' });
+    }
+
+    try {
+      const fulfillment = await fulfillVerifiedPurchase(payment);
+      if (!fulfillment.fulfilled && payment.user_id) {
+        const txReference = `PAYMENT-${payment.id}`;
+        const existingCredit = await query('SELECT id FROM wallet_transactions WHERE reference = $1', [txReference]);
+        if (!existingCredit.rows.length) {
+          await query('UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2', [payment.amount, payment.user_id]);
+          await query(`INSERT INTO wallet_transactions (user_id, type, title, amount, reference, status) VALUES ($1, 'topup', $2, $3, $4, 'completed')`, [payment.user_id, `Mobile Money payment (${payment.network})`, payment.amount, txReference]);
+        }
+        await query('UPDATE payment_requests SET status = \'completed\', payment_status = \'PAYMENT_VERIFIED\', order_status = \'PAYMENT_RECORDED\' WHERE id = $1', [payment.id]);
+      }
+      await query('INSERT INTO system_logs (action, details, level, time_ago) VALUES ($1, $2, \'success\', \'Just now\')', ['payment_approved', `Payment #${payment.id} approved by admin #${req.admin.id}`]);
+      return res.json({ message: 'Payment approved and fulfillment completed', status: 'completed' });
+    } catch (error) {
+      await query('UPDATE payment_requests SET status = \'failed\', payment_status = \'FULFILLMENT_FAILED\', rejection_reason = $2 WHERE id = $1', [payment.id, String(error.message || 'Fulfillment failed').slice(0, 500)]);
+      console.error('Manual payment fulfillment error:', error);
+      return res.status(500).json({ error: 'Payment was verified but fulfillment failed. Review the payment before retrying.' });
+    }
+  } catch (err) {
+    console.error('Payment action error:', err);
+    res.status(500).json({ error: 'Failed to process payment action' });
   }
 });
 
@@ -783,9 +830,11 @@ router.post('/airtime-sales/:id/action', adminAuth, async (req, res) => {
     if (request.status !== 'pending') return res.status(409).json({ error: 'Airtime sale already processed' });
     const status = action === 'reject' ? 'rejected' : action === 'approve' ? 'approved' : null;
     if (!status) return res.status(400).json({ error: 'Choose approve or reject' });
-    await query('UPDATE airtime_sale_requests SET status = $1, processed_by = $2, processed_at = CURRENT_TIMESTAMP WHERE id = $3', [status, req.admin.id, request.id]);
+    const claimed = await query('UPDATE airtime_sale_requests SET status = $1, processed_by = $2, processed_at = CURRENT_TIMESTAMP WHERE id = $3 AND status = \'pending\' RETURNING id', [status, req.admin.id, request.id]);
+    if (!claimed.rows.length) return res.status(409).json({ error: 'Airtime sale was already processed' });
     if (status === 'approved') {
-      await query('UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2', [request.payout_amount, request.user_id]);
+      const existingCredit = await query('SELECT id FROM wallet_transactions WHERE reference = $1 AND type = \'airtime_sell\' AND status = \'completed\'', [request.reference]);
+      if (!existingCredit.rows.length) await query('UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2', [request.payout_amount, request.user_id]);
     }
     await query('UPDATE wallet_transactions SET status = $1 WHERE user_id = $2 AND reference = $3 AND type = $4', [status === 'approved' ? 'completed' : 'rejected', request.user_id, request.reference, 'airtime_sell']);
     res.json({ message: `Airtime sale marked as ${status}`, request: { ...request, status } });
@@ -803,7 +852,8 @@ router.post('/airtime-purchases/:id/action', adminAuth, async (req, res) => {
     if (request.status !== 'pending') return res.status(409).json({ error: 'Airtime purchase already processed' });
     const status = action === 'reject' ? 'rejected' : action === 'approve' ? 'approved' : null;
     if (!status) return res.status(400).json({ error: 'Choose approve or reject' });
-    await query('UPDATE airtime_purchase_requests SET status = $1, processed_by = $2, processed_at = CURRENT_TIMESTAMP WHERE id = $3', [status, req.admin.id, request.id]);
+    const claimed = await query('UPDATE airtime_purchase_requests SET status = $1, processed_by = $2, processed_at = CURRENT_TIMESTAMP WHERE id = $3 AND status = \'pending\' RETURNING id', [status, req.admin.id, request.id]);
+    if (!claimed.rows.length) return res.status(409).json({ error: 'Airtime purchase was already processed' });
     await query('UPDATE wallet_transactions SET status = $1 WHERE user_id = $2 AND reference = $3 AND type = $4', [status, request.user_id, request.reference, 'airtime_buy']);
     res.json({ message: `Airtime purchase marked as ${status}`, request: { ...request, status } });
   } catch (err) {

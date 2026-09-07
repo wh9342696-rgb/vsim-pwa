@@ -178,25 +178,48 @@ function startAdminRefreshCoordinator() {
 
 function setupAdminInstallPrompt() {
   const installButton = document.getElementById('installAdminPwaBtn');
-  if (!installButton) return;
+  const prompt = document.getElementById('adminPwaInstallPrompt');
+  const promptTitle = document.getElementById('adminPwaInstallTitle');
+  const promptText = document.getElementById('adminPwaInstallText');
+  if (!installButton || !prompt) return;
 
+  const userAgent = navigator.userAgent || '';
+  const isIos = /iphone|ipad|ipod/i.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   if (isStandalone) {
     installButton.hidden = true;
+    prompt.hidden = true;
     return;
+  }
+
+  installButton.hidden = true;
+  prompt.hidden = true;
+  if (isIos && promptText) {
+    if (promptTitle) promptTitle.textContent = 'Add VSIM Admin to your Home Screen';
+    promptText.textContent = 'Tap Share, then choose Add to Home Screen.';
+    prompt.hidden = false;
   }
 
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
     adminInstallPrompt = event;
+    if (promptTitle) promptTitle.textContent = 'Install VSIM Admin as an app';
+    if (promptText) promptText.textContent = 'Install VSIM Admin on your home screen without browser controls.';
     installButton.hidden = false;
+    prompt.hidden = false;
   });
 
   window.addEventListener('appinstalled', () => {
     adminInstallPrompt = null;
     installButton.hidden = true;
+    prompt.hidden = true;
     showToast('VSIM Admin installed on this device', 'success');
   });
+}
+
+function dismissAdminPwaPrompt() {
+  const prompt = document.getElementById('adminPwaInstallPrompt');
+  if (prompt) prompt.hidden = true;
 }
 
 async function installAdminPwa() {
@@ -206,10 +229,11 @@ async function installAdminPwa() {
     return;
   }
   if (!adminInstallPrompt) {
-    showToast('Use your browser install option to add VSIM Admin as an app', 'info');
+    showToast('The native install prompt is not available yet.', 'info');
     return;
   }
 
+  document.getElementById('adminPwaInstallPrompt')?.setAttribute('hidden', '');
   adminInstallPrompt.prompt();
   const choice = await adminInstallPrompt.userChoice;
   if (choice.outcome === 'accepted') {
@@ -1661,14 +1685,30 @@ function renderDepositsTable() {
   tbody.innerHTML = AdminStore.deposits.map(d => `
     <tr>
       <td style="font-weight: 700;">${d.id}</td>
-      <td style="font-weight: 600;">${d.phone}</td>
+      <td style="font-weight: 600;">${d.user_name || d.phone || 'Unknown'}<div style="font-size:0.72rem;color:var(--text-muted);">${d.user_phone || d.phone || ''}</div></td>
+      <td>${d.target_esim_id ? 'eSIM renewal' : d.package_id ? 'eSIM purchase' : 'Wallet payment'}</td>
       <td style="font-weight: 800; color: var(--text-white);">UGX ${d.amount.toLocaleString()}</td>
-      <td>${d.merchant || 'VSIM-M001'}</td>
-      <td>${d.network || 'MTN'}</td>
+      <td>${d.customer_reference || d.reference || '-'}</td>
       <td style="color: var(--text-muted);">${d.time || 'Just now'}</td>
       <td><span class="status-pill ${d.status}">${d.status}</span></td>
+      <td>${['pending', 'payment_awaiting_verification'].includes(String(d.status).toLowerCase())
+        ? `<button class="btn-action-small pay" onclick="processAdminDeposit(${d.id}, 'approve')">Approve</button> <button class="btn-action-small" onclick="processAdminDeposit(${d.id}, 'reject')">Reject</button>`
+        : `<span style="font-size:0.75rem;color:var(--text-muted);">${d.reviewed_by ? `Admin #${d.reviewed_by}` : 'Processed'}</span>`}</td>
     </tr>
   `).join('');
+}
+
+async function processAdminDeposit(id, action) {
+  const reason = action === 'reject' ? (window.prompt('Reason for rejecting this payment?') || '').trim() : '';
+  if (action === 'reject' && !reason) return;
+  try {
+    await AdminAPI.processDeposit(id, action, reason);
+    showToast(`Payment ${action === 'approve' ? 'approved' : 'rejected'}`, 'success');
+    await refreshAdminData();
+    renderDepositsTable();
+  } catch (error) {
+    showToast(error.message || 'Payment action failed', 'error');
+  }
 }
 
 // Full Withdrawals View
