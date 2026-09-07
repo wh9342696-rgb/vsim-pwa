@@ -52,7 +52,7 @@ app.set('trust proxy', process.env.TRUST_PROXY === '1' ? 1 : false);
 app.disable('x-powered-by');
 const PORT = process.env.PORT || 3000;
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-const configuredCorsOrigins = String(process.env.CORS_ORIGINS || '')
+const configuredCorsOrigins = String(process.env.CORS_ORIGINS || process.env.ALLOWED_ORIGINS || '')
   .split(',')
   .map(origin => origin.trim())
   .filter(Boolean);
