@@ -1699,6 +1699,7 @@ function renderDepositsTable() {
 }
 
 async function processAdminDeposit(id, action) {
+  if (action === 'approve' && !window.confirm('Have you verified that the exact amount was received in the merchant account and that this transaction belongs to this order?')) return;
   const reason = action === 'reject' ? (window.prompt('Reason for rejecting this payment?') || '').trim() : '';
   if (action === 'reject' && !reason) return;
   try {

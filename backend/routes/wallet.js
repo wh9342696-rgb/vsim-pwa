@@ -159,8 +159,19 @@ router.post('/withdraw', authenticateToken, validateBody(walletActionSchema), as
 // 4. Transaction History Log
 router.get('/transactions', authenticateToken, async (req, res) => {
   try {
-    const result = await query(`SELECT * FROM wallet_transactions
+    const result = await query(`
+      SELECT id, user_id, type, title, amount, reference, status, created_at
+      FROM wallet_transactions
       WHERE user_id = $1
+      UNION ALL
+      SELECT id + 1000000000 AS id, user_id, 'payment' AS type,
+             CASE WHEN package_id IS NULL THEN 'Mobile Money payment awaiting verification'
+                  WHEN target_esim_id IS NULL THEN 'eSIM purchase awaiting verification'
+                  ELSE 'eSIM renewal awaiting verification' END AS title,
+             amount, reference, 'pending' AS status, created_at
+      FROM payment_requests
+      WHERE user_id = $1
+        AND LOWER(status) IN ('pending', 'payment_awaiting_verification', 'processing')
       ORDER BY created_at DESC`, [req.user.id]);
     res.json({ transactions: result.rows });
   } catch (err) {

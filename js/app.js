@@ -1251,6 +1251,8 @@ async function openMobileMoneyModal(preferredNetwork = 'MTN') {
   if (phoneInput && !phoneInput.value) {
     phoneInput.value = appState.profile.phone || '';
   }
+  const transactionInput = document.getElementById('merchantCustomerReference');
+  if (transactionInput) transactionInput.value = '';
 
   // Fetch real-time merchant
   await fetchRealtimeMerchant(preferredNetwork);
@@ -1373,6 +1375,10 @@ async function confirmMobileMoneyPayment() {
     return;
   }
   const customerReference = (document.getElementById('merchantCustomerReference')?.value || '').trim();
+  if (!customerReference) {
+    showToast('Enter the Mobile Money transaction ID from your payment message', 'error');
+    return;
+  }
 
   const confirmBtn = document.getElementById('confirmMerchantPaymentBtn');
   const spinner = document.getElementById('confirmSpinner');

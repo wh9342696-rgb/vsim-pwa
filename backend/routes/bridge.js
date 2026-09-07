@@ -87,6 +87,15 @@ export async function fulfillVerifiedPurchase(payment) {
      WHERE id = $1`,
     [payment.id]
   );
+  const paymentLedgerReference = `ESIM-PAYMENT-${payment.id}`;
+  const existingPaymentLedger = await query('SELECT id FROM wallet_transactions WHERE user_id = $1 AND type = \'purchase\' AND reference = $2', [payment.user_id, paymentLedgerReference]);
+  if (!existingPaymentLedger.rows.length) {
+    await query(
+      `INSERT INTO wallet_transactions (user_id, type, title, amount, reference, status)
+       VALUES ($1, 'purchase', $2, $3, $4, 'completed')`,
+      [payment.user_id, payment.target_esim_id ? `eSIM renewal - ${pkg.title}` : `eSIM purchase - ${pkg.title}`, payment.amount, paymentLedgerReference]
+    );
+  }
   await query('UPDATE esim_packages SET sold_count = sold_count + 1, revenue = revenue + $1 WHERE id = $2', [payment.amount, pkg.id]);
   const buyer = await query('SELECT name, referred_by FROM users WHERE id = $1', [payment.user_id]);
   const referredBy = buyer.rows[0]?.referred_by;
