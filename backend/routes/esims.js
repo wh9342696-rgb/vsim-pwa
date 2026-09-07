@@ -106,8 +106,8 @@ router.post('/purchase', authenticateToken, async (req, res) => {
     const targetIdentifier = targetEsimIccid || targetEsimId;
     if (targetIdentifier) {
       const targetRes = targetEsimIccid
-        ? await query('SELECT id, iccid, data_total, data_remaining, renewal_count FROM user_esims WHERE iccid = $1 AND user_id = $2', [targetEsimIccid, req.user.id])
-        : await query('SELECT id, iccid, data_total, data_remaining, renewal_count FROM user_esims WHERE id = $1 AND user_id = $2', [targetIdentifier, req.user.id]);
+        ? await query('SELECT id, iccid, data_total, data_remaining, renewal_count FROM user_esims WHERE iccid = $1 AND user_id = $2 AND status <> \'revoked\'', [targetEsimIccid, req.user.id])
+        : await query('SELECT id, iccid, data_total, data_remaining, renewal_count FROM user_esims WHERE id = $1 AND user_id = $2 AND status <> \'revoked\'', [targetIdentifier, req.user.id]);
       if (!targetRes.rows.length) return res.status(404).json({ error: 'Target eSIM not found' });
       targetEsim = targetRes.rows[0];
       if (targetEsimId && String(targetEsim.id) !== String(targetEsimId)) {
@@ -240,7 +240,7 @@ router.get('/my-esims', authenticateToken, async (req, res) => {
       `SELECT ue.*, ep.image_url
        FROM user_esims ue
        LEFT JOIN esim_packages ep ON ep.id = ue.package_id
-       WHERE ue.user_id = $1
+      WHERE ue.user_id = $1 AND ue.status <> 'revoked'
        ORDER BY ue.activated_at DESC`,
       [req.user.id]
     );

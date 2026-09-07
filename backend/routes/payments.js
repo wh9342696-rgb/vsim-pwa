@@ -206,8 +206,8 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
     if (isRenewal) {
       const targetIdentifier = targetEsimIccid || targetEsimId;
       const targetRes = targetEsimIccid
-        ? await query('SELECT id, iccid FROM user_esims WHERE iccid = $1 AND user_id = $2', [targetEsimIccid, userId])
-        : await query('SELECT id, iccid FROM user_esims WHERE id = $1 AND user_id = $2', [targetIdentifier, userId]);
+        ? await query('SELECT id, iccid FROM user_esims WHERE iccid = $1 AND user_id = $2 AND status <> \'revoked\'', [targetEsimIccid, userId])
+        : await query('SELECT id, iccid FROM user_esims WHERE id = $1 AND user_id = $2 AND status <> \'revoked\'', [targetIdentifier, userId]);
       if (!targetRes.rows.length) return res.status(404).json({ success: false, error: 'Target eSIM not found' });
       resolvedTargetEsimId = targetRes.rows[0].id;
       if (targetEsimId && String(resolvedTargetEsimId) !== String(targetEsimId)) {
