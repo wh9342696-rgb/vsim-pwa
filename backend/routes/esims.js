@@ -19,6 +19,7 @@ function formatDataValue(amountGb, unit) {
 }
 
 function classifyEsimStatus(esim, now = Date.now()) {
+  if (esim.status === 'revoked') return 'revoked';
   return esim.expires_at && now >= new Date(esim.expires_at).getTime() ? 'expired' : 'active';
 }
 
