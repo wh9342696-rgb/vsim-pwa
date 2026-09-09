@@ -71,6 +71,7 @@ router.get('/assigned-merchant', async (req, res) => {
        WHERE bd.status = 'active'
          AND bd.last_heartbeat >= CURRENT_TIMESTAMP - INTERVAL '2 minutes'
          AND NULLIF(bd.${bindingColumn}, '') IS NOT NULL
+         AND m.id IS NOT NULL
        ORDER BY bd.last_heartbeat DESC, bd.id ASC
        LIMIT 1`,
       [requestedNetwork]
@@ -92,8 +93,8 @@ router.get('/assigned-merchant', async (req, res) => {
     } else {
       const fallbackResult = await query(
         `SELECT * FROM merchants
-         WHERE UPPER(network) = $1 AND status = 'active'
-         ORDER BY priority ASC, id ASC
+         WHERE UPPER(network) IN ($1, 'ALL') AND status = 'active'
+         ORDER BY CASE WHEN UPPER(network) = $1 THEN 0 ELSE 1 END, priority ASC, id ASC
          LIMIT 1`,
         [requestedNetwork]
       );
@@ -164,7 +165,17 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
       [String(merchantCode || '').trim()]
     );
     if (!assignedBridge.rows.length) {
-      return res.status(409).json({ success: false, error: 'Merchant is not currently assigned to an active bridge device.' });
+      const configuredMerchant = await query(
+        `SELECT id FROM merchants
+         WHERE merchant_code = $1
+           AND UPPER(network) IN ($2, 'ALL')
+           AND status = 'active'
+         LIMIT 1`,
+        [String(merchantCode || '').trim(), requestedNetwork]
+      );
+      if (!configuredMerchant.rows.length) {
+        return res.status(409).json({ success: false, error: 'Merchant is not currently active.' });
+      }
     }
     const txRef = reference || await createUniqueReference('VSIM', async candidate => (await query('SELECT id FROM payment_requests WHERE reference = $1', [candidate])).rows.length > 0);
     const mCode = String(merchantCode).trim();
