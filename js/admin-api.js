@@ -24,7 +24,7 @@ const AdminAPI = (() => {
     return `${Math.floor(hours / 24)}d ago`;
   };
   const normalizeDeposit = value => ({ ...value, amount: Number(value.amount) || 0, time: value.time || relativeTime(value.created_at), status: String(value.status || 'pending').toLowerCase() });
-  const normalizeWithdrawal = value => ({ ...value, amount: Number(value.amount) || 0, time: value.time || relativeTime(value.created_at), status: String(value.status || 'pending').toLowerCase() });
+  const normalizeWithdrawal = value => ({ ...value, amount: Number(value.amount) || 0, requested_amount: Number(value.requested_amount ?? value.amount) || 0, fee_amount: Number(value.fee_amount) || 0, net_amount: Number(value.net_amount ?? value.amount) || 0, time: value.time || relativeTime(value.created_at), status: String(value.status || 'pending').toLowerCase() });
   const normalizeUser = value => ({ ...value, wallet_balance: Number(value.wallet_balance) || 0, initials: value.initials || String(value.name || 'U').split(' ').map(part => part[0]).slice(0, 2).join('').toUpperCase() });
   const normalizePackage = value => ({ ...value, price: Number(value.price) || 0, income: Number(value.income) || 0, sold_count: Number(value.sold_count) || 0, revenue: Number(value.revenue) || 0, status: String(value.status || 'active').toLowerCase() === 'active' ? 'Active' : 'Inactive' });
 
@@ -75,6 +75,8 @@ const AdminAPI = (() => {
       getEarnings: () => request('/earnings'),
     getSettings: () => request('/settings'),
     saveSettings: data => request('/settings', { method: 'PUT', body: JSON.stringify(data) }),
+    saveWithdrawalFees: data => request('/withdrawal-fees', { method: 'PUT', body: JSON.stringify(data) }),
+    previewWithdrawal: data => request('/withdrawals/preview', { method: 'POST', body: JSON.stringify(data) }),
     getNotifications: () => request('/notifications'),
     markNotificationRead: id => request(`/notifications/${id}/read`, { method: 'POST' }),
     markAllNotificationsRead: () => request('/notifications/read-all', { method: 'POST' }),

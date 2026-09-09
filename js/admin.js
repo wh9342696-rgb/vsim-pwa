@@ -1018,7 +1018,7 @@ function applyRoleUI() {
       const name = control.getAttribute('name') || '';
       const isProfileControl = ['admin_name', 'profile_photo'].includes(name);
       const isSystemSettingControl = ['platform_name', 'support_email', 'maintenance_mode', 'esim_progress_enabled', 'esim_progress_percent_per_hour', 'airtime_buy_markup_percent', 'airtime_sell_payout_percent'].includes(name);
-      const isWithdrawalFeeControl = name === 'withdrawal_fee';
+      const isWithdrawalFeeControl = ['withdrawal_fee', 'withdrawal_settlement_fee', 'withdrawal_expiry_fee', 'withdrawal_monthly_fee', 'withdrawal_settlement_days', 'withdrawal_fee_priority'].includes(name);
       control.disabled = isSubAdmin && isSystemSettingControl;
       if (isWithdrawalFeeControl) control.disabled = isSubAdmin;
       if (isSubAdmin && isProfileControl) {
@@ -1032,7 +1032,7 @@ function renderSettingsView() {
   const form = document.getElementById('adminSettingsForm');
   if (!form) return;
   const settings = AdminStore.settings || {};
-  ['platform_name', 'support_email', 'support_whatsapp', 'support_telegram', 'support_call_center', 'withdrawal_fee', 'airtime_buy_markup_percent', 'airtime_sell_payout_percent', 'maintenance_mode', 'esim_progress_enabled', 'esim_progress_percent_per_hour'].forEach(key => {
+  ['platform_name', 'support_email', 'support_whatsapp', 'support_telegram', 'support_call_center', 'withdrawal_fee', 'withdrawal_settlement_fee', 'withdrawal_expiry_fee', 'withdrawal_monthly_fee', 'withdrawal_settlement_days', 'airtime_buy_markup_percent', 'airtime_sell_payout_percent', 'maintenance_mode', 'esim_progress_enabled', 'esim_progress_percent_per_hour'].forEach(key => {
     const input = form.elements[key];
     if (input && settings[key] !== undefined) input.value = settings[key];
   });
@@ -1042,6 +1042,11 @@ function renderSettingsView() {
   const photoInput = form.elements.profile_photo;
   if (nameInput && AdminStore.admin) nameInput.value = AdminStore.admin.name || '';
   if (photoInput && AdminStore.admin) photoInput.value = AdminStore.admin.profile_photo || '';
+  const priority = String(settings.withdrawal_fee_priority || 'monthly_cycle,expiry,settlement,normal').split(',').map(value => value.trim());
+  priority.slice(0, 4).forEach((rule, index) => {
+    const input = form.elements[`withdrawal_priority_${index + 1}`];
+    if (input) input.value = rule;
+  });
   const settingsAvatar = document.getElementById('adminSettingsAvatar');
   if (settingsAvatar && AdminStore.admin) {
     const photo = AdminStore.pendingProfilePhoto !== undefined ? AdminStore.pendingProfilePhoto : AdminStore.admin.profile_photo;
@@ -1225,12 +1230,19 @@ async function handleSettingsSubmit(event) {
         support_whatsapp: payload.support_whatsapp,
         support_telegram: payload.support_telegram,
         support_call_center: payload.support_call_center,
-        withdrawal_fee: payload.withdrawal_fee,
         airtime_buy_markup_percent: payload.airtime_buy_markup_percent,
         airtime_sell_payout_percent: payload.airtime_sell_payout_percent,
         maintenance_mode: payload.maintenance_mode,
         esim_progress_enabled: payload.esim_progress_enabled,
         esim_progress_percent_per_hour: payload.esim_progress_percent_per_hour
+      });
+      await AdminAPI.saveWithdrawalFees({
+        withdrawal_fee: payload.withdrawal_fee,
+        withdrawal_settlement_fee: payload.withdrawal_settlement_fee,
+        withdrawal_expiry_fee: payload.withdrawal_expiry_fee,
+        withdrawal_monthly_fee: payload.withdrawal_monthly_fee,
+        withdrawal_settlement_days: payload.withdrawal_settlement_days,
+        withdrawal_fee_priority: [1, 2, 3, 4].map(index => payload[`withdrawal_priority_${index}`]).join(',')
       });
       AdminStore.settings = {
         platform_name: payload.platform_name,
@@ -1239,6 +1251,11 @@ async function handleSettingsSubmit(event) {
         support_telegram: payload.support_telegram,
         support_call_center: payload.support_call_center,
         withdrawal_fee: payload.withdrawal_fee,
+        withdrawal_settlement_fee: payload.withdrawal_settlement_fee,
+        withdrawal_expiry_fee: payload.withdrawal_expiry_fee,
+        withdrawal_monthly_fee: payload.withdrawal_monthly_fee,
+        withdrawal_settlement_days: payload.withdrawal_settlement_days,
+        withdrawal_fee_priority: [1, 2, 3, 4].map(index => payload[`withdrawal_priority_${index}`]).join(','),
         airtime_buy_markup_percent: payload.airtime_buy_markup_percent,
         airtime_sell_payout_percent: payload.airtime_sell_payout_percent,
         maintenance_mode: payload.maintenance_mode,
@@ -1253,6 +1270,20 @@ async function handleSettingsSubmit(event) {
     renderAdminIdentity();
   } catch (error) {
     showToast(error.message || 'Failed to save settings', 'error');
+  }
+}
+
+async function handleWithdrawalFeePreview(event) {
+  event.preventDefault();
+  const result = document.getElementById('withdrawalFeePreviewResult');
+  const amount = Number(new FormData(event.currentTarget).get('amount'));
+  if (!result) return;
+  result.textContent = 'Loading preview...';
+  try {
+    const quote = await AdminAPI.previewWithdrawal({ amount });
+    result.textContent = `Rule: ${quote.selectedRule} | Fee: UGX ${Number(quote.fee).toLocaleString()} | Net payout: UGX ${Number(quote.netAmount).toLocaleString()}`;
+  } catch (error) {
+    result.textContent = error.message || 'Preview failed';
   }
 }
 
@@ -1288,7 +1319,9 @@ function renderRecentWithdrawalsTable() {
   tbody.innerHTML = withdrawals.map(w => `
     <tr>
       <td style="font-weight: 600;">${w.phone}</td>
-      <td style="font-weight: 800; color: var(--text-white);">UGX ${w.amount.toLocaleString()}</td>
+      <td style="font-weight: 800; color: var(--text-white);">UGX ${w.requested_amount.toLocaleString()}</td>
+      <td>UGX ${w.fee_amount.toLocaleString()}</td>
+      <td>UGX ${w.net_amount.toLocaleString()}</td>
       <td style="color: var(--text-gray); font-size: 0.74rem;">${w.method || '-'}</td>
       <td style="color: var(--text-muted);">${w.time || '-'}</td>
       <td><span class="status-pill ${w.status}">${w.status}</span></td>
