@@ -1849,6 +1849,8 @@ function openAirtimePurchaseModal(details) {
   document.getElementById('airtimeDepositAmount').textContent = `UGX ${Number(details.paymentAmount).toLocaleString()}`;
   document.getElementById('airtimeMerchantNumber').textContent = details.merchantNumber;
   document.getElementById('airtimePurchaseReference').textContent = details.reference;
+  document.getElementById('airtimePurchaseMerchant').textContent = details.merchant?.name || details.merchant?.account_name || details.merchantNumber;
+  document.getElementById('airtimePurchaseInstructions').textContent = details.merchant?.instructions || `Send the deposit to ${details.merchantNumber}, then tap the confirmation button below.`;
   modal.classList.add('open');
 }
 
@@ -1891,6 +1893,8 @@ function openAirtimeSaleModal(details) {
   document.getElementById('airtimeSaleAmount').textContent = `UGX ${Number(details.airtimeAmount).toLocaleString()}`;
   document.getElementById('airtimeSalePayout').textContent = `UGX ${Number(details.payoutAmount).toLocaleString()}`;
   document.getElementById('airtimeSaleMerchantNumber').textContent = details.merchantNumber;
+  document.getElementById('airtimeSaleMerchant').textContent = details.merchant?.name || details.merchant?.account_name || details.merchantNumber;
+  document.getElementById('airtimeSaleInstructions').textContent = details.merchant?.instructions || `Send the airtime to ${details.merchantNumber}, then tap the confirmation button below.`;
   document.getElementById('airtimeSalePayoutPhone').textContent = details.payoutPhone;
   document.getElementById('airtimeSaleReference').textContent = details.reference;
   modal.classList.add('open');
