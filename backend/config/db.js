@@ -154,6 +154,7 @@ async function initializePostgresSchema() {
       payment_amount NUMERIC(12,2) NOT NULL,
       merchant_number TEXT NOT NULL,
       reference TEXT UNIQUE NOT NULL,
+      customer_reference TEXT,
       status TEXT DEFAULT 'pending',
       processed_by INTEGER REFERENCES admin_users(id),
       processed_at TIMESTAMP,
@@ -323,6 +324,7 @@ async function initializePostgresSchema() {
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS package_id TEXT');
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS target_esim_id INTEGER');
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS customer_reference TEXT');
+  await pool.query('ALTER TABLE airtime_purchase_requests ADD COLUMN IF NOT EXISTS customer_reference TEXT');
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS reviewed_by INTEGER REFERENCES admin_users(id)');
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP');
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS rejection_reason TEXT');
@@ -628,6 +630,7 @@ if (databaseDriver === 'postgres') {
       payment_amount REAL NOT NULL,
       merchant_number TEXT NOT NULL,
       reference TEXT UNIQUE NOT NULL,
+      customer_reference TEXT,
       status TEXT DEFAULT 'pending',
       processed_by INTEGER,
       processed_at DATETIME,
@@ -773,6 +776,7 @@ if (databaseDriver === 'postgres') {
   try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN package_id TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN target_esim_id INTEGER'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN customer_reference TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
+  try { sqlite.exec('ALTER TABLE airtime_purchase_requests ADD COLUMN customer_reference TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN reviewed_by INTEGER'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN reviewed_at DATETIME'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN rejection_reason TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }

@@ -412,7 +412,7 @@ async function loadAllData() {
 function renderAirtimePurchases() {
   const tbody = document.getElementById('airtimePurchasesTbody');
   if (!tbody) return;
-  tbody.innerHTML = (AdminStore.airtimePurchases || []).map(request => `<tr><td>${request.id}</td><td>${request.phone}</td><td>${request.network}</td><td>UGX ${Number(request.airtime_amount).toLocaleString()}</td><td>UGX ${Number(request.payment_amount).toLocaleString()}</td><td>${request.merchant_number}</td><td><span class="status-pill ${request.status}">${request.status}</span></td><td>${request.status === 'pending' ? `<button class="btn-action-small pay" onclick="processAirtimePurchase(${request.id}, 'approve')">Approve</button> <button class="btn-action-small" onclick="processAirtimePurchase(${request.id}, 'reject')">Reject</button>` : 'Processed'}</td></tr>`).join('') || '<tr><td colspan="8">No airtime purchase requests</td></tr>';
+  tbody.innerHTML = (AdminStore.airtimePurchases || []).map(request => `<tr><td>${request.id}</td><td>${request.phone}</td><td>${request.network}</td><td>UGX ${Number(request.airtime_amount).toLocaleString()}</td><td>UGX ${Number(request.payment_amount).toLocaleString()}</td><td>${request.merchant_number}</td><td style="font-family:monospace; font-size:0.75rem;">${request.customer_reference || '-'}</td><td><span class="status-pill ${request.status}">${request.status}</span></td><td>${request.status === 'pending' ? `<button class="btn-action-small pay" onclick="processAirtimePurchase(${request.id}, 'approve')">Approve</button> <button class="btn-action-small" onclick="processAirtimePurchase(${request.id}, 'reject')">Reject</button>` : 'Processed'}</td></tr>`).join('') || '<tr><td colspan="9">No airtime purchase requests</td></tr>';
 }
 
 function renderAirtimeSales() {
@@ -980,6 +980,11 @@ function updateMetricCards(m) {
 
   const withdrawnEl = document.getElementById('metricTotalWithdrawn');
   if (withdrawnEl) withdrawnEl.textContent = `UGX ${(m.totalWithdrawn || 0).toLocaleString()}`;
+
+  const pendingWithdrawalsEl = document.getElementById('pendingWithdrawalsTotal');
+  if (pendingWithdrawalsEl) pendingWithdrawalsEl.textContent = `UGX ${Number(m.pendingWithdrawalsTotal || 0).toLocaleString()}`;
+  const todayPaidWithdrawalsEl = document.getElementById('todayPaidWithdrawalsTotal');
+  if (todayPaidWithdrawalsEl) todayPaidWithdrawalsEl.textContent = `UGX ${Number(m.todayPaidWithdrawalsTotal || 0).toLocaleString()}`;
 }
 
 function applyRoleUI() {

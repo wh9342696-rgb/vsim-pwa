@@ -513,8 +513,8 @@
                 </div>
               </div>
               <div class="widget-card-footer-stats">
-                <span>Total Pending: <strong style="color: var(--accent-orange);">UGX 280,000</strong></span>
-                <span>Total Today Paid: <strong style="color: var(--accent-green);">UGX 120,000</strong></span>
+                <span>Total Pending: <strong id="pendingWithdrawalsTotal" style="color: var(--accent-orange);">UGX 0</strong></span>
+                <span>Total Today Paid: <strong id="todayPaidWithdrawalsTotal" style="color: var(--accent-green);">UGX 0</strong></span>
               </div>
             </div>
 
@@ -1098,7 +1098,7 @@
             <div><h2 class="dashboard-greeting-title">Airtime Purchase Requests</h2><p class="dashboard-greeting-sub">Review deposits and manually deliver approved airtime orders.</p></div>
           </div>
           <div class="dashboard-widget-card"><div class="widget-card-body" style="padding: 0;"><div class="table-responsive-wrapper"><table class="admin-data-table">
-            <thead><tr><th>ID</th><th>Recipient</th><th>Network</th><th>Airtime</th><th>Deposit Due</th><th>Merchant</th><th>Status</th><th>Action</th></tr></thead>
+            <thead><tr><th>ID</th><th>Recipient</th><th>Network</th><th>Airtime</th><th>Deposit Due</th><th>Merchant</th><th>SMS Ref</th><th>Status</th><th>Action</th></tr></thead>
             <tbody id="airtimePurchasesTbody"></tbody>
           </table></div></div></div>
         </section>

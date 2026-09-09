@@ -1841,6 +1841,8 @@ async function execBuyAirtime() {
 function openAirtimePurchaseModal(details) {
   const modal = document.getElementById('airtimePurchaseModal');
   if (!modal) return;
+  const customerReferenceInput = document.getElementById('airtimeCustomerReference');
+  if (customerReferenceInput) customerReferenceInput.value = '';
   modal.dataset.request = JSON.stringify(details);
   document.getElementById('airtimePurchaseAmount').textContent = `UGX ${Number(details.airtimeAmount).toLocaleString()}`;
   document.getElementById('airtimeDepositAmount').textContent = `UGX ${Number(details.paymentAmount).toLocaleString()}`;
@@ -1856,6 +1858,12 @@ function closeAirtimePurchaseModal() { document.getElementById('airtimePurchaseM
 async function confirmAirtimePurchase() {
   const modal = document.getElementById('airtimePurchaseModal');
   const details = JSON.parse(modal?.dataset.request || '{}');
+  const customerReference = document.getElementById('airtimeCustomerReference')?.value.trim() || '';
+  if (!customerReference) {
+    showToast('Enter the Mobile Money transaction ID from your payment message', 'error');
+    return;
+  }
+  details.customerReference = customerReference;
   try {
     const result = await window.VSIM_API.confirmAirtimePurchase(details);
     closeAirtimePurchaseModal();

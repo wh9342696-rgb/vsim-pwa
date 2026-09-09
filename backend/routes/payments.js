@@ -16,7 +16,7 @@ const confirmDepositSchema = z.object({
   merchantCode: z.string().optional(),
   network: z.string().optional(),
   reference: z.string().optional(),
-  customerReference: z.string().trim().max(160).optional(),
+  customerReference: z.string().trim().min(1, 'Mobile Money transaction ID is required').max(160),
   packageId: z.string().optional(),
   targetEsimId: z.union([z.number(), z.string()]).optional(),
   targetEsimIccid: z.string().optional(),
@@ -298,7 +298,7 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
       await query(
         `INSERT INTO admin_notifications (admin_id, type, title, message, reference, status)
          VALUES ($1, $2, $3, $4, $5, $6)`,
-        [admin.id, 'payment', 'Merchant Payment Received', `UGX ${num.toLocaleString()} sent to ${mCode} by ${payerPhone}`, txRef, 'pending']
+        [admin.id, 'payment', 'Merchant Payment Received', `UGX ${num.toLocaleString()} sent to ${mCode} by ${payerPhone} (SMS Ref: ${customerReference})`, txRef, 'pending']
       );
     }
 
@@ -315,7 +315,7 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
     await query(
       `INSERT INTO system_logs (action, details, level, time_ago)
        VALUES ($1, $2, $3, $4)`,
-      ['merchant_payment_reported', `Merchant payment reported: UGX ${num.toLocaleString()} to ${mCode} from ${payerPhone} (Ref: ${txRef})`, 'info', 'Just now']
+      ['merchant_payment_reported', `Merchant payment reported: UGX ${num.toLocaleString()} to ${mCode} from ${payerPhone} (Order Ref: ${txRef}, SMS Ref: ${customerReference})`, 'info', 'Just now']
     );
 
     res.json({

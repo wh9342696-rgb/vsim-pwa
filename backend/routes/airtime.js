@@ -87,11 +87,12 @@ router.post('/request-buy', authenticateToken, async (req, res) => {
 
 router.post('/confirm-buy', authenticateToken, async (req, res) => {
   try {
-    const { amount, airtimeAmount: preparedAirtimeAmount, paymentAmount, phone, network, merchantNumber, reference } = req.body || {};
+    const { amount, airtimeAmount: preparedAirtimeAmount, paymentAmount, phone, network, merchantNumber, reference, customerReference } = req.body || {};
     const airtimeAmount = parseFloat(amount ?? preparedAirtimeAmount);
     const depositAmount = parseFloat(paymentAmount);
-    if (!Number.isFinite(airtimeAmount) || !Number.isFinite(depositAmount) || !phone || !merchantNumber || !reference) {
-      return res.status(400).json({ error: 'Complete the payment details before submitting' });
+    const smsReference = String(customerReference || '').trim();
+    if (!Number.isFinite(airtimeAmount) || !Number.isFinite(depositAmount) || !phone || !merchantNumber || !reference || !smsReference || smsReference.length > 160) {
+      return res.status(400).json({ error: 'Enter the Mobile Money transaction ID before submitting' });
     }
     const markupPercent = await getAirtimeRate('airtime_buy_markup_percent', 0);
     const expectedDeposit = Math.round(airtimeAmount * (1 + markupPercent / 100));
@@ -99,14 +100,26 @@ router.post('/confirm-buy', authenticateToken, async (req, res) => {
     const duplicate = await query('SELECT id FROM airtime_purchase_requests WHERE reference = $1', [reference]);
     if (duplicate.rows.length) return res.status(409).json({ error: 'This payment reference has already been submitted' });
     await query(
-      `INSERT INTO airtime_purchase_requests (user_id, phone, network, airtime_amount, payment_amount, merchant_number, reference, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')`,
-      [req.user.id, String(phone).trim(), String(network).toUpperCase(), airtimeAmount, depositAmount, merchantNumber, reference]
+      `INSERT INTO airtime_purchase_requests (user_id, phone, network, airtime_amount, payment_amount, merchant_number, reference, customer_reference, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')`,
+      [req.user.id, String(phone).trim(), String(network).toUpperCase(), airtimeAmount, depositAmount, merchantNumber, reference, smsReference]
     );
     await query(
       `INSERT INTO wallet_transactions (user_id, type, title, amount, reference, status)
        VALUES ($1, 'airtime_buy', $2, $3, $4, 'pending')`,
       [req.user.id, `Airtime purchase (${String(network).toUpperCase()})`, depositAmount, reference]
+    );
+    const admins = await query(`SELECT id FROM admin_users WHERE status = 'active'`);
+    for (const admin of admins.rows) {
+      await query(
+        `INSERT INTO admin_notifications (admin_id, type, title, message, reference, status)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [admin.id, 'airtime_purchase', 'Airtime Payment Received', `UGX ${depositAmount.toLocaleString()} airtime payment from ${phone} (SMS Ref: ${smsReference})`, reference, 'pending']
+      );
+    }
+    await query(
+      `INSERT INTO system_logs (action, details, level, time_ago) VALUES ($1, $2, $3, $4)`,
+      ['airtime_payment_reported', `Airtime payment reported: UGX ${depositAmount.toLocaleString()} (Order Ref: ${reference}, SMS Ref: ${smsReference})`, 'info', 'Just now']
     );
     res.status(201).json({ message: 'Airtime purchase submitted for admin approval', status: 'pending', reference });
   } catch (err) {
@@ -165,6 +178,14 @@ router.post('/confirm-sell', authenticateToken, async (req, res) => {
        VALUES ($1, 'airtime_sell', $2, $3, $4, 'pending')`,
       [req.user.id, `Airtime sale payout (${String(network).toUpperCase()})`, cashAmount, reference]
     );
+    const admins = await query(`SELECT id FROM admin_users WHERE status = 'active'`);
+    for (const admin of admins.rows) {
+      await query(
+        `INSERT INTO admin_notifications (admin_id, type, title, message, reference, status)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [admin.id, 'airtime_sale', 'Airtime Sale Received', `${airtimeAmount.toLocaleString()} airtime sale request from ${payoutPhone} (Ref: ${reference})`, reference, 'pending']
+      );
+    }
     res.status(201).json({ message: 'Airtime sale submitted for admin review', status: 'pending', reference });
   } catch (err) {
     res.status(500).json({ error: 'Failed to submit airtime sale' });

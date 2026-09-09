@@ -471,8 +471,8 @@ router.get('/stats', adminAuth, async (req, res) => {
        FROM user_esims ue LEFT JOIN esim_packages ep ON ep.id = ue.package_id`
     );
     const depositsTotal = await query(`SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count FROM payment_requests WHERE status = 'completed'`);
-    const pendingPayouts = await query(`SELECT SUM(amount) AS total, COUNT(*) AS count FROM withdrawals WHERE status = 'pending'`);
-    const paidPayouts = await query(`SELECT SUM(amount) AS total, COUNT(*) AS count FROM withdrawals WHERE status = 'paid'`);
+    const pendingPayouts = await query(`SELECT COALESCE(SUM(COALESCE(requested_amount, amount)), 0) AS total, COUNT(*) AS count FROM withdrawals WHERE status = 'pending'`);
+    const paidPayouts = await query(`SELECT COALESCE(SUM(COALESCE(net_amount, amount)), 0) AS total, COUNT(*) AS count FROM withdrawals WHERE status IN ('paid', 'completed') AND processed_at >= CURRENT_DATE AND processed_at < CURRENT_DATE + INTERVAL '1 day'`);
     const bridgeOnline = await query(`
       SELECT COUNT(*) AS online
       FROM bridge_devices
