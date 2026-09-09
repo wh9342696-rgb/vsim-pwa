@@ -664,14 +664,15 @@ async function refreshCatalog() {
 
 function renderRecentActivity(transactions = []) {
   const containers = document.querySelectorAll('.activity-stream');
+  const recentTransactions = transactions.slice(0, 8);
   containers.forEach(container => {
     if (!container) return;
-    if (!transactions.length) {
+    if (!recentTransactions.length) {
       container.innerHTML = '<div class="activity-card-item"><div class="activity-card-left"><div class="activity-tag-icon in">…</div><div><div class="activity-name-text">No recent activity</div><div class="activity-date-text">Your wallet activity will appear here.</div></div></div></div>';
       return;
     }
 
-    container.innerHTML = transactions.map(tx => {
+    container.innerHTML = recentTransactions.map(tx => {
       const status = String(tx.status || 'completed').toLowerCase();
       const isPending = ['pending', 'awaiting', 'payment_awaiting_verification'].includes(status);
       const isIn = ['topup', 'credit', 'daily_income', 'referral_bonus', 'referral', 'yield', 'welcome_bonus', 'airtime_sell'].includes((tx.type || '').toLowerCase());
