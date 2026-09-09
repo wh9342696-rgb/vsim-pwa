@@ -62,7 +62,7 @@ const adminAuth = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'], issuer: 'vsim-api', audience: 'vsim-admin' });
-    const adminRes = await query('SELECT id, email, name, role, status, profit_total, joined_users_count, profile_photo, can_manage_withdrawal_fee, current_session_token FROM admin_users WHERE id = $1', [decoded.id]);
+    const adminRes = await query('SELECT id, email, name, role, status, password_hash, profit_total, joined_users_count, profile_photo, can_manage_withdrawal_fee, current_session_token FROM admin_users WHERE id = $1', [decoded.id]);
     if (adminRes.rows.length === 0 || adminRes.rows[0].status !== 'active') {
       return res.status(403).json({ error: 'Unauthorized admin account' });
     }
@@ -140,16 +140,35 @@ router.get('/me', adminAuth, async (req, res) => {
 
 router.put('/me', adminAuth, async (req, res) => {
   try {
-    const { name, profile_photo } = req.body || {};
+    const { name, profile_photo, email, current_password: currentPassword, new_password: newPassword } = req.body || {};
     if (!name || !String(name).trim()) {
       return res.status(400).json({ error: 'Name is required' });
     }
-    const result = await query(
-      `UPDATE admin_users SET name = $1, profile_photo = $2
-       WHERE id = $3
-       RETURNING id, email, name, role, status, created_at, profit_total, joined_users_count, profile_photo`,
-      [String(name).trim(), profile_photo ? String(profile_photo).trim() : null, req.admin.id]
-    );
+    const normalizedEmail = email === undefined ? req.admin.email : String(email).trim().toLowerCase();
+    const changingCredentials = Boolean(normalizedEmail !== req.admin.email || newPassword);
+    if (changingCredentials) {
+      if (!currentPassword || !(await bcrypt.compare(String(currentPassword), req.admin.password_hash || ''))) {
+        return res.status(403).json({ error: 'Current password is required to change admin credentials' });
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) return res.status(400).json({ error: 'Enter a valid admin email' });
+      if (newPassword && String(newPassword).length < 12) return res.status(400).json({ error: 'New admin password must be at least 12 characters' });
+      const duplicate = await query('SELECT id FROM admin_users WHERE email = $1 AND id <> $2', [normalizedEmail, req.admin.id]);
+      if (duplicate.rows.length) return res.status(409).json({ error: 'That admin email is already in use' });
+    }
+    const passwordHash = newPassword ? await bcrypt.hash(String(newPassword), 12) : null;
+    const result = newPassword
+      ? await query(
+        `UPDATE admin_users SET name = $1, password_hash = $2, profile_photo = $3, email = $4
+         WHERE id = $5
+         RETURNING id, email, name, role, status, created_at, profit_total, joined_users_count, profile_photo`,
+        [String(name).trim(), passwordHash, profile_photo ? String(profile_photo).trim() : null, normalizedEmail, req.admin.id]
+      )
+      : await query(
+        `UPDATE admin_users SET name = $1, profile_photo = $2, email = $3
+         WHERE id = $4
+         RETURNING id, email, name, role, status, created_at, profit_total, joined_users_count, profile_photo`,
+        [String(name).trim(), profile_photo ? String(profile_photo).trim() : null, normalizedEmail, req.admin.id]
+      );
     res.json({ message: 'Profile updated successfully', admin: result.rows[0] });
   } catch (err) {
     console.error('Admin profile update error:', err);

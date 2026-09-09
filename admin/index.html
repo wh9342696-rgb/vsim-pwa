@@ -12,7 +12,7 @@
   <script>
     window.VSIM_API_BASE = 'https://api.vsime.uk/api/v1';
   </script>
-  <link rel="manifest" href="/admin-manifest.json" />
+  <link rel="manifest" href="/admin-manifest.webmanifest" />
   <link rel="apple-touch-icon" href="/icons/vsim-admin.svg" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="VSIM Admin" />
@@ -1411,6 +1411,9 @@
               <p id="settingsAdminIdentity" style="color: var(--text-gray); margin-bottom: 16px;"></p>
               <form id="adminSettingsForm" class="settings-form" onsubmit="handleSettingsSubmit(event)">
                 <div class="modal-form-group"><label>Admin Name</label><input name="admin_name" class="modal-form-input" required /></div>
+                <div class="modal-form-group"><label>Admin Email</label><input name="admin_email" type="email" class="modal-form-input" autocomplete="username" required /></div>
+                <div class="modal-form-group"><label>Current Password <span class="field-optional">Required only for credential changes</span></label><input name="current_password" type="password" class="modal-form-input" autocomplete="current-password" /></div>
+                <div class="modal-form-group"><label>New Password <span class="field-optional">12+ characters</span></label><input name="new_password" type="password" class="modal-form-input" autocomplete="new-password" minlength="12" /></div>
                 <div class="admin-profile-photo-editor" id="adminProfilePhotoDropzone" onclick="openAdminPhotoPicker()" ondragover="event.preventDefault(); this.classList.add('dragging')" ondragleave="this.classList.remove('dragging')" ondrop="handleAdminPhotoDrop(event)">
                   <div class="admin-settings-avatar" id="adminSettingsAvatar">SA</div>
                   <div class="admin-profile-photo-copy">

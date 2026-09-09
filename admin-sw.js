@@ -1,13 +1,13 @@
 // VSIM Admin Panel Service Worker
-const CACHE_NAME = 'vsim-admin-v2.4-manual-payments';
+const CACHE_NAME = 'vsim-admin-v2.5-production-pwa';
 const ASSETS_TO_CACHE = [
   './admin.html',
   './css/admin.css',
-  './js/admin-api.js?v=20260907-manual-payments',
-  './js/admin.js?v=20260907-manual-payments',
+  './js/admin-api.js?v=de7a90b',
+  './js/admin.js?v=20260909-settings-1',
   './js/pwa-register.js',
   './icons/vsim-admin.svg',
-  './admin-manifest.json'
+  './admin-manifest.webmanifest'
 ];
 
 self.addEventListener('install', (event) => {

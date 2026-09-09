@@ -1044,8 +1044,10 @@ function renderSettingsView() {
   const identity = document.getElementById('settingsAdminIdentity');
   if (identity && AdminStore.admin) identity.textContent = AdminStore.admin.name;
   const nameInput = form.elements.admin_name;
+  const emailInput = form.elements.admin_email;
   const photoInput = form.elements.profile_photo;
   if (nameInput && AdminStore.admin) nameInput.value = AdminStore.admin.name || '';
+  if (emailInput && AdminStore.admin) emailInput.value = AdminStore.admin.email || '';
   if (photoInput && AdminStore.admin) photoInput.value = AdminStore.admin.profile_photo || '';
   const priority = String(settings.withdrawal_fee_priority || 'monthly_cycle,expiry,settlement,normal').split(',').map(value => value.trim());
   priority.slice(0, 4).forEach((rule, index) => {
@@ -1222,7 +1224,13 @@ async function handleSettingsSubmit(event) {
     const profilePhoto = AdminStore.pendingProfilePhoto !== undefined
       ? AdminStore.pendingProfilePhoto
       : (AdminStore.admin.profile_photo || '');
-    const profile = await AdminAPI.updateProfile({ name: payload.admin_name, profile_photo: profilePhoto });
+    const profile = await AdminAPI.updateProfile({
+      name: payload.admin_name,
+      email: payload.admin_email,
+      current_password: payload.current_password,
+      new_password: payload.new_password,
+      profile_photo: profilePhoto
+    });
     if (profile?.admin) AdminStore.admin = profile.admin;
     AdminStore.pendingProfilePhoto = undefined;
     const photoInput = document.getElementById('adminProfilePhotoInput');
