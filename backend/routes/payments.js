@@ -76,10 +76,47 @@ router.get('/assigned-merchant', async (req, res) => {
       [requestedNetwork]
     );
     const assignedBridge = bridgeResult.rows[0];
-    if (!assignedBridge) {
-      return res.status(503).json({ success: false, error: `No active ${requestedNetwork} bridge merchant is currently available.` });
+
+    let selectedMerchant = null;
+    if (assignedBridge) {
+      selectedMerchant = {
+        id: assignedBridge.merchant_id,
+        name: assignedBridge.name || `${requestedNetwork} Bridge Merchant`,
+        merchant_code: requestedNetwork === 'AIRTEL' ? assignedBridge.airtel_merchant_id : assignedBridge.mtn_merchant_id,
+        network: requestedNetwork,
+        account_name: assignedBridge.account_name || assignedBridge.name || (requestedNetwork === 'AIRTEL' ? assignedBridge.airtel_merchant_id : assignedBridge.mtn_merchant_id),
+        phone: assignedBridge.merchant_phone || '',
+        bridgeDeviceId: assignedBridge.device_id,
+        instructions: assignedBridge.instructions || null
+      };
+    } else {
+      const fallbackResult = await query(
+        `SELECT * FROM merchants
+         WHERE UPPER(network) = $1 AND status = 'active'
+         ORDER BY priority ASC, id ASC
+         LIMIT 1`,
+        [requestedNetwork]
+      );
+      const fallbackMerchant = fallbackResult.rows[0];
+      if (fallbackMerchant) {
+        selectedMerchant = {
+          id: fallbackMerchant.id,
+          name: fallbackMerchant.name || `${requestedNetwork} Merchant`,
+          merchant_code: fallbackMerchant.merchant_code,
+          network: fallbackMerchant.network || requestedNetwork,
+          account_name: fallbackMerchant.account_name || fallbackMerchant.name || fallbackMerchant.merchant_code,
+          phone: fallbackMerchant.phone || '',
+          bridgeDeviceId: null,
+          instructions: fallbackMerchant.instructions || null
+        };
+      }
     }
-    const merchantCode = requestedNetwork === 'AIRTEL' ? assignedBridge.airtel_merchant_id : assignedBridge.mtn_merchant_id;
+
+    if (!selectedMerchant) {
+      return res.status(503).json({ success: false, error: `No active ${requestedNetwork} merchant is currently available.` });
+    }
+
+    const merchantCode = selectedMerchant.merchant_code;
     const refCode = await createUniqueReference('VSIM', async candidate =>
       (await query('SELECT id FROM payment_requests WHERE reference = $1', [candidate])).rows.length > 0
     );
@@ -92,14 +129,8 @@ router.get('/assigned-merchant', async (req, res) => {
     res.json({
       success: true,
       merchant: {
-        id: assignedBridge.merchant_id,
-        name: assignedBridge.name || `${requestedNetwork} Bridge Merchant`,
-        merchant_code: merchantCode,
-        network: requestedNetwork,
-        account_name: assignedBridge.account_name || assignedBridge.name || merchantCode,
-        phone: assignedBridge.merchant_phone || '',
-        bridgeDeviceId: assignedBridge.device_id,
-        instructions: assignedBridge.instructions || defaultInstructions
+        ...selectedMerchant,
+        instructions: selectedMerchant.instructions || defaultInstructions
       },
       reference: refCode,
       amount: parseFloat(amount) || 0
