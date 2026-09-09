@@ -2140,6 +2140,10 @@ html, body {
   gap: 10px;
 }
 
+.activity-card-item:nth-child(n + 9) {
+  display: none;
+}
+
 .activity-card-item {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
