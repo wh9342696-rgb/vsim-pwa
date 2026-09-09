@@ -1683,15 +1683,34 @@ function focusField(fieldId) {
   event.target.classList.add('selected');
 }
 
-function calcWithdrawReceive() {
+let latestWithdrawalQuote = null;
+
+async function refreshWithdrawQuote() {
   const input = document.getElementById('withdrawVal');
   const receiveElem = document.getElementById('withdrawReceiveVal');
   const amount = parseFloat(input.value) || 0;
-  const net = Math.max(0, amount - withdrawalFee);
-  if (receiveElem) receiveElem.textContent = `UGX ${net.toLocaleString()}`;
   const feeElem = document.getElementById('withdrawFeeVal');
-  if (feeElem) feeElem.textContent = `UGX ${withdrawalFee.toLocaleString()}`;
+  const ruleElem = document.getElementById('withdrawFeeRule');
+  if (!amount || !window.VSIM_API?.getToken()) {
+    latestWithdrawalQuote = null;
+    if (receiveElem) receiveElem.textContent = 'UGX 0';
+    if (feeElem) feeElem.textContent = 'UGX 0';
+    if (ruleElem) ruleElem.textContent = '';
+    return;
+  }
+  try {
+    const quote = await window.VSIM_API.quoteWithdrawal(amount);
+    latestWithdrawalQuote = quote;
+    if (receiveElem) receiveElem.textContent = `UGX ${Number(quote.netAmount || 0).toLocaleString()}`;
+    if (feeElem) feeElem.textContent = `UGX ${Number(quote.fee || 0).toLocaleString()}`;
+    if (ruleElem) ruleElem.textContent = quote.message || '';
+  } catch (error) {
+    latestWithdrawalQuote = null;
+    if (ruleElem) ruleElem.textContent = error.message || 'Enter an amount to get the current withdrawal quote.';
+  }
 }
+
+function calcWithdrawReceive() { refreshWithdrawQuote(); }
 
 function syncWithdrawNetwork() {
   const phone = String(document.getElementById('withdrawPhone')?.value || '').replace(/\s+/g, '');
@@ -1776,10 +1795,6 @@ async function execWithdraw() {
     showToast(`The withdrawal network was switched to ${inferredNetwork}.`, 'info');
     return;
   }
-  if (amount > appState.walletBalance) {
-    showToast('Insufficient wallet balance', 'error');
-    return;
-  }
   if (amount < 5000) {
     showToast('Minimum withdrawal is UGX 5,000', 'error');
     return;
@@ -1790,6 +1805,9 @@ async function execWithdraw() {
     return;
   }
   try {
+    const quote = await window.VSIM_API.quoteWithdrawal(amount);
+    const confirmed = window.confirm(`${quote.message}\n\nWithdrawal: UGX ${Number(quote.requestedAmount).toLocaleString()}\nFee: UGX ${Number(quote.fee).toLocaleString()}\nYou receive: UGX ${Number(quote.netAmount).toLocaleString()}\n\nContinue with this withdrawal?`);
+    if (!confirmed) return;
     const res = await window.VSIM_API.withdrawWallet(amount, phone, network);
     appState.walletBalance = Number(res.walletBalance) || 0;
     updateBalanceDisplay();

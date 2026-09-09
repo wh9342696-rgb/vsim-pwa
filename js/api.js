@@ -205,6 +205,13 @@ const VSIM_API = {
     });
   },
 
+  async quoteWithdrawal(amount) {
+    return await this.request('/wallet/withdrawals/quote', {
+      method: 'POST',
+      body: JSON.stringify({ amount })
+    });
+  },
+
   async fetchTransactions() {
     return await this.request('/wallet/transactions');
   },
