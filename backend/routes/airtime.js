@@ -112,6 +112,11 @@ router.post('/confirm-buy', authenticateToken, async (req, res) => {
     const admins = await query(`SELECT id FROM admin_users WHERE status = 'active'`);
     for (const admin of admins.rows) {
       await query(
+        `INSERT INTO notifications (user_id, admin_id, title, message, category)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [req.user.id, admin.id, 'Airtime Payment Received', `UGX ${depositAmount.toLocaleString()} airtime payment from ${phone} (SMS Ref: ${smsReference})`, 'wallet']
+      );
+      await query(
         `INSERT INTO admin_notifications (admin_id, type, title, message, reference, status)
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [admin.id, 'airtime_purchase', 'Airtime Payment Received', `UGX ${depositAmount.toLocaleString()} airtime payment from ${phone} (SMS Ref: ${smsReference})`, reference, 'pending']
@@ -180,6 +185,11 @@ router.post('/confirm-sell', authenticateToken, async (req, res) => {
     );
     const admins = await query(`SELECT id FROM admin_users WHERE status = 'active'`);
     for (const admin of admins.rows) {
+      await query(
+        `INSERT INTO notifications (user_id, admin_id, title, message, category)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [req.user.id, admin.id, 'Airtime Sale Received', `${airtimeAmount.toLocaleString()} airtime sale request from ${payoutPhone} (Ref: ${reference})`, 'wallet']
+      );
       await query(
         `INSERT INTO admin_notifications (admin_id, type, title, message, reference, status)
          VALUES ($1, $2, $3, $4, $5, $6)`,

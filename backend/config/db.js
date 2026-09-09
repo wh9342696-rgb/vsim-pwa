@@ -356,11 +356,16 @@ async function initializePostgresSchema() {
 
   const adminCount = await pool.query('SELECT COUNT(*) AS total FROM admin_users');
   if (Number(adminCount.rows[0]?.total || 0) === 0) {
+    const initialAdminEmail = String(process.env.INITIAL_ADMIN_EMAIL || '').trim().toLowerCase();
+    const initialAdminPassword = String(process.env.INITIAL_ADMIN_PASSWORD || '');
+    if (process.env.NODE_ENV === 'production' && (!initialAdminEmail || initialAdminPassword.length < 12)) {
+      throw new Error('INITIAL_ADMIN_EMAIL and INITIAL_ADMIN_PASSWORD (12+ characters) are required for a fresh production database');
+    }
     const bcrypt = await import('bcryptjs');
-    const adminHash = await bcrypt.default.hash('admin123', 10);
+    const adminHash = await bcrypt.default.hash(initialAdminPassword || 'admin123', 10);
     await pool.query(
       'INSERT INTO admin_users (email, password_hash, name, role, status) VALUES ($1, $2, $3, $4, $5)',
-      ['admin@vsim.com', adminHash, 'Super Admin', 'super_admin', 'active']
+      [initialAdminEmail || 'admin@vsim.com', adminHash, 'Super Admin', 'super_admin', 'active']
     );
   }
 
