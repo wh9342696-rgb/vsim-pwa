@@ -1274,9 +1274,10 @@ async function handleSettingsSubmit(event) {
 }
 
 async function handleWithdrawalFeePreview(event) {
-  event.preventDefault();
+  const form = event?.currentTarget || event;
+  if (event?.preventDefault) event.preventDefault();
   const result = document.getElementById('withdrawalFeePreviewResult');
-  const amount = Number(new FormData(event.currentTarget).get('amount'));
+  const amount = Number(form?.querySelector('[name="amount"]')?.value || 0);
   if (!result) return;
   result.textContent = 'Loading preview...';
   try {

@@ -1,3 +1,195 @@
+.settings-view {
+  padding-bottom: 28px;
+}
+
+.settings-page-header {
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.settings-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.settings-sync-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 11px;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.08);
+  color: #a7f3d0;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.settings-sync-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.12);
+}
+
+.settings-layout {
+  width: 100%;
+}
+
+.settings-card {
+  width: 100%;
+  max-width: none !important;
+  overflow: hidden;
+}
+
+.settings-card-header {
+  align-items: flex-start;
+}
+
+.settings-card-description {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.settings-card-body {
+  padding: 20px;
+}
+
+.settings-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.settings-form > #settingsAdminIdentity,
+.settings-form > .admin-profile-photo-editor,
+.settings-form > .settings-section-divider,
+.settings-form > .settings-access-note,
+.settings-form > .settings-simulator,
+.settings-form > .settings-actions {
+  grid-column: 1 / -1;
+}
+
+.settings-form > #settingsAdminIdentity {
+  margin: 0 !important;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--bg-card-secondary);
+  font-size: 0.78rem;
+}
+
+.settings-form .modal-form-group {
+  margin: 0;
+}
+
+.settings-section-divider {
+  margin: 6px 0 -2px;
+}
+
+.settings-full-width {
+  grid-column: 1 / -1;
+}
+
+.settings-simulator {
+  padding: 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-card-secondary);
+}
+
+.settings-simulator-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.settings-simulator-heading strong {
+  color: var(--text-white);
+  font-size: 0.84rem;
+}
+
+.settings-simulator-heading span {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.settings-simulator-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.settings-simulator-row .modal-form-group {
+  flex: 1;
+  margin: 0;
+}
+
+.settings-simulator-row button {
+  flex: 0 0 auto;
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+@media (max-width: 720px) {
+  .settings-page-header,
+  .settings-header-actions {
+    align-items: stretch;
+  }
+
+  .settings-page-header,
+  .settings-header-actions {
+    flex-direction: column;
+  }
+
+  .settings-header-actions .btn-secondary,
+  .settings-header-actions .settings-sync-status {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .settings-form {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-card-body {
+    padding: 16px;
+  }
+
+  .settings-simulator-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .settings-simulator-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settings-simulator-row button,
+  .settings-actions button {
+    width: 100%;
+  }
+
+  .settings-actions {
+    flex-direction: column;
+  }
+}
 /* ==========================================================================
    VSIM ADMIN PANEL PWA - DESIGN SYSTEM & STYLESHEET
    Matches reference Admin Dashboard UI with pixel perfection & full responsiveness
