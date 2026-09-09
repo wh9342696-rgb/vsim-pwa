@@ -85,8 +85,6 @@ router.get('/assigned-merchant', async (req, res) => {
         name: assignedBridge.name || `${requestedNetwork} Bridge Merchant`,
         merchant_code: requestedNetwork === 'AIRTEL' ? assignedBridge.airtel_merchant_id : assignedBridge.mtn_merchant_id,
         network: requestedNetwork,
-        account_name: assignedBridge.account_name || assignedBridge.name || (requestedNetwork === 'AIRTEL' ? assignedBridge.airtel_merchant_id : assignedBridge.mtn_merchant_id),
-        phone: assignedBridge.merchant_phone || '',
         bridgeDeviceId: assignedBridge.device_id,
         instructions: assignedBridge.instructions || null
       };
@@ -105,8 +103,6 @@ router.get('/assigned-merchant', async (req, res) => {
           name: fallbackMerchant.name || `${requestedNetwork} Merchant`,
           merchant_code: fallbackMerchant.merchant_code,
           network: fallbackMerchant.network || requestedNetwork,
-          account_name: fallbackMerchant.account_name || fallbackMerchant.name || fallbackMerchant.merchant_code,
-          phone: fallbackMerchant.phone || '',
           bridgeDeviceId: null,
           instructions: fallbackMerchant.instructions || null
         };

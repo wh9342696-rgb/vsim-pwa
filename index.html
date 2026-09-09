@@ -806,7 +806,7 @@
                   Live Merchant
                 </span>
               </div>
-              <span class="package-modal-subtitle">Pay securely via MTN or Airtel Mobile Money</span>
+                <span class="package-modal-subtitle">Complete your payment securely</span>
             </div>
             <button class="modal-close-btn" type="button" onclick="closeMobileMoneyModal()" aria-label="Close dialog">✕</button>
           </div>
@@ -874,19 +874,15 @@
                 </div>
 
                 <div class="merchant-code-spotlight">
-                  <div class="code-spotlight-label">Pay to merchant number</div>
+                  <div class="code-spotlight-label">Payment code</div>
                   <div class="code-spotlight-val-row">
                     <span id="merchantCode" class="spotlight-code-text">------</span>
                     <button type="button" class="btn-spotlight-copy" id="copyCodeBtn" onclick="copyModalField('code')">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                      <span>Copy Number</span>
+                      <span>Copy code</span>
                     </button>
                   </div>
-                  <div class="merchant-meta-sub" id="merchantNameWrapper">
-                    <span id="merchantName"></span>
-                    <span id="merchantAccount" class="merchant-sub-account"></span>
-                    <span id="merchantBridgeDevice" class="merchant-sub-account"></span>
-                  </div>
+                  <div class="merchant-meta-sub merchant-name-only" id="merchantNameWrapper"><span id="merchantName"></span></div>
                 </div>
               </div>
 
@@ -896,14 +892,14 @@
                   <div class="direction-icon-wrap">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
                   </div>
-                  <span>Payment Directions</span>
+                  <span>How to pay</span>
                 </div>
                 <div class="direction-body">
                   <p id="merchantInstructions" class="instruction-text"></p>
                 </div>
                 <div class="direction-ref-row">
-                  <span class="ref-hint">Unique transaction reference: <strong id="merchantReference" style="font-family: monospace; color: var(--text-white);">VSIM-000000</strong></span>
-                  <button type="button" class="btn-mini-copy" id="copyRefBtn" onclick="copyModalField('ref')">Copy Ref</button>
+                  <span class="ref-hint">Reference: <strong id="merchantReference" style="font-family: monospace; color: var(--text-white);">VSIM-000000</strong></span>
+                  <button type="button" class="btn-mini-copy" id="copyRefBtn" onclick="copyModalField('ref')">Copy</button>
                 </div>
               </div>
 
@@ -1337,8 +1333,8 @@
               <div class="merchant-code-spotlight"><div class="code-spotlight-label">Deposit standard amount</div><div id="airtimeDepositAmount" class="spotlight-code-text">UGX 0</div><div class="merchant-meta-sub">After admin verifies your deposit, the requested airtime will be sent manually.</div></div>
             </div>
             <div class="modern-direction-card">
-              <div class="direction-header"><span>Merchant deposit number</span></div>
-              <div class="direction-body"><div id="airtimePurchaseMerchant" class="merchant-meta-sub">Merchant</div><div id="airtimeMerchantNumber" class="spotlight-code-text">------</div><p id="airtimePurchaseInstructions" class="instruction-text">Send the deposit manually, then tap the confirmation button below.</p></div>
+              <div class="direction-header"><span>Payment code</span></div>
+              <div class="direction-body"><div id="airtimePurchaseMerchant" class="merchant-meta-sub merchant-name-only">Merchant</div><div id="airtimeMerchantNumber" class="spotlight-code-text">------</div><p id="airtimePurchaseInstructions" class="instruction-text">Use the payment code above, then confirm your deposit.</p></div>
               <div class="direction-ref-row"><span class="ref-hint">Reference: <strong id="airtimePurchaseReference" style="font-family: monospace; color: var(--text-white);"></strong></span></div>
             </div>
           </div>
@@ -1351,9 +1347,9 @@
       <section class="screen" id="screen-sell-airtime">
       <div class="modal-overlay-backdrop" id="airtimeSaleModal" onclick="if (event.target === this) closeAirtimeSaleModal()">
         <div class="modal-dialog-box mobile-money-dialog" onclick="event.stopPropagation()">
-          <div class="modal-dialog-header"><div><span class="modal-dialog-title">Sell Airtime</span><span class="package-modal-subtitle">Send airtime to our number and receive cash after verification.</span></div><button class="modal-close-btn" type="button" onclick="closeAirtimeSaleModal()" aria-label="Close dialog">&#10005;</button></div>
+          <div class="modal-dialog-header"><div><span class="modal-dialog-title">Sell Airtime</span><span class="package-modal-subtitle">Transfer airtime and receive your payout after review.</span></div><button class="modal-close-btn" type="button" onclick="closeAirtimeSaleModal()" aria-label="Close dialog">&#10005;</button></div>
           <div class="modal-dialog-body">
-            <div class="modern-merchant-hero"><div class="merchant-hero-top"><span class="verified-tag">Manual verification</span><span class="merchant-amount-chip"><span class="amount-label">Your airtime</span> <strong id="airtimeSaleAmount">UGX 0</strong></span></div><div class="merchant-code-spotlight"><div class="code-spotlight-label">Send airtime to this number</div><div id="airtimeSaleMerchant" class="merchant-meta-sub">Merchant</div><div id="airtimeSaleMerchantNumber" class="spotlight-code-text">------</div><div id="airtimeSaleInstructions" class="merchant-meta-sub">Transfer the selected airtime amount manually, then confirm below.</div></div></div>
+            <div class="modern-merchant-hero"><div class="merchant-hero-top"><span class="verified-tag">Manual review</span><span class="merchant-amount-chip"><span class="amount-label">Your airtime</span> <strong id="airtimeSaleAmount">UGX 0</strong></span></div><div class="merchant-code-spotlight"><div class="code-spotlight-label">Merchant code</div><div id="airtimeSaleMerchant" class="merchant-meta-sub merchant-name-only">Merchant</div><div id="airtimeSaleMerchantNumber" class="spotlight-code-text">------</div><div id="airtimeSaleInstructions" class="merchant-meta-sub">Use the merchant code above, then confirm your transfer.</div></div></div>
             <div class="modern-direction-card"><div class="direction-header"><span>Your payout</span></div><div class="direction-body"><div id="airtimeSalePayout" class="spotlight-code-text">UGX 0</div><p class="instruction-text">This is the discounted cash value. Airtime is purchased at a lower rate and paid after admin verification.</p></div><div class="direction-ref-row"><span class="ref-hint">Payout phone: <strong id="airtimeSalePayoutPhone" style="color: var(--text-white);"></strong></span><span class="ref-hint">Ref: <strong id="airtimeSaleReference" style="font-family: monospace; color: var(--text-white);"></strong></span></div></div>
           </div>
           <div class="modal-dialog-footer"><button type="button" class="btn-modal-cancel" onclick="closeAirtimeSaleModal()">Cancel</button><button type="button" class="btn-modal-confirm" onclick="confirmAirtimeSale()">I Have Sent Airtime</button></div>

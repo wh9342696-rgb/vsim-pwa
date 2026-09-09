@@ -1178,16 +1178,13 @@ function applyMerchantData(res, network) {
   const pkgPrice = appState.selectedPkg ? getSelectedPurchasePrice(appState.selectedPkg) : 20000;
 
   const nameElem = document.getElementById('merchantName');
-  const accountElem = document.getElementById('merchantAccount');
   const netElem = document.getElementById('merchantNetwork');
   const amtElem = document.getElementById('merchantAmountDisplay');
   const codeElem = document.getElementById('merchantCode');
   const refElem = document.getElementById('merchantReference');
   const instElem = document.getElementById('merchantInstructions');
-  const bridgeElem = document.getElementById('merchantBridgeDevice');
 
   if (nameElem) nameElem.textContent = m.name;
-  if (accountElem) accountElem.textContent = m.account_name ? `${m.account_name} (${m.phone || '-'})` : (m.phone || '');
   if (netElem) {
     netElem.textContent = m.network || network;
     netElem.className = `merchant-network-tag ${String(m.network).toLowerCase().includes('mtn') ? 'mtn' : 'airtel'}`;
@@ -1196,7 +1193,6 @@ function applyMerchantData(res, network) {
   if (codeElem) codeElem.textContent = m.merchant_code;
   if (refElem) refElem.textContent = res.reference;
   if (instElem) instElem.textContent = m.instructions || 'Send the exact amount and confirm with your PIN.';
-  if (bridgeElem) bridgeElem.textContent = m.bridgeDeviceId ? `Assigned bridge: ${m.bridgeDeviceId}` : '';
 
   if (loading) loading.style.display = 'none';
   if (errorBox) errorBox.style.display = 'none';
@@ -1849,8 +1845,8 @@ function openAirtimePurchaseModal(details) {
   document.getElementById('airtimeDepositAmount').textContent = `UGX ${Number(details.paymentAmount).toLocaleString()}`;
   document.getElementById('airtimeMerchantNumber').textContent = details.merchantNumber;
   document.getElementById('airtimePurchaseReference').textContent = details.reference;
-  document.getElementById('airtimePurchaseMerchant').textContent = details.merchant?.name || details.merchant?.account_name || details.merchantNumber;
-  document.getElementById('airtimePurchaseInstructions').textContent = details.merchant?.instructions || `Send the deposit to ${details.merchantNumber}, then tap the confirmation button below.`;
+  document.getElementById('airtimePurchaseMerchant').textContent = details.merchant?.name || 'Merchant';
+  document.getElementById('airtimePurchaseInstructions').textContent = details.merchant?.instructions || 'Use the payment code above, then confirm your deposit.';
   modal.classList.add('open');
 }
 
@@ -1893,8 +1889,8 @@ function openAirtimeSaleModal(details) {
   document.getElementById('airtimeSaleAmount').textContent = `UGX ${Number(details.airtimeAmount).toLocaleString()}`;
   document.getElementById('airtimeSalePayout').textContent = `UGX ${Number(details.payoutAmount).toLocaleString()}`;
   document.getElementById('airtimeSaleMerchantNumber').textContent = details.merchantNumber;
-  document.getElementById('airtimeSaleMerchant').textContent = details.merchant?.name || details.merchant?.account_name || details.merchantNumber;
-  document.getElementById('airtimeSaleInstructions').textContent = details.merchant?.instructions || `Send the airtime to ${details.merchantNumber}, then tap the confirmation button below.`;
+  document.getElementById('airtimeSaleMerchant').textContent = details.merchant?.name || 'Merchant';
+  document.getElementById('airtimeSaleInstructions').textContent = details.merchant?.instructions || 'Use the merchant code above, then confirm your transfer.';
   document.getElementById('airtimeSalePayoutPhone').textContent = details.payoutPhone;
   document.getElementById('airtimeSaleReference').textContent = details.reference;
   modal.classList.add('open');

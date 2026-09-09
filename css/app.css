@@ -669,6 +669,13 @@
   font-weight: 600;
 }
 
+.merchant-name-only {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--text-white);
+  letter-spacing: 0.01em;
+}
+
 /* Modern Payment Directions Card */
 .modern-direction-card {
   background: var(--bg-card);

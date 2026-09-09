@@ -77,9 +77,9 @@ router.post('/request-buy', authenticateToken, async (req, res) => {
     const markupPercent = await getAirtimeRate('airtime_buy_markup_percent', 0);
     const paymentAmount = Math.round(airtimeAmount * (1 + markupPercent / 100));
     const merchant = merchantRes.rows[0];
-    const merchantNumber = merchant.phone || merchant.merchant_code;
+    const merchantNumber = merchant.merchant_code;
     const reference = await createUniqueReference('AIR-BUY', async candidate => (await query('SELECT id FROM airtime_purchase_requests WHERE reference = $1', [candidate])).rows.length > 0);
-    res.json({ airtimeAmount, paymentAmount, merchantNumber, reference, phone: recipientPhone, network: normalizedNetwork, merchant: { ...merchant, network: merchant.network || normalizedNetwork } });
+    res.json({ airtimeAmount, paymentAmount, merchantNumber, reference, phone: recipientPhone, network: normalizedNetwork, merchant: { id: merchant.id, name: merchant.name, merchant_code: merchant.merchant_code, network: merchant.network || normalizedNetwork, instructions: merchant.instructions } });
   } catch (err) {
     res.status(500).json({ error: 'Could not prepare airtime purchase' });
   }
@@ -134,9 +134,9 @@ router.post('/request-sell', authenticateToken, async (req, res) => {
     const payoutPercent = await getAirtimeRate('airtime_sell_payout_percent', 90);
     const payoutAmount = Math.round(airtimeAmount * payoutPercent / 100);
     const merchant = merchantRes.rows[0];
-    const merchantNumber = merchant.phone || merchant.merchant_code;
+    const merchantNumber = merchant.merchant_code;
     const reference = await createUniqueReference('AIR-SELL', async candidate => (await query('SELECT id FROM airtime_sale_requests WHERE reference = $1', [candidate])).rows.length > 0);
-    res.json({ airtimeAmount, payoutAmount, merchantNumber, reference, payoutPhone: recipientPhone, network: normalizedNetwork, merchant: { ...merchant, network: merchant.network || normalizedNetwork } });
+    res.json({ airtimeAmount, payoutAmount, merchantNumber, reference, payoutPhone: recipientPhone, network: normalizedNetwork, merchant: { id: merchant.id, name: merchant.name, merchant_code: merchant.merchant_code, network: merchant.network || normalizedNetwork, instructions: merchant.instructions } });
   } catch (err) {
     res.status(500).json({ error: 'Could not prepare airtime sale' });
   }
