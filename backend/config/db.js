@@ -269,7 +269,14 @@ async function initializePostgresSchema() {
     await pool.query(statement);
   }
 
-  await pool.query(`INSERT INTO system_settings (key, value) VALUES ('withdrawal_fee', '2000') ON CONFLICT (key) DO NOTHING`);
+  await pool.query(`INSERT INTO system_settings (key, value) VALUES
+    ('withdrawal_fee', '2000'),
+    ('withdrawal_settlement_fee', '1000'),
+    ('withdrawal_expiry_fee', '1000'),
+    ('withdrawal_monthly_fee', '500'),
+    ('withdrawal_settlement_days', ''),
+    ('withdrawal_fee_priority', 'monthly_cycle,expiry,settlement,normal')
+    ON CONFLICT (key) DO NOTHING`);
 
   await pool.query('ALTER TABLE esim_packages ADD COLUMN IF NOT EXISTS progress_percent_per_hour NUMERIC(8,4) DEFAULT 0.42');
   await pool.query("ALTER TABLE esim_packages ADD COLUMN IF NOT EXISTS renewal_schedule TEXT DEFAULT '[]'");
@@ -277,6 +284,12 @@ async function initializePostgresSchema() {
   await pool.query('ALTER TABLE user_esims ADD COLUMN IF NOT EXISTS renewal_count INTEGER DEFAULT 0');
   await pool.query('ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS reference TEXT');
   await pool.query('ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS requested_amount NUMERIC(12,2)');
+  await pool.query('ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS fee_amount NUMERIC(12,2) DEFAULT 0');
+  await pool.query('ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS net_amount NUMERIC(12,2)');
+  await pool.query('ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS fee_rule TEXT DEFAULT \'normal_day\'');
+  await pool.query('ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS fee_snapshot TEXT');
+  await pool.query('ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS payment_reference TEXT');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_reserved_balance NUMERIC(12,2) DEFAULT 0');
   await pool.query('ALTER TABLE bridge_devices ADD COLUMN IF NOT EXISTS provider TEXT');
   await pool.query('ALTER TABLE bridge_devices ADD COLUMN IF NOT EXISTS merchant_id TEXT');
   await pool.query('ALTER TABLE bridge_devices ADD COLUMN IF NOT EXISTS app_version TEXT');

@@ -16,6 +16,52 @@ function getWithdrawalNetwork(phone) {
   return Object.entries(withdrawalNetworkPrefixes).find(([, prefixes]) => prefixes.some(prefix => phone.startsWith(prefix)))?.[0] || null;
 }
 
+export async function getWithdrawalQuote(userId, requestedAmount, { requireBalance = true } = {}) {
+  const amount = Number(requestedAmount);
+  if (!Number.isFinite(amount) || amount < 5000) throw new Error('Minimum withdrawal is UGX 5,000');
+  const [settingsRes, userRes, esimRes] = await Promise.all([
+    query("SELECT key, value FROM system_settings WHERE key LIKE 'withdrawal_%'"),
+    userId ? query('SELECT wallet_balance FROM users WHERE id = $1', [userId]) : Promise.resolve({ rows: [] }),
+    userId ? query("SELECT expires_at, activated_at FROM user_esims WHERE user_id = $1 AND status = 'active' ORDER BY expires_at ASC NULLS LAST LIMIT 1", [userId]) : Promise.resolve({ rows: [] })
+  ]);
+  const settings = Object.fromEntries(settingsRes.rows.map(row => [row.key, row.value]));
+  const balance = Number(userRes.rows[0]?.wallet_balance || 0);
+  if (requireBalance && amount > balance) throw new Error('Insufficient wallet balance');
+  const now = new Date();
+  const day = now.getUTCDay();
+  const settlementDays = String(settings.withdrawal_settlement_days || '').split(',').map(value => Number(value.trim())).filter(Number.isInteger);
+  const esim = esimRes.rows[0];
+  const expiry = esim?.expires_at ? new Date(esim.expires_at) : null;
+  const expiryDay = expiry && Math.abs(expiry.getTime() - now.getTime()) < 24 * 60 * 60 * 1000;
+  const monthlyCycle = esim?.activated_at && now.getTime() - new Date(esim.activated_at).getTime() >= 30 * 24 * 60 * 60 * 1000;
+  const conditions = { monthly_cycle: monthlyCycle, expiry: Boolean(expiryDay), settlement: settlementDays.includes(day), normal: true };
+  const priority = String(settings.withdrawal_fee_priority || 'monthly_cycle,expiry,settlement,normal').split(',').map(value => value.trim()).filter(Boolean);
+  const rule = priority.find(candidate => conditions[candidate]) || 'normal';
+  const feeKey = { monthly_cycle: 'withdrawal_monthly_fee', expiry: 'withdrawal_expiry_fee', settlement: 'withdrawal_settlement_fee', normal: 'withdrawal_fee' }[rule];
+  const fee = Math.max(0, Number(settings[feeKey]) || 0);
+  const netAmount = Math.max(0, amount - fee);
+  const messages = { normal: 'A higher withdrawal processing fee applies today.', settlement: 'Your withdrawal qualifies for the configured settlement-day fee.', expiry: 'Your withdrawal is near the active eSIM expiry point.', monthly_cycle: 'Your completed monthly cycle qualifies for the lowest configured fee.' };
+  return {
+    requestedAmount: amount,
+    fee,
+    netAmount,
+    feeRule: `${rule}_day`,
+    selectedRule: rule,
+    message: messages[rule],
+    canContinue: true,
+    balance: userId ? balance : null,
+    conditions,
+    priority,
+    settings: {
+      normalFee: Math.max(0, Number(settings.withdrawal_fee) || 0),
+      settlementFee: Math.max(0, Number(settings.withdrawal_settlement_fee) || 0),
+      expiryFee: Math.max(0, Number(settings.withdrawal_expiry_fee) || 0),
+      monthlyFee: Math.max(0, Number(settings.withdrawal_monthly_fee) || 0),
+      settlementDays
+    }
+  };
+}
+
 const walletActionSchema = z.object({
   amount: z.union([z.number(), z.string()]),
   phone: z.string().optional(),
@@ -83,6 +129,14 @@ router.post('/topup', authenticateToken, validateBody(walletActionSchema), async
   }
 });
 
+router.post('/withdrawals/quote', authenticateToken, validateBody(z.object({ amount: z.union([z.number(), z.string()]) })), async (req, res) => {
+  try {
+    res.json(await getWithdrawalQuote(req.user.id, req.body.amount));
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Unable to quote withdrawal' });
+  }
+});
+
 // 3. Mobile Money Withdrawal Request (balance is deducted after admin approval)
 router.post('/withdraw', authenticateToken, validateBody(walletActionSchema), async (req, res) => {
   try {
@@ -102,23 +156,22 @@ router.post('/withdraw', authenticateToken, validateBody(walletActionSchema), as
       return res.status(400).json({ error: `This number belongs to ${inferredNetwork}` });
     }
 
-    const userRes = await query('SELECT wallet_balance FROM users WHERE id = $1', [req.user.id]);
-    const balance = userRes.rows[0].wallet_balance;
-
-    if (balance < num) {
-      return res.status(400).json({ error: 'Insufficient wallet balance' });
-    }
-
-    const feeResult = await query("SELECT value FROM system_settings WHERE key = 'withdrawal_fee'");
-    const fee = Math.max(0, Number(feeResult.rows[0]?.value) || 0);
-    const netAmount = Math.max(0, num - fee);
+    const quote = await getWithdrawalQuote(req.user.id, num);
+    const { fee, netAmount, feeRule } = quote;
 
     const ref = await createUniqueReference('WITHDRAW', async candidate => (await query('SELECT id FROM withdrawals WHERE reference = $1', [candidate])).rows.length > 0);
     // Record in withdrawals table for Admin Panel payout queue
+    const reserved = await query(
+      `UPDATE users SET wallet_balance = wallet_balance - $1, wallet_reserved_balance = COALESCE(wallet_reserved_balance, 0) + $1
+       WHERE id = $2 AND wallet_balance >= $1 RETURNING wallet_balance`,
+      [num, req.user.id]
+    );
+    if (!reserved.rows.length) return res.status(409).json({ error: 'Wallet balance changed. Please request a new quote.' });
+
     await query(
-      `INSERT INTO withdrawals (user_id, phone, amount, method, network, status, reference)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [req.user.id, userPhone, netAmount, 'Mobile Money', normalizedNetwork, 'pending', ref]
+      `INSERT INTO withdrawals (user_id, phone, amount, requested_amount, fee_amount, net_amount, fee_rule, fee_snapshot, method, network, status, reference)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [req.user.id, userPhone, num, num, fee, netAmount, feeRule, JSON.stringify({ fee, feeRule, quotedAt: new Date().toISOString() }), 'Mobile Money', normalizedNetwork, 'pending', ref]
     );
 
     await query(
@@ -148,7 +201,9 @@ router.post('/withdraw', authenticateToken, validateBody(walletActionSchema), as
     res.json({
       message: `Withdrawal request submitted for approval! Net payout: UGX ${netAmount.toLocaleString()}`,
       walletBalance: updatedUser.rows[0].wallet_balance,
-      netAmount
+      netAmount,
+      fee,
+      feeRule
     });
   } catch (err) {
     console.error('Withdraw error:', err);

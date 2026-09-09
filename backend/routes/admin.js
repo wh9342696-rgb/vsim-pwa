@@ -9,6 +9,7 @@ import { createUniqueReference } from '../utils/reference.js';
 import { emitDataChanged } from '../realtime.js';
 import { encryptBridgeSecret, decryptBridgeSecret, hashBridgeSecret } from '../utils/bridge-secret.js';
 import { fulfillVerifiedPurchase } from './bridge.js';
+import { getWithdrawalQuote } from './wallet.js';
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -677,6 +678,54 @@ router.put('/settings', adminAuth, ensureSuperAdmin, async (req, res) => {
   res.json({ message: 'Settings saved successfully', settings: req.body || {} });
 });
 
+const withdrawalFeeKeys = ['withdrawal_fee', 'withdrawal_settlement_fee', 'withdrawal_expiry_fee', 'withdrawal_monthly_fee'];
+const withdrawalFeeRules = ['monthly_cycle', 'expiry', 'settlement', 'normal'];
+
+function validateWithdrawalFeeConfig(body) {
+  const fees = {};
+  for (const key of withdrawalFeeKeys) {
+    const value = Number(body?.[key]);
+    if (!Number.isFinite(value) || value < 0) throw new Error(`${key} must be a non-negative number`);
+    fees[key] = String(value);
+  }
+  const days = String(body?.withdrawal_settlement_days ?? '').split(',').map(value => value.trim()).filter(Boolean);
+  if (days.some(day => !/^[0-6]$/.test(day))) throw new Error('Settlement days must contain weekday numbers from 0 to 6');
+  const priority = String(body?.withdrawal_fee_priority ?? '').split(',').map(value => value.trim()).filter(Boolean);
+  if (priority.length !== withdrawalFeeRules.length || new Set(priority).size !== withdrawalFeeRules.length || priority.some(rule => !withdrawalFeeRules.includes(rule))) {
+    throw new Error('Fee priority must contain monthly_cycle, expiry, settlement, and normal exactly once');
+  }
+  return { ...fees, withdrawal_settlement_days: days.join(','), withdrawal_fee_priority: priority.join(',') };
+}
+
+router.get('/withdrawal-fees', adminAuth, async (req, res) => {
+  const result = await query("SELECT key, value FROM system_settings WHERE key = ANY($1::text[])", [withdrawalFeeKeys.concat(['withdrawal_settlement_days', 'withdrawal_fee_priority'])]);
+  const settings = Object.fromEntries(result.rows.map(row => [row.key, row.value]));
+  res.json({ settings, canManage: req.admin.role === 'super_admin' || Boolean(req.admin.can_manage_withdrawal_fee) });
+});
+
+router.put('/withdrawal-fees', adminAuth, ensureSuperAdmin, async (req, res) => {
+  try {
+    const settings = validateWithdrawalFeeConfig(req.body);
+    for (const [key, value] of Object.entries(settings)) {
+      await query(`INSERT INTO system_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, [key, value]);
+    }
+    await query(`INSERT INTO system_logs (action, details, level, time_ago) VALUES ($1, $2, $3, $4)`, ['withdrawal_fee_settings_updated', `Withdrawal fee rules updated by admin ${req.admin.id}: ${JSON.stringify(settings)}`, 'info', 'Just now']);
+    res.json({ message: 'Withdrawal fee rules saved', settings });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Invalid withdrawal fee configuration' });
+  }
+});
+
+router.post('/withdrawals/preview', adminAuth, async (req, res) => {
+  try {
+    const amount = Number(req.body?.amount);
+    if (!Number.isFinite(amount) || amount < 5000) return res.status(400).json({ error: 'Minimum withdrawal is UGX 5,000' });
+    res.json(await getWithdrawalQuote(req.body?.userId ? Number(req.body.userId) : null, amount, { requireBalance: false }));
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Unable to preview withdrawal fee' });
+  }
+});
+
 // 2. Recent Automatic Deposits
 router.get('/deposits', adminAuth, ensureSuperAdmin, async (req, res) => {
   try {
@@ -865,7 +914,7 @@ router.post('/airtime-purchases/:id/action', adminAuth, async (req, res) => {
 router.post('/withdrawals/:id/action', adminAuth, ensureSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { action } = req.body; // 'pay_now', 'approve', 'reject'
+    const { action, paymentReference, note } = req.body; // 'pay_now', 'approve', 'reject'
     if (!['pay_now', 'approve', 'reject'].includes(action)) {
       return res.status(400).json({ error: 'Choose approve, reject, or dispatch' });
     }
@@ -874,34 +923,15 @@ router.post('/withdrawals/:id/action', adminAuth, ensureSuperAdmin, async (req, 
     if (!w) return res.status(404).json({ error: 'Withdrawal not found' });
     if (w.status !== 'pending') return res.status(409).json({ error: 'Withdrawal has already been processed' });
 
-    const newStatus = action === 'reject' ? 'rejected' : 'approved';
+    const newStatus = action === 'reject' ? 'rejected' : 'completed';
     const txHash = action === 'reject' ? null : `MM-PAY-${Date.now().toString().slice(-8)}`;
-
-    if (newStatus === 'approved') {
-      // The withdrawal row stores the net payout, while the transaction keeps the gross request.
-      const transactionRes = await query(
-        `SELECT amount FROM wallet_transactions
-         WHERE user_id = $1 AND reference = $2 AND type = 'withdrawal' AND status = 'pending'`,
-        [w.user_id, w.reference]
-      );
-      const feeResult = await query("SELECT value FROM system_settings WHERE key = 'withdrawal_fee'");
-      const withdrawalFee = Math.max(0, Number(feeResult.rows[0]?.value) || 0);
-      const requiredBalance = Number(transactionRes.rows[0]?.amount ?? Number(w.amount) + withdrawalFee);
-      const debitRes = await query(
-        `UPDATE users
-         SET wallet_balance = wallet_balance - $1
-         WHERE id = $2 AND wallet_balance >= $1
-         RETURNING id`,
-        [requiredBalance, w.user_id]
-      );
-      if (debitRes.rows.length === 0) {
-        const balanceRes = await query('SELECT wallet_balance FROM users WHERE id = $1', [w.user_id]);
-        const currentBalance = Number(balanceRes.rows[0]?.wallet_balance || 0);
-        return res.status(400).json({ error: `Insufficient wallet balance. Dispatch requires UGX ${requiredBalance.toLocaleString()}, but only UGX ${currentBalance.toLocaleString()} is available.` });
-      }
+    const requestedAmount = Number(w.requested_amount ?? w.amount);
+    if (newStatus === 'rejected') {
+      await query('UPDATE users SET wallet_balance = wallet_balance + $1, wallet_reserved_balance = GREATEST(COALESCE(wallet_reserved_balance, 0) - $1, 0) WHERE id = $2', [requestedAmount, w.user_id]);
+    } else {
+      await query('UPDATE users SET wallet_reserved_balance = GREATEST(COALESCE(wallet_reserved_balance, 0) - $1, 0) WHERE id = $2', [requestedAmount, w.user_id]);
     }
-
-    await query('UPDATE withdrawals SET status = $1, tx_hash = $2, processed_by = $3, processed_at = CURRENT_TIMESTAMP WHERE id = $4 AND status = $5', [newStatus, txHash, req.admin.id, id, 'pending']);
+    await query('UPDATE withdrawals SET status = $1, tx_hash = $2, payment_reference = $3, processed_by = $4, processed_at = CURRENT_TIMESTAMP WHERE id = $5 AND status = $6', [newStatus, txHash, paymentReference || null, req.admin.id, id, 'pending']);
     await query(
       `UPDATE wallet_transactions
        SET status = $1
@@ -909,14 +939,11 @@ router.post('/withdrawals/:id/action', adminAuth, ensureSuperAdmin, async (req, 
       [newStatus, w.user_id, w.reference]
     );
 
-    // Log the payout
-    if (newStatus === 'approved') {
-      await query(
-        `INSERT INTO system_logs (action, details, level, time_ago)
-         VALUES ($1, $2, $3, $4)`,
-        ['withdrawal_paid', `Withdrawal paid: UGX ${w.amount.toLocaleString()} to ${w.phone} via Mobile Money`, 'info', 'Just now']
-      );
-    }
+    await query(
+      `INSERT INTO system_logs (action, details, level, time_ago)
+       VALUES ($1, $2, $3, $4)`,
+      [newStatus === 'completed' ? 'withdrawal_paid' : 'withdrawal_rejected', `Withdrawal ${newStatus}: requested UGX ${requestedAmount.toLocaleString()}, net UGX ${Number(w.net_amount ?? w.amount).toLocaleString()} to ${w.phone} by admin ${req.admin.id}${note ? ` (${String(note).slice(0, 160)})` : ''}`, newStatus === 'completed' ? 'info' : 'warning', 'Just now']
+    );
 
     res.json({ message: `Withdrawal marked as ${newStatus}`, withdrawal: { ...w, status: newStatus, tx_hash: txHash } });
   } catch (err) {
