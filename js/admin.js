@@ -1081,13 +1081,16 @@ function applyRoleUI() {
   const settingsForm = document.getElementById('adminSettingsForm');
   if (settingsForm) {
     settingsForm.classList.toggle('sub-admin-readonly', isSubAdmin);
+    const withdrawalRulesSection = document.getElementById('withdrawalFeeRulesSection');
+    if (withdrawalRulesSection) {
+      withdrawalRulesSection.style.display = isSubAdmin ? 'none' : '';
+    }
     settingsForm.querySelectorAll('input, select, textarea, button[type="submit"]').forEach(control => {
       const name = control.getAttribute('name') || '';
       const isProfileControl = ['admin_name', 'profile_photo'].includes(name);
       const isSystemSettingControl = ['platform_name', 'support_email', 'maintenance_mode', 'esim_progress_enabled', 'esim_progress_percent_per_hour', 'airtime_buy_markup_percent', 'airtime_sell_payout_percent'].includes(name);
       const isWithdrawalFeeControl = ['withdrawal_fee', 'withdrawal_settlement_fee', 'withdrawal_expiry_fee', 'withdrawal_monthly_fee', 'withdrawal_settlement_days', 'withdrawal_fee_priority'].includes(name);
-      control.disabled = isSubAdmin && isSystemSettingControl;
-      if (isWithdrawalFeeControl) control.disabled = isSubAdmin;
+      control.disabled = isSubAdmin && (isSystemSettingControl || isWithdrawalFeeControl);
       if (isSubAdmin && isProfileControl) {
         control.disabled = false;
       }
