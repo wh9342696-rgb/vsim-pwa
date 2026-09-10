@@ -824,7 +824,22 @@ if (databaseDriver === 'postgres') {
     assignReferralCode.run(code, user.id);
   }
 
-  // Seed default active merchants in SQLite if table is empty
+  // Seed default admin and merchants in SQLite if tables are empty
+  try {
+    const adminCountRow = sqlite.prepare('SELECT COUNT(*) AS total FROM admin_users').get();
+    if (!adminCountRow || Number(adminCountRow.total || 0) === 0) {
+      const initialAdminEmail = String(process.env.INITIAL_ADMIN_EMAIL || 'admin@vsim.com').trim().toLowerCase();
+      const initialAdminPassword = String(process.env.INITIAL_ADMIN_PASSWORD || 'admin123');
+      const bcrypt = await import('bcryptjs');
+      const adminHash = await bcrypt.default.hash(initialAdminPassword, 10);
+      sqlite.prepare(
+        'INSERT INTO admin_users (email, password_hash, name, role, status) VALUES (?, ?, ?, ?, ?)'
+      ).run(initialAdminEmail, adminHash, 'Super Admin', 'super_admin', 'active');
+    }
+  } catch (seedErr) {
+    console.error('Error seeding default admin in SQLite:', seedErr);
+  }
+
   try {
     const merchantCountRow = sqlite.prepare('SELECT COUNT(*) AS total FROM merchants').get();
     if (!merchantCountRow || merchantCountRow.total === 0) {
