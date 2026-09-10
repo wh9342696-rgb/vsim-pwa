@@ -177,7 +177,7 @@ function startAdminRefreshCoordinator() {
 }
 
 function setupAdminInstallPrompt() {
-  const installButton = document.getElementById('installAdminPwaBtn');
+  const installButton = document.getElementById('installAdminPwaPromptBtn');
   const prompt = document.getElementById('adminPwaInstallPrompt');
   const promptTitle = document.getElementById('adminPwaInstallTitle');
   const promptText = document.getElementById('adminPwaInstallText');
@@ -237,7 +237,7 @@ async function installAdminPwa() {
   adminInstallPrompt.prompt();
   const choice = await adminInstallPrompt.userChoice;
   if (choice.outcome === 'accepted') {
-    document.getElementById('installAdminPwaBtn')?.setAttribute('hidden', '');
+    document.getElementById('installAdminPwaPromptBtn')?.setAttribute('hidden', '');
   }
   adminInstallPrompt = null;
 }
