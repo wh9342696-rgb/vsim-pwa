@@ -387,7 +387,7 @@ async function loadAllData() {
       AdminAPI.getWithdrawals(),
       AdminAPI.getAirtimePurchases(),
       AdminAPI.getAirtimeSales(),
-      isSubAdmin ? Promise.resolve(null) : AdminAPI.getPackages(),
+      AdminAPI.getPackages(),
       isSubAdmin ? Promise.resolve(null) : AdminAPI.getMerchants(),
       AdminAPI.getBridgeDevices(),
       AdminAPI.getBridgeEvents(),
@@ -829,7 +829,7 @@ async function reviewKyc(id, action) {
 // VIEW NAVIGATION ROUTING
 // ============================================================================
 function navigateToView(viewId) {
-  const allowedSubAdminViews = new Set(['view-dashboard', 'view-users', 'view-withdrawals', 'view-airtime-purchases', 'view-airtime-sales', 'view-tickets', 'view-notifications', 'view-settings']);
+  const allowedSubAdminViews = new Set(['view-dashboard', 'view-users', 'view-withdrawals', 'view-airtime-purchases', 'view-airtime-sales', 'view-packages', 'view-tickets', 'view-notifications', 'view-settings']);
   if (AdminStore.admin?.role === 'sub_admin' && !allowedSubAdminViews.has(viewId)) {
     viewId = 'view-dashboard';
   }
@@ -1052,7 +1052,7 @@ function applyRoleUI() {
   const sidebarRole = document.getElementById('sidebarAdminRole');
   if (sidebarName) sidebarName.textContent = AdminStore.admin?.name || 'Admin';
   if (sidebarRole) sidebarRole.textContent = 'Online';
-  const allowedSubAdminViews = ['view-dashboard', 'view-users', 'view-withdrawals', 'view-airtime-purchases', 'view-airtime-sales', 'view-tickets', 'view-notifications', 'view-settings'];
+  const allowedSubAdminViews = ['view-dashboard', 'view-users', 'view-withdrawals', 'view-airtime-purchases', 'view-airtime-sales', 'view-packages', 'view-tickets', 'view-notifications', 'view-settings'];
   document.querySelectorAll('.nav-menu-link, .mobile-drawer-btn').forEach(link => {
     link.style.display = '';
     const view = link.getAttribute('data-view') || (link.getAttribute('onclick') || '').match(/view-[a-z-]+/)?.[0];
@@ -1838,9 +1838,14 @@ function renderPackagesGrid() {
   const container = document.getElementById('fullPackagesGrid');
   if (!container) return;
 
+  const isSubAdmin = AdminStore.admin?.role === 'sub_admin';
+
   container.innerHTML = AdminStore.packages.map(p => {
     let renewalSchedule = [];
     try { renewalSchedule = Array.isArray(p.renewal_schedule) ? p.renewal_schedule : JSON.parse(p.renewal_schedule || '[]'); } catch (error) {}
+    const actionButtons = isSubAdmin
+      ? '<div style="font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.02em;">Available inventory</div>'
+      : `<div class="package-icon-actions"><button class="icon-action-button" type="button" onclick="openRenewalPricingModal('${p.id}')" title="Manage renewal prices" aria-label="Manage renewal prices"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15.36-6.36L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-15.36 6.36L3 16"></path><path d="M3 21v-5h5"></path></svg></button><button class="icon-action-button danger" type="button" onclick="handleDeletePackage('${p.id}')" title="Delete package" aria-label="Delete package"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path></svg></button></div>`;
     return `
     <div class="dashboard-widget-card" style="padding: 16px;">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
@@ -1854,7 +1859,7 @@ function renderPackagesGrid() {
       </div>
       <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-subtle);">
         <span style="font-size: 1.05rem; font-weight: 900; color: var(--primary-purple);">UGX ${p.price.toLocaleString()}</span>
-        <div class="package-icon-actions"><button class="icon-action-button" type="button" onclick="openRenewalPricingModal('${p.id}')" title="Manage renewal prices" aria-label="Manage renewal prices"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 15.36-6.36L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-15.36 6.36L3 16"></path><path d="M3 21v-5h5"></path></svg></button><button class="icon-action-button danger" type="button" onclick="handleDeletePackage('${p.id}')" title="Delete package" aria-label="Delete package"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path></svg></button></div>
+        ${actionButtons}
       </div>
     </div>
   `;
