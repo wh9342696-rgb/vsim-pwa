@@ -185,6 +185,7 @@ function setupAdminInstallPrompt() {
 
   const userAgent = navigator.userAgent || '';
   const isIos = /iphone|ipad|ipod/i.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /android/i.test(userAgent);
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   if (isStandalone) {
     installButton.hidden = true;
@@ -194,10 +195,36 @@ function setupAdminInstallPrompt() {
 
   installButton.hidden = true;
   prompt.hidden = true;
-  if (isIos && promptText) {
-    if (promptTitle) promptTitle.textContent = 'Add VSIM Admin to your Home Screen';
-    promptText.textContent = 'Tap Share, then choose Add to Home Screen.';
+
+  const showFallbackPrompt = () => {
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+      adminInstallPrompt = null;
+      installButton.hidden = true;
+      prompt.hidden = true;
+      return;
+    }
+
+    if (isIos) {
+      if (promptTitle) promptTitle.textContent = 'Add VSIM Admin to your Home Screen';
+      if (promptText) promptText.textContent = 'Tap Share, then choose Add to Home Screen.';
+    } else if (isAndroid) {
+      if (promptTitle) promptTitle.textContent = 'Install VSIM Admin app';
+      if (promptText) promptText.textContent = 'Open the browser menu and choose Install app or Add to Home screen.';
+    } else {
+      if (promptTitle) promptTitle.textContent = 'Install VSIM Admin as an app';
+      if (promptText) promptText.textContent = 'Open the browser menu and choose Install app.';
+    }
+
+    installButton.hidden = false;
     prompt.hidden = false;
+  };
+
+  if (isIos) {
+    showFallbackPrompt();
+  } else {
+    setTimeout(() => {
+      if (!adminInstallPrompt) showFallbackPrompt();
+    }, 1500);
   }
 
   window.addEventListener('beforeinstallprompt', event => {
@@ -224,12 +251,19 @@ function dismissAdminPwaPrompt() {
 
 async function installAdminPwa() {
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /android/i.test(navigator.userAgent || '');
+
   if (isIos) {
     showToast('Tap Share, then choose Add to Home Screen', 'info');
     return;
   }
+
   if (!adminInstallPrompt) {
-    showToast('The native install prompt is not available yet.', 'info');
+    if (isAndroid) {
+      showToast('Open the Chrome menu and choose Install app', 'info');
+    } else {
+      showToast('Use your browser menu to install this app', 'info');
+    }
     return;
   }
 
