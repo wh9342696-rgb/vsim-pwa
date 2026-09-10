@@ -13,13 +13,14 @@
     window.VSIM_API_BASE = 'https://api.vsime.uk/api/v1';
   </script>
   <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icons/vsim.svg" />
+  <link rel="apple-touch-icon" href="icons/vsim-192.png" />
+  <link rel="icon" href="icons/vsim-192.png" type="image/png" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="VSIM" />
   <link rel="stylesheet" href="css/app.css?v=20260906-kyc-mobile" />
   <script src="js/pwa-register.js?v=20260906-kyc-mobile" defer></script>
 </head>
-<body data-service-worker="service-worker.js">
+<body data-service-worker="/service-worker.js">
   <div class="pwa-install-prompt" id="pwaInstallPrompt" hidden>
     <div class="pwa-install-prompt-copy">
       <strong id="pwaInstallPromptTitle">Install VSIM as an app</strong>

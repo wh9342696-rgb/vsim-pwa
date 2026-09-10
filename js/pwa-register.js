@@ -6,13 +6,17 @@
     const worker = document.body?.dataset?.serviceWorker;
     if (!worker) return;
 
+    const workerUrl = worker.startsWith('/')
+      ? worker
+      : (location.pathname.startsWith('/admin') ? `/${worker}` : worker);
+
     navigator.serviceWorker
-      .register(worker, { scope: '/' })
+      .register(workerUrl, { scope: '/' })
       .then(() => {
-        console.info('[PWA] Service worker registered for admin app.');
+        console.info('[PWA] Service worker registered for app.', workerUrl);
       })
       .catch(error => {
-        console.warn('[PWA] Service worker registration failed', error);
+        console.warn('[PWA] Service worker registration failed', { workerUrl, error });
       });
   });
 })();
