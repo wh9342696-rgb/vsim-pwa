@@ -1803,8 +1803,23 @@ async function execWithdraw() {
   }
   try {
     const quote = await window.VSIM_API.quoteWithdrawal(amount);
-    const confirmed = window.confirm(`${quote.message}\n\nWithdrawal: UGX ${Number(quote.requestedAmount).toLocaleString()}\nFee: UGX ${Number(quote.fee).toLocaleString()}\nYou receive: UGX ${Number(quote.netAmount).toLocaleString()}\n\nContinue with this withdrawal?`);
+    const hasReminder = Boolean(quote?.message && String(quote.message).trim());
+    const reminderText = hasReminder
+      ? `${quote.message}\n\nWithdrawal: UGX ${Number(quote.requestedAmount).toLocaleString()}\nFee: UGX ${Number(quote.fee).toLocaleString()}\nYou receive: UGX ${Number(quote.netAmount).toLocaleString()}`
+      : `Withdrawal: UGX ${Number(quote.requestedAmount).toLocaleString()}\nFee: UGX ${Number(quote.fee).toLocaleString()}\nYou receive: UGX ${Number(quote.netAmount).toLocaleString()}`;
+
+    const confirmed = hasReminder
+      ? await showCustomConfirm({
+          title: 'Withdrawal fee reminder',
+          message: `${reminderText}\n\nProceed with this withdrawal?`,
+          confirmText: 'Continue',
+          cancelText: 'Cancel',
+          isDanger: false
+        })
+      : window.confirm(`${reminderText}\n\nContinue with this withdrawal?`);
+
     if (!confirmed) return;
+
     const res = await window.VSIM_API.withdrawWallet(amount, phone, network);
     appState.walletBalance = Number(res.walletBalance) || 0;
     updateBalanceDisplay();
