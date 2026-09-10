@@ -1681,13 +1681,17 @@ function focusField(fieldId) {
 }
 
 let latestWithdrawalQuote = null;
+let withdrawQuoteRequestSeq = 0;
+let withdrawQuoteDebounceTimer = null;
 
 async function refreshWithdrawQuote() {
   const input = document.getElementById('withdrawVal');
   const receiveElem = document.getElementById('withdrawReceiveVal');
-  const amount = parseFloat(input.value) || 0;
   const feeElem = document.getElementById('withdrawFeeVal');
   const ruleElem = document.getElementById('withdrawFeeRule');
+
+  const amount = parseFloat(input?.value || '') || 0;
+
   if (!amount || !window.VSIM_API?.getToken()) {
     latestWithdrawalQuote = null;
     if (receiveElem) receiveElem.textContent = 'UGX 0';
@@ -1695,19 +1699,42 @@ async function refreshWithdrawQuote() {
     if (ruleElem) ruleElem.textContent = '';
     return;
   }
+
+  const requestId = ++withdrawQuoteRequestSeq;
   try {
     const quote = await window.VSIM_API.quoteWithdrawal(amount);
+    if (requestId !== withdrawQuoteRequestSeq) return;
+
     latestWithdrawalQuote = quote;
     if (receiveElem) receiveElem.textContent = `UGX ${Number(quote.netAmount || 0).toLocaleString()}`;
     if (feeElem) feeElem.textContent = `UGX ${Number(quote.fee || 0).toLocaleString()}`;
     if (ruleElem) ruleElem.textContent = quote.message || '';
   } catch (error) {
+    if (requestId !== withdrawQuoteRequestSeq) return;
     latestWithdrawalQuote = null;
     if (ruleElem) ruleElem.textContent = error.message || 'Enter an amount to get the current withdrawal quote.';
   }
 }
 
-function calcWithdrawReceive() { refreshWithdrawQuote(); }
+function calcWithdrawReceive() {
+  const input = document.getElementById('withdrawVal');
+  const amount = parseFloat(input?.value || '') || 0;
+  if (withdrawQuoteDebounceTimer) clearTimeout(withdrawQuoteDebounceTimer);
+  if (!amount || !window.VSIM_API?.getToken()) {
+    latestWithdrawalQuote = null;
+    const receiveElem = document.getElementById('withdrawReceiveVal');
+    const feeElem = document.getElementById('withdrawFeeVal');
+    const ruleElem = document.getElementById('withdrawFeeRule');
+    if (receiveElem) receiveElem.textContent = 'UGX 0';
+    if (feeElem) feeElem.textContent = 'UGX 0';
+    if (ruleElem) ruleElem.textContent = '';
+    return;
+  }
+  withdrawQuoteDebounceTimer = setTimeout(() => {
+    withdrawQuoteDebounceTimer = null;
+    refreshWithdrawQuote();
+  }, 350);
+}
 
 function syncWithdrawNetwork() {
   const phone = String(document.getElementById('withdrawPhone')?.value || '').replace(/\s+/g, '');
