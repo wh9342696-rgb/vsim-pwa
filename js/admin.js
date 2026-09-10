@@ -832,7 +832,6 @@ function navigateToView(viewId) {
   const allowedSubAdminViews = new Set(['view-dashboard', 'view-users', 'view-withdrawals', 'view-airtime-purchases', 'view-airtime-sales', 'view-tickets', 'view-notifications', 'view-settings']);
   if (AdminStore.admin?.role === 'sub_admin' && !allowedSubAdminViews.has(viewId)) {
     viewId = 'view-dashboard';
-    showToast('This area is available to the main administrator only.', 'error');
   }
   AdminStore.currentView = viewId;
 
@@ -1046,13 +1045,13 @@ function applyRoleUI() {
   if (exportButton) exportButton.style.display = isSubAdmin ? 'none' : '';
   const accessContext = document.getElementById('adminAccessContext');
   if (accessContext) {
-    accessContext.hidden = !isSubAdmin;
-    accessContext.textContent = isSubAdmin ? 'Assigned workspace' : '';
+    accessContext.hidden = true;
+    accessContext.textContent = '';
   }
   const sidebarName = document.getElementById('sidebarAdminName');
   const sidebarRole = document.getElementById('sidebarAdminRole');
   if (sidebarName) sidebarName.textContent = AdminStore.admin?.name || 'Admin';
-  if (sidebarRole) sidebarRole.textContent = isSubAdmin ? 'Workspace' : 'Online';
+  if (sidebarRole) sidebarRole.textContent = 'Online';
   const allowedSubAdminViews = ['view-dashboard', 'view-users', 'view-withdrawals', 'view-airtime-purchases', 'view-airtime-sales', 'view-tickets', 'view-notifications', 'view-settings'];
   document.querySelectorAll('.nav-menu-link, .mobile-drawer-btn').forEach(link => {
     link.style.display = '';
@@ -1139,7 +1138,7 @@ function renderAdminIdentity() {
   const fallback = document.querySelector('.admin-avatar-fallback');
   const settingsAvatar = document.getElementById('adminSettingsAvatar');
   if (name) name.textContent = AdminStore.admin.name;
-  if (role) role.textContent = AdminStore.admin.role === 'super_admin' ? 'Main Administrator' : '';
+  if (role) role.textContent = 'Administrator';
   const photo = AdminStore.pendingProfilePhoto !== undefined ? AdminStore.pendingProfilePhoto : AdminStore.admin.profile_photo;
   if (avatar && photo) {
     avatar.src = photo;
@@ -2474,7 +2473,7 @@ function handleGlobalSearch(query) {
     }
   }
   const feeNote = document.getElementById('withdrawalFeeAccessNote');
-  if (feeNote) feeNote.textContent = isSubAdmin ? 'Locked: only the Super Admin can change this value.' : 'Controlled centrally by the Super Admin.';
+  if (feeNote) feeNote.textContent = 'Managed centrally with platform-wide settings.';
 }
 
 // Mobile Drawers
