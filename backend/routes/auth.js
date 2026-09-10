@@ -45,6 +45,22 @@ function encodeJson(value) {
   return JSON.stringify(value);
 }
 
+function sanitizePhoneInput(value) {
+  const digits = String(value ?? '').replace(/\D+/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('256')) return `0${digits.slice(3)}`;
+  if (digits.startsWith('0')) return digits;
+  if (digits.length === 12 && digits.startsWith('256')) return `0${digits.slice(3)}`;
+  return digits.length === 10 ? digits : digits.slice(-10);
+}
+
+export function sanitizeUserLoginInput(value) {
+  const raw = value && typeof value === 'object' ? value : {};
+  const phone = sanitizePhoneInput(raw.phone);
+  const password = String(raw.password ?? '').replace(/[\u0000-\u001F\u007F]+/g, '').trim();
+  return { ...raw, phone, password };
+}
+
 function challengeExpiry() {
   return new Date(Date.now() + PASSKEY_CHALLENGE_TTL_MS).toISOString().replace('T', ' ').replace('Z', '');
 }
@@ -211,7 +227,8 @@ router.post(['/signup', '/register'], async (req, res) => {
 // 2. User Login
 router.post('/login', async (req, res) => {
   try {
-    const parsed = loginSchema.safeParse(req.body);
+    const sanitized = sanitizeUserLoginInput(req.body);
+    const parsed = loginSchema.safeParse(sanitized);
     if (!parsed.success) {
       return res.status(400).json({ error: parsed.error.issues[0].message });
     }

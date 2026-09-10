@@ -52,6 +52,13 @@ function normalizeRenewalSchedule(value, basePrice) {
   });
 }
 
+export function sanitizeAdminLoginInput(value) {
+  const raw = value && typeof value === 'object' ? value : {};
+  const email = String(raw.email ?? '').replace(/[\u0000-\u001F\u007F]+/g, '').trim().toLowerCase();
+  const password = String(raw.password ?? '').replace(/[\u0000-\u001F\u007F]+/g, '').trim();
+  return { ...raw, email, password };
+}
+
 const adminAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization || '';
@@ -88,12 +95,13 @@ const ensureSuperAdmin = (req, res, next) => {
 
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body || {};
+    const sanitized = sanitizeAdminLoginInput(req.body);
+    const { email, password } = sanitized;
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const adminRes = await query('SELECT * FROM admin_users WHERE email = $1', [email.trim().toLowerCase()]);
+    const adminRes = await query('SELECT * FROM admin_users WHERE email = $1', [email]);
     if (adminRes.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid admin credentials' });
     }
