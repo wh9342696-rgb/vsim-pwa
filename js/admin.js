@@ -927,8 +927,21 @@ function renderActiveView(viewId) {
   if (viewId === 'view-earnings') renderEarningsView();
   if (viewId === 'view-tickets') renderSupportTickets();
   if (viewId === 'view-airtime-purchases') renderAirtimePurchases();
-  if (viewId === 'view-packages')    renderPackagesGrid();
-    if (viewId === 'view-merchants')   renderMerchantsView();
+  if (viewId === 'view-packages') {
+    const title = document.querySelector('#view-packages .dashboard-greeting-title');
+    const subtitle = document.querySelector('#view-packages .dashboard-greeting-sub');
+    const addButton = document.querySelector('#view-packages .btn-primary');
+    const isSubAdmin = AdminStore.admin?.role === 'sub_admin';
+
+    if (title) title.textContent = isSubAdmin ? 'Available eSIM Inventory' : 'eSIM Packages & Inventory';
+    if (subtitle) subtitle.textContent = isSubAdmin
+      ? 'View available eSIM stock and package options for travel demand.'
+      : 'Configure global data quotas, pricing, and daily investment yields.';
+    if (addButton) addButton.style.display = isSubAdmin ? 'none' : '';
+
+    renderPackagesGrid();
+  }
+  if (viewId === 'view-merchants')   renderMerchantsView();
   if (viewId === 'view-bridge') {
     renderBridgeGrid();
     refreshBridgeDevicesView();
@@ -1839,6 +1852,8 @@ function renderPackagesGrid() {
   if (!container) return;
 
   const isSubAdmin = AdminStore.admin?.role === 'sub_admin';
+  const addButton = document.querySelector('#view-packages .btn-primary');
+  if (addButton) addButton.style.display = isSubAdmin ? 'none' : '';
 
   container.innerHTML = AdminStore.packages.map(p => {
     let renewalSchedule = [];
