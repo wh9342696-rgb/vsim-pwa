@@ -229,7 +229,10 @@ function setupAdminInstallPrompt() {
 
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
-    adminInstallPrompt = event;
+    if (event && typeof event.prompt === 'function') {
+      adminInstallPrompt = event;
+      window.adminInstallPrompt = event;
+    }
     if (promptTitle) promptTitle.textContent = 'Install VSIM Admin as an app';
     if (promptText) promptText.textContent = 'Install VSIM Admin on your home screen without browser controls.';
     installButton.hidden = false;
@@ -252,13 +255,14 @@ function dismissAdminPwaPrompt() {
 async function installAdminPwa() {
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const isAndroid = /android/i.test(navigator.userAgent || '');
+  const promptEvent = window.adminInstallPrompt || adminInstallPrompt;
 
   if (isIos) {
     showToast('Tap Share, then choose Add to Home Screen', 'info');
     return;
   }
 
-  if (!adminInstallPrompt) {
+  if (!promptEvent || typeof promptEvent.prompt !== 'function') {
     if (isAndroid) {
       showToast('Open the Chrome menu and choose Install app', 'info');
     } else {
@@ -268,12 +272,24 @@ async function installAdminPwa() {
   }
 
   document.getElementById('adminPwaInstallPrompt')?.setAttribute('hidden', '');
-  adminInstallPrompt.prompt();
-  const choice = await adminInstallPrompt.userChoice;
-  if (choice.outcome === 'accepted') {
-    document.getElementById('installAdminPwaPromptBtn')?.setAttribute('hidden', '');
+
+  try {
+    const promptResult = promptEvent.prompt();
+    if (promptResult && typeof promptResult.then === 'function') {
+      await promptResult;
+    }
+
+    const choice = await (promptEvent.userChoice || Promise.resolve({ outcome: 'accepted' }));
+    if (choice && choice.outcome === 'accepted') {
+      document.getElementById('installAdminPwaPromptBtn')?.setAttribute('hidden', '');
+    }
+  } catch (error) {
+    console.warn('[PWA] Native install prompt failed:', error);
+    showToast('This browser blocked the install prompt. Please use the browser menu to install the app.', 'info');
+  } finally {
+    adminInstallPrompt = null;
+    window.adminInstallPrompt = null;
   }
-  adminInstallPrompt = null;
 }
 
 function bindAdminLogin() {
