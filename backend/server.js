@@ -238,9 +238,9 @@ app.get('/api/v1/realtime', (req, res) => {
   }
 });
 
-// Route for direct /admin URL - serve admin.html
-// MUST come BEFORE static middleware to prevent 404
-app.get('/admin', (req, res) => {
+// Route for direct /admin and /admin/ URLs - serve admin.html
+// MUST come BEFORE static middleware to prevent 404 on mobile/browser install flows
+app.get(['/admin', '/admin/'], (req, res) => {
   if (!hasFrontend) return res.status(404).json({ error: 'Frontend is hosted separately' });
   const adminPath = path.join(frontendPublicDir, 'admin.html');
   res.sendFile(adminPath, (err) => {
