@@ -514,6 +514,7 @@ router.get('/stats', adminAuth, async (req, res) => {
        FROM esim_packages ep
        LEFT JOIN user_esims ue ON ue.package_id = ep.id
        GROUP BY ep.id, ep.title, ep.price
+      HAVING COUNT(ue.id) > 0
        ORDER BY sold_count DESC, ep.price ASC
        LIMIT 5`
     );

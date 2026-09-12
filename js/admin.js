@@ -1461,14 +1461,14 @@ function renderTopPackagesTable() {
     .sort((left, right) => Number(right.sold_count || 0) - Number(left.sold_count || 0) || Number(left.price || 0) - Number(right.price || 0))
     .slice(0, 5);
 
-  tbody.innerHTML = pkgs.map(p => `
+  tbody.innerHTML = pkgs.length ? pkgs.map(p => `
     <tr>
       <td style="font-weight: 700; color: var(--text-white);">${p.title}</td>
       <td style="font-weight: 700;">${p.price.toLocaleString()}</td>
       <td style="color: var(--text-gray);">${Number(p.sold_count || 0).toLocaleString()}</td>
       <td style="font-weight: 800; color: var(--accent-green);">UGX ${Number(p.revenue || 0).toLocaleString()}</td>
     </tr>
-  `).join('');
+  `).join('') : '<tr><td colspan="4" style="text-align:center; padding:24px; color:var(--text-muted);">No eSIM purchases yet</td></tr>';
 }
 
 // Render Bridge Devices List
