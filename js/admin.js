@@ -324,16 +324,33 @@ function bindAdminLogin() {
   });
 }
 
-function connectAdminRealtimeUpdates() {
-  if (!AdminAPI.isLoggedIn() || !window.EventSource) return;
-  if (window.adminRealtimeSource) window.adminRealtimeSource.close();
-  const source = new EventSource(`${AdminAPI.baseUrl}/../realtime?token=${encodeURIComponent(AdminAPI.getToken())}`);
-  source.addEventListener('data_changed', () => refreshAdminData());
-  source.onerror = () => {
-    source.close();
-    setTimeout(connectAdminRealtimeUpdates, 3000);
-  };
-  window.adminRealtimeSource = source;
+async function connectAdminRealtimeUpdates() {
+  if (!AdminAPI.isLoggedIn()) return;
+  if (window.adminRealtimeSource) window.adminRealtimeSource.abort();
+  const controller = new AbortController();
+  window.adminRealtimeSource = controller;
+  try {
+    const response = await fetch(`${AdminAPI.baseUrl}/../realtime`, {
+      headers: { Authorization: `Bearer ${AdminAPI.getToken()}` },
+      signal: controller.signal
+    });
+    if (!response.ok || !response.body) throw new Error('Realtime connection failed');
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    while (!controller.signal.aborted) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split('\n\n');
+      buffer = events.pop() || '';
+      if (events.some(event => event.includes('event: data_changed'))) refreshAdminData();
+    }
+  } catch (error) {
+    if (controller.signal.aborted) return;
+  } finally {
+    if (!controller.signal.aborted) setTimeout(connectAdminRealtimeUpdates, 3000);
+  }
 }
 
 function showAdminLogin() {
@@ -987,6 +1004,10 @@ function renderDashboard() {
   const depositsMonth = document.getElementById('depositsMonthTotal');
   if (depositsToday) depositsToday.textContent = `UGX ${Number(metrics.depositsTotal || 0).toLocaleString()}`;
   if (depositsMonth) depositsMonth.textContent = `UGX ${Number(metrics.depositsTotal || 0).toLocaleString()}`;
+  const pendingWithdrawals = document.getElementById('pendingWithdrawalsTotal');
+  const todayPaidWithdrawals = document.getElementById('todayPaidWithdrawalsTotal');
+  if (pendingWithdrawals) pendingWithdrawals.textContent = `UGX ${Number(metrics.pendingWithdrawalsTotal || 0).toLocaleString()}`;
+  if (todayPaidWithdrawals) todayPaidWithdrawals.textContent = `UGX ${Number(metrics.todayPaidWithdrawalsTotal || 0).toLocaleString()}`;
 
   // 1. Update 4 Hero Metric Cards
   updateMetricCards(metrics);
@@ -1008,6 +1029,7 @@ function renderDashboard() {
 
   // 7. Render Charts
   renderEarningsLineChart(earningsChart);
+  updateEarningsSummary(earningsChart);
   renderInvestmentDonutChart(investmentsBreakdown);
 
   // 8. Update Sidebar System Status
@@ -1017,6 +1039,18 @@ function renderDashboard() {
     const storageStatusVal = document.getElementById('sidebarStorageStatus');
     if (storageStatusVal) storageStatusVal.textContent = systemStatus.storage || 'Unavailable';
   }
+}
+
+function updateEarningsSummary(data) {
+  const values = {
+    earningsToday: Number(data?.today || 0),
+    earningsThisWeek: Number(data?.thisWeek || 0),
+    earningsThisMonth: Number(data?.thisMonth || 0)
+  };
+  Object.entries(values).forEach(([id, value]) => {
+    const element = document.getElementById(id);
+    if (element) element.textContent = `UGX ${value.toLocaleString()}`;
+  });
 }
 
 function updateMetricCards(m) {
@@ -1423,7 +1457,9 @@ function renderTopPackagesTable() {
   const tbody = document.getElementById('topPackagesTbody');
   if (!tbody) return;
 
-  const pkgs = (AdminStore.packages || []).slice(0, 5);
+  const pkgs = [...(AdminStore.packages || [])]
+    .sort((left, right) => Number(right.sold_count || 0) - Number(left.sold_count || 0) || Number(left.price || 0) - Number(right.price || 0))
+    .slice(0, 5);
 
   tbody.innerHTML = pkgs.map(p => `
     <tr>

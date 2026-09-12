@@ -517,6 +517,14 @@ router.get('/stats', adminAuth, async (req, res) => {
        FROM wallet_transactions WHERE type = 'yield' AND created_at >= CURRENT_DATE - INTERVAL '6 days'
        GROUP BY created_at::date ORDER BY day`
     );
+    const yieldTotals = await query(
+      `SELECT
+         COALESCE(SUM(amount) FILTER (WHERE type = 'yield'), 0) AS all_time,
+         COALESCE(SUM(amount) FILTER (WHERE type = 'yield' AND created_at >= CURRENT_DATE), 0) AS today,
+         COALESCE(SUM(amount) FILTER (WHERE type = 'yield' AND created_at >= CURRENT_DATE - INTERVAL '6 days'), 0) AS this_week,
+         COALESCE(SUM(amount) FILTER (WHERE type = 'yield' AND created_at >= DATE_TRUNC('month', CURRENT_DATE)), 0) AS this_month
+       FROM wallet_transactions`
+    );
     const investmentTotals = Object.fromEntries(investmentRows.rows.map(row => [row.status, Number(row.amount)]));
     const totalInvestment = Object.values(investmentTotals).reduce((sum, value) => sum + value, 0);
     const chartDays = Array.from({ length: 7 }, (_, index) => {
@@ -545,7 +553,7 @@ router.get('/stats', adminAuth, async (req, res) => {
         totalUsersReal: Number(usersCount.rows[0]?.total || 0),
         activeUsers: Number(activeUsers.rows[0]?.total || 0),
         totalInvested: Number(purchasedValue.rows[0]?.total_value || 0),
-        totalEarningsPaid: Number(packages.rows[0]?.revenue || 0),
+        totalEarningsPaid: Number(yieldTotals.rows[0]?.all_time || 0),
         totalWithdrawn: Number(paidPayouts.rows[0]?.total || 0),
         depositsTotal: Number(depositsTotal.rows[0]?.total || 0),
         depositsCount: Number(depositsTotal.rows[0]?.count || 0),
@@ -558,9 +566,9 @@ router.get('/stats', adminAuth, async (req, res) => {
       earningsChart: {
         days: chartDays,
         amounts: chartAmounts,
-        today: chartAmounts[6] || 0,
-        thisWeek: chartAmounts.reduce((sum, value) => sum + value, 0),
-        thisMonth: Number(packages.rows[0]?.revenue || 0)
+        today: Number(yieldTotals.rows[0]?.today || 0),
+        thisWeek: Number(yieldTotals.rows[0]?.this_week || 0),
+        thisMonth: Number(yieldTotals.rows[0]?.this_month || 0)
       },
       investmentsBreakdown: {
         total: totalInvestment,

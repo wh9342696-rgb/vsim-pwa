@@ -21,7 +21,7 @@
   <link rel="manifest" href="/admin-manifest.webmanifest" />
   <link rel="icon" href="/icons/vsim-admin.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="/icons/vsim-admin.svg" />
-  <link rel="stylesheet" href="/css/admin.css?v=20260909-settings-1" />
+  <link rel="stylesheet" href="/css/admin.css?v=20260912-live-data-1" />
   <script src="/js/pwa-register.js" defer></script>
 </head>
 <body data-service-worker="/admin-sw.js">
@@ -542,18 +542,18 @@
                 <div class="earnings-breakdown-row">
                   <div class="breakdown-stat-box">
                     <div class="title">Today</div>
-                    <div class="val">UGX 2,456,000</div>
-                    <div class="growth">+11.2%</div>
+                    <div class="val" id="earningsToday">UGX 0</div>
+                    <div class="growth">Live data</div>
                   </div>
                   <div class="breakdown-stat-box">
                     <div class="title">This Week</div>
-                    <div class="val">UGX 13,245,600</div>
-                    <div class="growth">+12.5%</div>
+                    <div class="val" id="earningsThisWeek">UGX 0</div>
+                    <div class="growth">Live data</div>
                   </div>
                   <div class="breakdown-stat-box">
                     <div class="title">This Month</div>
-                    <div class="val">UGX 24,685,750</div>
-                    <div class="growth">+15.3%</div>
+                    <div class="val" id="earningsThisMonth">UGX 0</div>
+                    <div class="growth">Live data</div>
                   </div>
                 </div>
               </div>
@@ -1973,6 +1973,6 @@
 
   <!-- Script Imports -->
   <script src="/js/admin-api.js?v=de7a90b"></script>
-  <script src="/js/admin.js?v=20260909-settings-1"></script>
+  <script src="/js/admin.js?v=20260912-live-data-1"></script>
 </body>
 </html>

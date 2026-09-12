@@ -2813,6 +2813,31 @@ button,
   .widget-card-body {
     padding: 10px;
   }
+
+  .widget-card-footer-stats {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .earnings-breakdown-row {
+    gap: 3px;
+  }
+
+  .breakdown-stat-box {
+    min-width: 0;
+    padding-left: 3px;
+    padding-right: 3px;
+  }
+
+  .breakdown-stat-box .val {
+    font-size: 0.74rem;
+    white-space: nowrap;
+  }
+
+  .table-responsive-wrapper {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
 }
 
 @media (min-width: 1600px) {

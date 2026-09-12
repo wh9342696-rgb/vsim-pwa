@@ -162,22 +162,41 @@ function initTheme() {
   applyTheme(appState.currentTheme);
 }
 
-function connectRealtimeUpdates() {
-  if (!window.VSIM_API?.getToken() || !window.EventSource) return;
-  if (window.vsimRealtimeSource) window.vsimRealtimeSource.close();
-  const source = new EventSource(`${window.VSIM_API.baseUrl}/realtime?token=${encodeURIComponent(window.VSIM_API.getToken())}`);
+async function connectRealtimeUpdates() {
+  if (!window.VSIM_API?.getToken()) return;
+  if (window.vsimRealtimeSource) window.vsimRealtimeSource.abort();
+  const controller = new AbortController();
+  window.vsimRealtimeSource = controller;
   let refreshTimer = null;
-  source.addEventListener('data_changed', event => {
-    const payload = JSON.parse(event.data || '{}');
+  try {
+    const response = await fetch(`${window.VSIM_API.baseUrl}/realtime`, {
+      headers: { Authorization: `Bearer ${window.VSIM_API.getToken()}` },
+      signal: controller.signal
+    });
+    if (!response.ok || !response.body) throw new Error('Realtime connection failed');
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    while (!controller.signal.aborted) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split('\n\n');
+      buffer = events.pop() || '';
+      for (const event of events) {
+        if (!event.includes('event: data_changed')) continue;
+        clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(() => fetchBackendData(), 500);
+      }
+    }
+  } catch (error) {
+    if (controller.signal.aborted) return;
+  } finally {
     clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(() => fetchBackendData(), 500);
-  });
-  source.onerror = () => {
-    clearTimeout(refreshTimer);
-    source.close();
-    setTimeout(connectRealtimeUpdates, 3000);
-  };
-  window.vsimRealtimeSource = source;
+    if (!controller.signal.aborted) {
+      setTimeout(connectRealtimeUpdates, 3000);
+    }
+  }
 }
 
 function applyTheme(theme) {
