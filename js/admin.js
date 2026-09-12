@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function registerAdminServiceWorker() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/admin-sw.js', { scope: '/admin/' }).catch(console.error);
+    navigator.serviceWorker.register('/admin-sw.js', { scope: '/admin' }).catch(console.error);
   }
 }
 

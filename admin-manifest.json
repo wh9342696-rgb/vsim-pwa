@@ -1,9 +1,9 @@
 {
   "name": "VSIM Admin Panel",
   "short_name": "VSIM Admin",
-  "id": "/admin/",
-  "start_url": "/admin/",
-  "scope": "/admin/",
+  "id": "/admin",
+  "start_url": "/admin",
+  "scope": "/admin",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#090D16",

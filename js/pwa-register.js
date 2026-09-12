@@ -10,7 +10,7 @@
       ? worker
       : (location.pathname.startsWith('/admin') ? `/${worker}` : worker);
 
-    const workerScope = workerUrl.includes('admin-sw.js') ? '/admin/' : '/';
+    const workerScope = workerUrl.includes('admin-sw.js') ? '/admin' : '/';
     navigator.serviceWorker
       .register(workerUrl, { scope: workerScope })
       .then(() => {
