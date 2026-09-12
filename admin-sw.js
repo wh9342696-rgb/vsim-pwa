@@ -1,5 +1,5 @@
 // VSIM Admin Panel Service Worker
-const CACHE_NAME = 'vsim-admin-v2.7-installable-pwa';
+const CACHE_NAME = 'vsim-admin-v2.8-standalone-pwa';
 const ASSETS_TO_CACHE = [
   '/admin.html',
   '/css/admin.css',

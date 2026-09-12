@@ -5,7 +5,7 @@
   "start_url": "/admin",
   "scope": "/admin",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#090D16",
   "theme_color": "#090D16",
   "orientation": "portrait-primary",
