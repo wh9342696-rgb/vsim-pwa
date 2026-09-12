@@ -1314,14 +1314,23 @@ async function fetchRealtimeMerchant(network) {
   try {
     const pkgPrice = appState.selectedPkg ? getSelectedPurchasePrice(appState.selectedPkg) : 20000;
     const pkgId = appState.selectedPkg ? appState.selectedPkg.id : '';
+    let lastError = null;
 
-    const res = await window.VSIM_API.fetchAssignedMerchant(pkgPrice, pkgId, network);
-
-    if (!res || !res.success || !res.merchant) {
-      throw new Error(res?.error || `No active ${network} merchant available`);
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const res = await window.VSIM_API.fetchAssignedMerchant(pkgPrice, pkgId, network);
+        if (!res || !res.success || !res.merchant) {
+          throw new Error(res?.error || `No active ${network} merchant available`);
+        }
+        applyMerchantData(res, network);
+        return;
+      } catch (error) {
+        lastError = error;
+        if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 500));
+      }
     }
 
-    applyMerchantData(res, network);
+    throw lastError || new Error(`No active ${network} merchant available`);
   } catch (error) {
     if (loading) loading.style.display = 'none';
     if (content) content.style.display = 'none';
