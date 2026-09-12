@@ -42,7 +42,9 @@ export async function getWithdrawalQuote(userId, requestedAmount, { requireBalan
   const monthlyCycle = esim?.activated_at && now.getTime() - new Date(esim.activated_at).getTime() >= 30 * 24 * 60 * 60 * 1000;
   const conditions = { monthly_cycle: monthlyCycle, expiry: Boolean(expiryDay), settlement: settlementDays.includes(day), normal: true };
   const priority = String(settings.withdrawal_fee_priority || 'monthly_cycle,expiry,settlement,normal').split(',').map(value => value.trim()).filter(Boolean);
-  const rule = priority.find(candidate => conditions[candidate]) || 'normal';
+  const rule = day === 5
+    ? priority.find(candidate => conditions[candidate]) || 'normal'
+    : 'normal';
   const feeKey = { monthly_cycle: 'withdrawal_monthly_fee', expiry: 'withdrawal_expiry_fee', settlement: 'withdrawal_settlement_fee', normal: 'withdrawal_fee' }[rule];
   const fee = Math.max(0, Number(settings[feeKey]) || 0);
   const netAmount = Math.max(0, amount - fee);
