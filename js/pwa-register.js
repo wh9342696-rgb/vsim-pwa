@@ -10,8 +10,9 @@
       ? worker
       : (location.pathname.startsWith('/admin') ? `/${worker}` : worker);
 
+    const workerScope = workerUrl.includes('admin-sw.js') ? '/admin/' : '/';
     navigator.serviceWorker
-      .register(workerUrl, { scope: '/' })
+      .register(workerUrl, { scope: workerScope })
       .then(() => {
         console.info('[PWA] Service worker registered for app.', workerUrl);
       })
