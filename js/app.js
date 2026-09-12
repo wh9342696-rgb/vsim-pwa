@@ -1859,13 +1859,14 @@ async function execWithdraw() {
   try {
     const quote = await window.VSIM_API.quoteWithdrawal(amount);
     const hasReminder = Boolean(quote?.message && String(quote.message).trim());
+    const settlementTerms = String(quote?.settlementTerms || '').trim();
     const reminderText = hasReminder
-      ? `${quote.message}\n\nWithdrawal: UGX ${Number(quote.requestedAmount).toLocaleString()}\nFee: UGX ${Number(quote.fee).toLocaleString()}\nYou receive: UGX ${Number(quote.netAmount).toLocaleString()}`
+      ? `${quote.message}${settlementTerms ? `\n\n${settlementTerms}` : ''}\n\nWithdrawal: UGX ${Number(quote.requestedAmount).toLocaleString()}\nFee: UGX ${Number(quote.fee).toLocaleString()}\nYou receive: UGX ${Number(quote.netAmount).toLocaleString()}`
       : `Withdrawal: UGX ${Number(quote.requestedAmount).toLocaleString()}\nFee: UGX ${Number(quote.fee).toLocaleString()}\nYou receive: UGX ${Number(quote.netAmount).toLocaleString()}`;
 
     const confirmed = hasReminder
       ? await showCustomConfirm({
-          title: 'Withdrawal fee reminder',
+          title: quote.selectedRule === 'settlement' ? 'Friday settlement terms' : 'Withdrawal fee reminder',
           message: `${reminderText}\n\nProceed with this withdrawal?`,
           confirmText: 'Continue',
           cancelText: 'Cancel',

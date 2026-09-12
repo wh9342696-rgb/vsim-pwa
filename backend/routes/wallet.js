@@ -6,6 +6,7 @@ import { authenticateToken } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 
 const router = express.Router();
+const KYC_WITHDRAWAL_THRESHOLD = 100000;
 
 const withdrawalNetworkPrefixes = {
   MTN: ['076', '077', '078'],
@@ -21,15 +22,20 @@ export async function getWithdrawalQuote(userId, requestedAmount, { requireBalan
   if (!Number.isFinite(amount) || amount < 5000) throw new Error('Minimum withdrawal is UGX 5,000');
   const [settingsRes, userRes, esimRes] = await Promise.all([
     query("SELECT key, value FROM system_settings WHERE key LIKE 'withdrawal_%'"),
-    userId ? query('SELECT wallet_balance FROM users WHERE id = $1', [userId]) : Promise.resolve({ rows: [] }),
+    userId ? query('SELECT wallet_balance, kyc_tier FROM users WHERE id = $1', [userId]) : Promise.resolve({ rows: [] }),
     userId ? query("SELECT expires_at, activated_at FROM user_esims WHERE user_id = $1 AND status = 'active' ORDER BY expires_at ASC NULLS LAST LIMIT 1", [userId]) : Promise.resolve({ rows: [] })
   ]);
   const settings = Object.fromEntries(settingsRes.rows.map(row => [row.key, row.value]));
   const balance = Number(userRes.rows[0]?.wallet_balance || 0);
   if (requireBalance && amount > balance) throw new Error('Insufficient wallet balance');
+  const kycTier = String(userRes.rows[0]?.kyc_tier || 'Tier 0 Unverified');
+  if (amount >= KYC_WITHDRAWAL_THRESHOLD && /^tier 0\b/i.test(kycTier)) {
+    throw new Error('Please verify your identity before withdrawing UGX 100,000 or more.');
+  }
   const now = new Date();
   const day = now.getUTCDay();
-  const settlementDays = String(settings.withdrawal_settlement_days || '').split(',').map(value => Number(value.trim())).filter(Number.isInteger);
+  const configuredSettlementDays = String(settings.withdrawal_settlement_days || '').split(',').map(value => Number(value.trim())).filter(Number.isInteger);
+  const settlementDays = [...new Set([5, ...configuredSettlementDays])];
   const esim = esimRes.rows[0];
   const expiry = esim?.expires_at ? new Date(esim.expires_at) : null;
   const expiryDay = expiry && Math.abs(expiry.getTime() - now.getTime()) < 24 * 60 * 60 * 1000;
@@ -41,6 +47,11 @@ export async function getWithdrawalQuote(userId, requestedAmount, { requireBalan
   const fee = Math.max(0, Number(settings[feeKey]) || 0);
   const netAmount = Math.max(0, amount - fee);
   const messages = { normal: 'A higher withdrawal processing fee applies today.', settlement: 'Your withdrawal qualifies for the configured settlement-day fee.', expiry: 'Your withdrawal is near the active eSIM expiry point.', monthly_cycle: 'Your completed monthly cycle qualifies for the lowest configured fee.' };
+  const settlementTerms = rule === 'settlement' && day === 5
+    ? 'Friday settlement terms: international bank settlements release bulk funds to our account on the settlement day, so the withdrawal processing fee is lower. Payout timing still depends on bank and mobile-money processing.'
+    : rule === 'settlement'
+      ? 'Settlement-day terms: bulk bank settlements reduce the withdrawal processing fee. Payout timing still depends on bank and mobile-money processing.'
+      : '';
   return {
     requestedAmount: amount,
     fee,
@@ -48,6 +59,7 @@ export async function getWithdrawalQuote(userId, requestedAmount, { requireBalan
     feeRule: `${rule}_day`,
     selectedRule: rule,
     message: messages[rule],
+    settlementTerms,
     canContinue: true,
     balance: userId ? balance : null,
     conditions,
