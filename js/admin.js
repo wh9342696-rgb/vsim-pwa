@@ -186,6 +186,7 @@ function setupAdminInstallPrompt() {
   const userAgent = navigator.userAgent || '';
   const isIos = /iphone|ipad|ipod/i.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const isAndroid = /android/i.test(userAgent);
+  const isEmbeddedBrowser = /Electron|\bCode\//i.test(userAgent);
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   if (isStandalone) {
     installButton.hidden = true;
@@ -210,6 +211,9 @@ function setupAdminInstallPrompt() {
     } else if (isAndroid) {
       if (promptTitle) promptTitle.textContent = 'Install VSIM Admin app';
       if (promptText) promptText.textContent = 'Open the browser menu and choose Install app or Add to Home screen.';
+    } else if (isEmbeddedBrowser) {
+      if (promptTitle) promptTitle.textContent = 'Open VSIM Admin in your browser';
+      if (promptText) promptText.textContent = 'Open this URL in Chrome, Edge, Safari, or Firefox to install VSIM Admin.';
     } else {
       if (promptTitle) promptTitle.textContent = 'Install VSIM Admin as an app';
       if (promptText) promptText.textContent = 'Open the browser menu and choose Install app.';
@@ -255,10 +259,16 @@ function dismissAdminPwaPrompt() {
 async function installAdminPwa() {
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const isAndroid = /android/i.test(navigator.userAgent || '');
+  const isEmbeddedBrowser = /Electron|\bCode\//i.test(navigator.userAgent || '');
   const promptEvent = window.adminInstallPrompt || adminInstallPrompt;
 
   if (isIos) {
     showToast('Tap Share, then choose Add to Home Screen', 'info');
+    return;
+  }
+
+  if (isEmbeddedBrowser) {
+    showToast('Open https://vsime.uk/admin in Chrome or Safari to install VSIM Admin.', 'info');
     return;
   }
 
