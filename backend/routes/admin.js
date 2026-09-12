@@ -507,6 +507,16 @@ router.get('/stats', adminAuth, async (req, res) => {
         AND last_heartbeat >= CURRENT_TIMESTAMP - INTERVAL '2 minutes'
     `);
     const packages = await query(`SELECT COALESCE(SUM(revenue), 0) AS revenue, COALESCE(SUM(sold_count), 0) AS sold FROM esim_packages`);
+    const topPackages = await query(
+      `SELECT ep.id, ep.title, ep.price,
+              COUNT(ue.id)::int AS sold_count,
+              (COUNT(ue.id) * COALESCE(ep.price, 0)) AS revenue
+       FROM esim_packages ep
+       LEFT JOIN user_esims ue ON ue.package_id = ep.id
+       GROUP BY ep.id, ep.title, ep.price
+       ORDER BY sold_count DESC, ep.price ASC
+       LIMIT 5`
+    );
     const investmentRows = await query(
       `SELECT ue.status, COALESCE(SUM(COALESCE(ep.price, 0)), 0) AS amount
        FROM user_esims ue LEFT JOIN esim_packages ep ON ep.id = ue.package_id
@@ -570,6 +580,12 @@ router.get('/stats', adminAuth, async (req, res) => {
         thisWeek: Number(yieldTotals.rows[0]?.this_week || 0),
         thisMonth: Number(yieldTotals.rows[0]?.this_month || 0)
       },
+      topPackages: topPackages.rows.map(packageRow => ({
+        ...packageRow,
+        price: Number(packageRow.price || 0),
+        sold_count: Number(packageRow.sold_count || 0),
+        revenue: Number(packageRow.revenue || 0)
+      })),
       investmentsBreakdown: {
         total: totalInvestment,
         active: breakdown('active', '#6366f1'),

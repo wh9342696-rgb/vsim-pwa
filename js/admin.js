@@ -1457,7 +1457,7 @@ function renderTopPackagesTable() {
   const tbody = document.getElementById('topPackagesTbody');
   if (!tbody) return;
 
-  const pkgs = [...(AdminStore.packages || [])]
+  const pkgs = [...(AdminStore.stats?.topPackages || AdminStore.packages || [])]
     .sort((left, right) => Number(right.sold_count || 0) - Number(left.sold_count || 0) || Number(left.price || 0) - Number(right.price || 0))
     .slice(0, 5);
 
