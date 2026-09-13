@@ -1,5 +1,5 @@
 
-const CACHE = 'vsim-v18-withdrawal-terms';
+const CACHE = 'vsim-v19-withdrawal-faq-top';
 const ASSETS = [
   './',
   './index.html',
