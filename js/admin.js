@@ -37,6 +37,7 @@ const AdminStore = {
 let adminDataRefreshInFlight = null;
 let lastAdminRefreshAt = 0;
 let adminAutoLogoutTimer = null;
+let adminInstallPrompt = null;
 const ADMIN_INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000;
 
 function isAdminStandalonePwa() {
@@ -105,6 +106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupEventListeners();
   bindAdminLogin();
   registerAdminServiceWorker();
+  setupAdminPwaInstall();
 
   // Keep the login screen visible until a real backend token exists.
   if (!AdminAPI.isLoggedIn()) {
@@ -126,6 +128,41 @@ function registerAdminServiceWorker() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/admin-sw.js', { scope: '/admin' }).catch(console.error);
   }
+}
+
+function setupAdminPwaInstall() {
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    adminInstallPrompt = event;
+  });
+
+  window.addEventListener('appinstalled', () => {
+    adminInstallPrompt = null;
+    if (typeof showToast === 'function') {
+      showToast('VSIM Admin installed on this device', 'success');
+    }
+  });
+}
+
+async function installAdminPwa() {
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIos) {
+    if (typeof showToast === 'function') {
+      showToast('Tap Share, then choose Add to Home Screen', 'info');
+    }
+    return;
+  }
+
+  if (!adminInstallPrompt) {
+    if (typeof showToast === 'function') {
+      showToast('Use your browser install option to add VSIM Admin as an app', 'info');
+    }
+    return;
+  }
+
+  adminInstallPrompt.prompt();
+  await adminInstallPrompt.userChoice;
+  adminInstallPrompt = null;
 }
 
 function refreshAdminData() {
