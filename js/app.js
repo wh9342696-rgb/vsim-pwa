@@ -1717,6 +1717,7 @@ async function refreshWithdrawQuote() {
   const receiveElem = document.getElementById('withdrawReceiveVal');
   const feeElem = document.getElementById('withdrawFeeVal');
   const ruleElem = document.getElementById('withdrawFeeRule');
+  const policyElem = document.getElementById('withdrawalPolicyNotice');
 
   const amount = parseFloat(input?.value || '') || 0;
 
@@ -1737,6 +1738,9 @@ async function refreshWithdrawQuote() {
     if (receiveElem) receiveElem.textContent = `UGX ${Number(quote.netAmount || 0).toLocaleString()}`;
     if (feeElem) feeElem.textContent = `UGX ${Number(quote.fee || 0).toLocaleString()}`;
     if (ruleElem) ruleElem.textContent = quote.message || '';
+    if (policyElem && quote.policy?.terms) {
+      policyElem.innerHTML = `<strong style="display: block; color: var(--text-white); margin-bottom: 5px;">${quote.policy.today} withdrawal terms</strong>${quote.policy.terms}${quote.policy.verificationRequired ? '<br><strong style="color: var(--text-white);">Verification is required for this amount.</strong>' : ''}`;
+    }
   } catch (error) {
     if (requestId !== withdrawQuoteRequestSeq) return;
     latestWithdrawalQuote = null;
