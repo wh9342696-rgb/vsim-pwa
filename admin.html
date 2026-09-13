@@ -25,14 +25,6 @@
   <script src="js/pwa-register.js?v=20260912-installable-2" defer></script>
 </head>
 <body data-service-worker="/admin-sw.js">
-  <aside class="admin-pwa-install-prompt" id="adminPwaInstallPrompt" hidden aria-live="polite">
-    <div class="admin-pwa-install-copy">
-      <strong id="adminPwaInstallTitle">Install VSIM Admin as an app</strong>
-      <span id="adminPwaInstallText">Use VSIM Admin from your home screen without browser controls.</span>
-    </div>
-    <button type="button" id="installAdminPwaPromptBtn" onclick="installAdminPwa()">Install</button>
-    <button type="button" class="admin-pwa-install-close" onclick="dismissAdminPwaPrompt()" aria-label="Dismiss install prompt">&times;</button>
-  </aside>
   <script>
     (() => {
       const blockKeys = ['F12', 'I', 'J', 'C', 'U'];
