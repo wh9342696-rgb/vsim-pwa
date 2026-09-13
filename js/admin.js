@@ -34,7 +34,6 @@ const AdminStore = {
   activeSearchQuery: ''
 };
 
-let adminInstallPrompt = null;
 let adminDataRefreshInFlight = null;
 let lastAdminRefreshAt = 0;
 let adminAutoLogoutTimer = null;
