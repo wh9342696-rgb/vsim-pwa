@@ -786,21 +786,27 @@ router.get('/deposits', adminAuth, ensureSuperAdmin, async (req, res) => {
       p.*,
       u.name AS user_name,
       u.phone AS user_phone,
-      (SELECT be.transaction_reference
-       FROM bridge_events be
-       WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE(p.reference, ''))
-       ORDER BY be.received_at DESC
-       LIMIT 1) AS merchant_reference,
-      (SELECT be.provider
-       FROM bridge_events be
-       WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE(p.reference, ''))
-       ORDER BY be.received_at DESC
-       LIMIT 1) AS merchant_provider,
-      (SELECT be.status
-       FROM bridge_events be
-       WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE(p.reference, ''))
-       ORDER BY be.received_at DESC
-       LIMIT 1) AS merchant_event_status,
+      COALESCE((
+        SELECT be.transaction_reference
+        FROM bridge_events be
+        WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE(p.reference, ''))
+        ORDER BY be.received_at DESC
+        LIMIT 1
+      ), '') AS merchant_reference,
+      COALESCE((
+        SELECT be.provider
+        FROM bridge_events be
+        WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE(p.reference, ''))
+        ORDER BY be.received_at DESC
+        LIMIT 1
+      ), '') AS merchant_provider,
+      COALESCE((
+        SELECT be.status
+        FROM bridge_events be
+        WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE(p.reference, ''))
+        ORDER BY be.received_at DESC
+        LIMIT 1
+      ), '') AS merchant_event_status,
       CASE
         WHEN COALESCE(TRIM(p.reference), '') = '' THEN 'UNMATCHED'
         WHEN EXISTS (
@@ -830,8 +836,15 @@ router.get('/deposits', adminAuth, ensureSuperAdmin, async (req, res) => {
     sql += ' ORDER BY p.created_at DESC LIMIT ' + (parseInt(limit) || 50);
 
     const result = await query(sql, params);
-    res.json({ deposits: result.rows });
+    res.json({ deposits: result.rows.map(row => ({
+      ...row,
+      reference_match: row.reference_match || 'UNMATCHED',
+      merchant_reference: row.merchant_reference || '',
+      merchant_provider: row.merchant_provider || '',
+      merchant_event_status: row.merchant_event_status || ''
+    })) });
   } catch (err) {
+    console.error('Deposit inspection error:', err);
     res.status(500).json({ error: 'Failed to fetch deposits' });
   }
 });
