@@ -2601,19 +2601,16 @@ function initReferralHandler() {
       if (status) status.textContent = 'Linked from referral link';
     }
 
-    const token = window.VSIM_API?.getToken();
-    if (token) {
-      // A referral link must never silently honor an already-authenticated account.
-      // If a logged-in user opens a shared referral invite, drop the stale session
-      // tokens and force the browser back into the signup route where the referral chain
-      // can be attached to a new user row instead of being resolved against an account.
+    // Referral invites must always open the signup flow for a new user.
+    // Clear any stale token, remembered account marker, and protected route target
+    // so the browser cannot fall through to the logged-in / account screen.
+    if (window.VSIM_API?.getToken()) {
       window.VSIM_API.setToken('');
-      localStorage.removeItem('vsim_has_account');
-      authStatus = 'signed-out';
-      navigateTo('screen-signup', false);
-      showToast(`Referral code ${savedRef} applied! (+UGX 5,000 Welcome Bonus)`, 'success');
-      return;
     }
+    localStorage.removeItem('vsim_has_account');
+    localStorage.removeItem('vsim_jwt_token');
+    authStatus = 'signed-out';
+    pendingProtectedScreen = null;
 
     navigateTo('screen-signup', false);
     showToast(`Referral code ${savedRef} applied! (+UGX 5,000 Welcome Bonus)`, 'success');
