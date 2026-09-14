@@ -98,7 +98,7 @@ function credentialFromRow(row) {
 }
 
 // Zod Input Validation Schemas
-const signupSchema = z.preprocess((value) => {
+export const signupSchema = z.preprocess((value) => {
   if (!value || typeof value !== 'object') return value;
   const name = value.name ?? value.fullName ?? '';
   const phone = String(value.phone ?? '').replace(/\s+/g, '').trim();
