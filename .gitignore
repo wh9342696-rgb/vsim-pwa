@@ -3,6 +3,8 @@ node_modules/
 backend/node_modules/
 backend/.env*
 frontend.tar.gz
+*.tar.gz
+.wrangler/
 
 # Environment and secrets
 .env
