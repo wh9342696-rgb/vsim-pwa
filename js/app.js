@@ -2587,24 +2587,36 @@ function initReferralHandler() {
     }
 
     const savedRef = sessionStorage.getItem('vsim_pending_ref');
-    if (savedRef) {
-      const refInput = document.getElementById('signupRefCode');
-      const referralLabel = document.getElementById('signupReferralLabel');
-      if (refInput) {
-        refInput.value = savedRef;
-        refInput.readOnly = true;
-        refInput.setAttribute('aria-readonly', 'true');
-      }
-      if (referralLabel) {
-        const status = referralLabel.querySelector('.signup-referral-status');
-        if (status) status.textContent = 'Linked from referral link';
-      }
-      const token = window.VSIM_API?.getToken();
-      if (!token) {
-        navigateTo('screen-signup', false);
-        showToast(`Referral code ${savedRef} applied! (+UGX 5,000 Welcome Bonus)`, 'success');
-      }
+    if (!savedRef) return;
+
+    const refInput = document.getElementById('signupRefCode');
+    const referralLabel = document.getElementById('signupReferralLabel');
+    if (refInput) {
+      refInput.value = savedRef;
+      refInput.readOnly = true;
+      refInput.setAttribute('aria-readonly', 'true');
     }
+    if (referralLabel) {
+      const status = referralLabel.querySelector('.signup-referral-status');
+      if (status) status.textContent = 'Linked from referral link';
+    }
+
+    const token = window.VSIM_API?.getToken();
+    if (token) {
+      // A referral link must never silently honor an already-authenticated account.
+      // If a logged-in user opens a shared referral invite, drop the stale session
+      // tokens and force the browser back into the signup route where the referral chain
+      // can be attached to a new user row instead of being resolved against an account.
+      window.VSIM_API.setToken('');
+      localStorage.removeItem('vsim_has_account');
+      authStatus = 'signed-out';
+      navigateTo('screen-signup', false);
+      showToast(`Referral code ${savedRef} applied! (+UGX 5,000 Welcome Bonus)`, 'success');
+      return;
+    }
+
+    navigateTo('screen-signup', false);
+    showToast(`Referral code ${savedRef} applied! (+UGX 5,000 Welcome Bonus)`, 'success');
   } catch (e) {
     console.error('Referral handler error:', e);
   }
