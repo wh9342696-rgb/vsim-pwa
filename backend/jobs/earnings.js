@@ -1,11 +1,23 @@
 import cron from 'node-cron';
 import { query } from '../config/db.js';
 
+const EARNINGS_TIME_ZONE = 'Africa/Kampala';
+
+function isUgandaWeekend(date = new Date()) {
+  const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: EARNINGS_TIME_ZONE }).format(date);
+  return weekday === 'Saturday' || weekday === 'Sunday';
+}
+
 export function startEarningsCronJob() {
   // Scheduled every 24 hours at 00:00 UTC (0 0 * * *)
   cron.schedule('0 0 * * *', async () => {
     console.log('[CRON] Running daily eSIM yield settlement job...');
     try {
+      if (isUgandaWeekend()) {
+        console.log('[CRON] Weekend in Uganda; daily eSIM income is not settled.');
+        return;
+      }
+
       // Fetch active user eSIMs
       const activeLines = await query(`SELECT * FROM user_esims WHERE status = 'active'`);
 

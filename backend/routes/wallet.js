@@ -7,6 +7,7 @@ import { validateBody } from '../middleware/validate.js';
 
 const router = express.Router();
 const KYC_WITHDRAWAL_THRESHOLD = 100000;
+const WITHDRAWAL_TIME_ZONE = 'Africa/Kampala';
 
 const withdrawalNetworkPrefixes = {
   MTN: ['076', '077', '078'],
@@ -15,6 +16,12 @@ const withdrawalNetworkPrefixes = {
 
 function getWithdrawalNetwork(phone) {
   return Object.entries(withdrawalNetworkPrefixes).find(([, prefixes]) => prefixes.some(prefix => phone.startsWith(prefix)))?.[0] || null;
+}
+
+function getUgandaCalendarDay(date = new Date()) {
+  const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: WITHDRAWAL_TIME_ZONE }).format(date);
+  const day = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(weekday);
+  return { weekday, day, isFriday: day === 5, isWeekend: day === 0 || day === 6 };
 }
 
 export async function getWithdrawalQuote(userId, requestedAmount, { requireBalance = true } = {}) {
@@ -33,7 +40,8 @@ export async function getWithdrawalQuote(userId, requestedAmount, { requireBalan
     throw new Error('Please verify your identity before withdrawing UGX 100,000 or more.');
   }
   const now = new Date();
-  const day = now.getUTCDay();
+  const calendar = getUgandaCalendarDay(now);
+  const day = calendar.day;
   const configuredSettlementDays = String(settings.withdrawal_settlement_days || '').split(',').map(value => Number(value.trim())).filter(Number.isInteger);
   const settlementDays = [...new Set([5, ...configuredSettlementDays])];
   const esim = esimRes.rows[0];
@@ -48,7 +56,7 @@ export async function getWithdrawalQuote(userId, requestedAmount, { requireBalan
   const feeKey = { monthly_cycle: 'withdrawal_monthly_fee', expiry: 'withdrawal_expiry_fee', settlement: 'withdrawal_settlement_fee', normal: 'withdrawal_fee' }[rule];
   const fee = Math.max(0, Number(settings[feeKey]) || 0);
   const netAmount = Math.max(0, amount - fee);
-  const messages = { normal: 'A higher withdrawal processing fee applies today.', settlement: 'Your withdrawal qualifies for the configured settlement-day fee.', expiry: 'Your withdrawal is near the active eSIM expiry point.', monthly_cycle: 'Your completed monthly cycle qualifies for the lowest configured fee.' };
+  const messages = { normal: 'Today is not Friday, so the higher withdrawal processing fee applies.', settlement: 'Friday is the weekly settlement day, so the lower settlement fee applies.', expiry: 'Your withdrawal is near the active eSIM expiry point.', monthly_cycle: 'Your completed monthly cycle qualifies for the lowest configured fee.' };
   const settlementTerms = rule === 'settlement' && day === 5
     ? 'Friday settlement terms: international bank settlements release bulk funds to our account on the settlement day, so the withdrawal processing fee is lower. Payout timing still depends on bank and mobile-money processing.'
     : rule === 'settlement'
@@ -62,6 +70,16 @@ export async function getWithdrawalQuote(userId, requestedAmount, { requireBalan
     selectedRule: rule,
     message: messages[rule],
     settlementTerms,
+    policy: {
+      today: calendar.weekday,
+      withdrawalDay: 'Friday',
+      isFriday: calendar.isFriday,
+      isWeekend: calendar.isWeekend,
+      verificationThreshold: KYC_WITHDRAWAL_THRESHOLD,
+      verificationRequired: amount >= KYC_WITHDRAWAL_THRESHOLD,
+      weekendIncomePaused: calendar.isWeekend,
+      terms: 'Withdrawals are available every day. Friday is the weekly bank settlement day and has the lower settlement fee; the higher standard fee applies on other days. Withdrawals of UGX 100,000 or more require approved identity verification.'
+    },
     canContinue: true,
     balance: userId ? balance : null,
     conditions,

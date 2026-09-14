@@ -31,36 +31,19 @@ const __dirname = path.dirname(__filename);
 if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32)) {
   throw new Error('JWT_SECRET must be set to at least 32 characters in production');
 }
-if (process.env.NODE_ENV === 'production' && process.env.JWT_SECRET === 'vsim_super_secret_production_key_2026') {
-  throw new Error('The development JWT_SECRET cannot be used in production');
-}
 if (process.env.NODE_ENV === 'production' && (!process.env.FRONTEND_URL || !process.env.FRONTEND_URL.startsWith('https://'))) {
   throw new Error('FRONTEND_URL must be an HTTPS origin in production');
 }
-if (process.env.NODE_ENV === 'production' && (!process.env.WEBAUTHN_RP_ID || !process.env.WEBAUTHN_ORIGIN || !process.env.WEBAUTHN_ORIGIN.startsWith('https://'))) {
-  throw new Error('WEBAUTHN_RP_ID and HTTPS WEBAUTHN_ORIGIN are required in production');
-}
-if (process.env.NODE_ENV === 'production' && process.env.TRUST_PROXY !== '1') {
-  throw new Error('TRUST_PROXY=1 is required when running behind the configured reverse proxy');
-}
-if (process.env.NODE_ENV === 'production' && (!process.env.DEVICE_SECRET_ENCRYPTION_KEY || process.env.DEVICE_SECRET_ENCRYPTION_KEY.length < 32)) {
-  throw new Error('DEVICE_SECRET_ENCRYPTION_KEY must be set to at least 32 characters in production');
-}
 
 const app = express();
-app.set('trust proxy', process.env.TRUST_PROXY === '1' ? 1 : false);
+app.set('trust proxy', 1);
 app.disable('x-powered-by');
 const PORT = process.env.PORT || 3000;
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-const configuredCorsOrigins = String(process.env.CORS_ORIGINS || process.env.ALLOWED_ORIGINS || '')
-  .split(',')
-  .map(origin => origin.trim())
-  .filter(Boolean);
 
 const localFrontendDir = path.resolve(__dirname, '../frontend');
 const productionFrontendDir = '/var/www/vsim/frontend';
 const frontendPublicDir = fs.existsSync(productionFrontendDir) ? productionFrontendDir : localFrontendDir;
-const hasFrontend = fs.existsSync(path.join(frontendPublicDir, 'index.html'));
 
 console.log('[STARTUP] frontendPublicDir:', frontendPublicDir);
 console.log('[STARTUP] production exists:', fs.existsSync(productionFrontendDir));
@@ -86,7 +69,7 @@ app.use(helmet({
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
-      connectSrc: process.env.NODE_ENV === 'production' ? ["'self'", frontendUrl] : ["'self'", frontendUrl, 'http://localhost:4000', 'ws://localhost:4001', 'http://localhost:3000'],
+      connectSrc: ["'self'", frontendUrl, 'http://localhost:4000', 'ws://localhost:4001', 'http://localhost:3000'],
       fontSrc: ["'self'", 'data:'],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
@@ -102,14 +85,14 @@ app.use(helmet({
   frameguard: { action: 'deny' }
 }));
 const allowedOrigins = new Set([
-  ...(process.env.NODE_ENV === 'production' ? [] : [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:8080',
-    'http://127.0.0.1:8080'
-  ]),
-  frontendUrl,
-  ...configuredCorsOrigins
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:8080',
+  'http://127.0.0.1:8080',
+  'https://vsime.uk',
+  'https://www.vsime.uk',
+  'https://admin.vsime.uk',
+  frontendUrl
 ].filter(Boolean));
 
 app.use(cors({
@@ -118,60 +101,54 @@ app.use(cors({
       callback(null, true);
       return;
     }
-    const error = new Error(`CORS blocked for origin: ${origin}`);
-    error.status = 403;
-    callback(error);
+    callback(new Error(`CORS blocked for origin: ${origin}`));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: false, limit: '100kb' }));
-morgan.token('safe-url', req => tokensUrl(req));
-function tokensUrl(req) {
-  return String(req.originalUrl || req.url || '').replace(/([?&]token=)[^&\s]+/gi, '$1[REDACTED]');
-}
-app.use(morgan(process.env.NODE_ENV === 'production'
-  ? ':remote-addr - :method :safe-url HTTP/:http-version :status :res[content-length] ":referrer" ":user-agent"'
-  : ':method :safe-url :status', {
-  skip: req => req.path === '/health',
-  stream: { write: message => process.stdout.write(message.replace(/(authorization: Bearer |token=)[^\s&]+/gi, '$1[REDACTED]')) }
-}));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true }));
+app.use(morgan('dev'));
 
-// Rate Limiter: allow normal app polling without blocking user actions.
+// Keep anonymous traffic bounded without sharing one small bucket with account actions.
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 300,
+  max: 600,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  skip: req => Boolean(req.headers.authorization),
   message: { error: 'Too many requests, please try again later.' }
 });
-const adminApiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 1200,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: { error: 'Too many admin requests, please wait briefly and try again.' }
-});
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 80,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: { error: 'Too many authentication attempts, please wait a few minutes and try again.' }
-});
 
-app.use(['/api/v1/auth/login', '/api/auth/login', '/api/v1/auth/passkey/login/options', '/api/auth/passkey/login/options', '/api/v1/admin/login', '/api/admin/login'], authLimiter);
-app.use(['/api/v1/admin', '/api/admin'], adminApiLimiter);
+// Failed account attempts are limited independently so public polling cannot block signup or login.
+const authAttemptLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  skip: req => Boolean(req.headers.authorization),
+  skipSuccessfulRequests: true,
+  message: { error: 'Too many account attempts. Please try again later.' }
+});
 
 app.use('/api', (req, res, next) => {
   const path = req.path || '';
+  const isAuthAttemptRoute = path.includes('/auth/signup')
+    || path.includes('/auth/register')
+    || path.includes('/auth/login')
+    || path.includes('/auth/passkey/');
+  const isAdminRoute = path.startsWith('/v1/admin') || path.startsWith('/admin');
   const isPublicCatalog = req.method === 'GET' && path === '/v1/esims/packages';
   const isPublicSupportConfig = req.method === 'GET' && path === '/v1/support/config';
-  const isLoginRequest = req.method === 'POST' && path === '/v1/auth/login';
   const isRealtimeRoute = path === '/v1/realtime';
-  const isAdminRoute = path === '/v1/admin' || path.startsWith('/v1/admin/');
 
-  if (isPublicCatalog || isPublicSupportConfig || isLoginRequest || isRealtimeRoute || isAdminRoute) {
+  if (isAuthAttemptRoute) {
+    return authAttemptLimiter(req, res, next);
+  }
+
+  // Let the route's authentication middleware return 401/403 instead of masking it as a rate-limit error.
+  if (path === '/v1/auth/profile' || path === '/auth/profile' || isAdminRoute || isPublicCatalog || isPublicSupportConfig || isRealtimeRoute) {
     return next();
   }
 
@@ -201,47 +178,28 @@ app.get('/api/v1/realtime', (req, res) => {
   if (!token) return res.status(401).json({ error: 'Realtime token required' });
 
   try {
-    const user = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'], issuer: 'vsim-api', audience: ['vsim-client', 'vsim-admin'] });
-    const userId = Number(user.id);
-    const isAdmin = Boolean(user.role);
-    query(isAdmin
-      ? 'SELECT id, role, status, current_session_token FROM admin_users WHERE id = $1'
-      : 'SELECT id, current_session_token FROM users WHERE id = $1', [userId]).then(result => {
-      const record = result.rows[0];
-      if (!record || record.status === 'inactive' || record.current_session_token !== user.sessionToken) {
-        res.status(403).end();
-        return;
-      }
-
+    const user = jwt.verify(token, process.env.JWT_SECRET);
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders?.();
     res.write(`event: connected\ndata: ${JSON.stringify({ id: user.id, role: user.role || 'user' })}\n\n`);
 
-    const sendChange = payload => {
-      if (payload?.type === 'support' && payload.audience) {
-        const allowed = payload.audience.some(target => (target.type === (isAdmin ? 'admin' : 'user') && Number(target.id) === userId) || (isAdmin && target.type === 'admin_role' && target.role === user.role));
-        if (!allowed) return;
-      }
-      res.write(`event: data_changed\ndata: ${JSON.stringify(payload)}\n\n`);
-    };
+    const sendChange = payload => res.write(`event: data_changed\ndata: ${JSON.stringify(payload)}\n\n`);
     const heartbeat = setInterval(() => res.write(': heartbeat\n\n'), 15000);
     realtimeEvents.on('data_changed', sendChange);
     req.on('close', () => {
       clearInterval(heartbeat);
       realtimeEvents.off('data_changed', sendChange);
     });
-    }).catch(() => res.status(503).end());
   } catch (error) {
     res.status(403).json({ error: 'Invalid or expired realtime token' });
   }
 });
 
-// Route for direct /admin and /admin/ URLs - serve admin.html
-// MUST come BEFORE static middleware to prevent 404 on mobile/browser install flows
-app.get(['/admin', '/admin/'], (req, res) => {
-  if (!hasFrontend) return res.status(404).json({ error: 'Frontend is hosted separately' });
+// Route for direct /admin URL - serve admin.html
+// MUST come BEFORE static middleware to prevent 404
+app.get('/admin', (req, res) => {
   const adminPath = path.join(frontendPublicDir, 'admin.html');
   res.sendFile(adminPath, (err) => {
     if (err) {
@@ -261,7 +219,7 @@ app.get('/r/:code', (req, res) => {
 // NOTE: Directory must exist at /var/www/vsim/frontend on VPS
 // This comes AFTER explicit routes to allow them to execute first
 try {
-  if (hasFrontend) app.use(express.static(frontendPublicDir));
+  app.use(express.static(frontendPublicDir));
   console.log('[STARTUP] Static frontend serving enabled from:', frontendPublicDir);
 } catch (err) {
   console.warn('[STARTUP] Could not serve frontend:', err.message);
@@ -288,7 +246,6 @@ apiRoutes.forEach(([routePath, routeHandler]) => {
 
 // Fallback: Serve index.html for any non-API request (SPA routing)
 app.get('*', (req, res) => {
-  if (!hasFrontend) return res.status(404).json({ error: 'Frontend is hosted separately' });
   const indexPath = path.join(frontendPublicDir, 'index.html');
   res.sendFile(indexPath, (err) => {
     if (err) {
@@ -301,8 +258,9 @@ app.get('*', (req, res) => {
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error('[SERVER ERROR]', err);
-  const status = Number(err.status) >= 400 && Number(err.status) < 500 ? Number(err.status) : 500;
-  res.status(status).json({ error: status === 500 ? 'Internal Server Error' : (err.message || 'Request failed') });
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal Server Error'
+  });
 });
 
 // Initialize Automated Daily Yield Settlement Cron Job

@@ -782,8 +782,35 @@ router.post('/withdrawals/preview', adminAuth, async (req, res) => {
 router.get('/deposits', adminAuth, ensureSuperAdmin, async (req, res) => {
   try {
     const { status, limit = 50, search } = req.query;
-    let sql = `SELECT p.*, u.name AS user_name, u.phone AS user_phone
-           FROM payment_requests p LEFT JOIN users u ON u.id = p.user_id`;
+    let sql = `SELECT
+      p.*,
+      u.name AS user_name,
+      u.phone AS user_phone,
+      (SELECT be.transaction_reference
+       FROM bridge_events be
+       WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE(p.reference, ''))
+       ORDER BY be.received_at DESC
+       LIMIT 1) AS merchant_reference,
+      (SELECT be.provider
+       FROM bridge_events be
+       WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE(p.reference, ''))
+       ORDER BY be.received_at DESC
+       LIMIT 1) AS merchant_provider,
+      (SELECT be.status
+       FROM bridge_events be
+       WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE(p.reference, ''))
+       ORDER BY be.received_at DESC
+       LIMIT 1) AS merchant_event_status,
+      CASE
+        WHEN COALESCE(TRIM(p.reference), '') = '' THEN 'UNMATCHED'
+        WHEN EXISTS (
+          SELECT 1 FROM bridge_events be
+          WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE(p.reference, ''))
+        ) THEN 'MATCHED'
+        ELSE 'UNMATCHED'
+      END AS reference_match
+      FROM payment_requests p
+      LEFT JOIN users u ON u.id = p.user_id`;
     const params = [];
 
     const conditions = [];
@@ -793,14 +820,14 @@ router.get('/deposits', adminAuth, ensureSuperAdmin, async (req, res) => {
     }
     if (search) {
       params.push(`%${search}%`);
-      conditions.push(`(p.phone LIKE $${params.length} OR p.merchant LIKE $${params.length} OR p.reference LIKE $${params.length} OR p.customer_reference LIKE $${params.length} OR u.name LIKE $${params.length})`);
+      conditions.push(`(p.phone LIKE $${params.length} OR p.merchant LIKE $${params.length} OR p.reference LIKE $${params.length} OR u.name LIKE $${params.length})`);
     }
 
     if (conditions.length > 0) {
       sql += ' WHERE ' + conditions.join(' AND ');
     }
 
-    sql += ' ORDER BY created_at DESC LIMIT ' + (parseInt(limit) || 50);
+    sql += ' ORDER BY p.created_at DESC LIMIT ' + (parseInt(limit) || 50);
 
     const result = await query(sql, params);
     res.json({ deposits: result.rows });

@@ -74,7 +74,6 @@ async function initializePostgresSchema() {
       type TEXT DEFAULT 'Data Only',
       price NUMERIC(12,2) NOT NULL,
       income NUMERIC(12,2) NOT NULL,
-      commission_percent NUMERIC(5,2) DEFAULT 10,
       sold_count INTEGER DEFAULT 0,
       revenue NUMERIC(12,2) DEFAULT 0,
       image_url TEXT,
@@ -154,7 +153,6 @@ async function initializePostgresSchema() {
       payment_amount NUMERIC(12,2) NOT NULL,
       merchant_number TEXT NOT NULL,
       reference TEXT UNIQUE NOT NULL,
-      customer_reference TEXT,
       status TEXT DEFAULT 'pending',
       processed_by INTEGER REFERENCES admin_users(id),
       processed_at TIMESTAMP,
@@ -185,26 +183,16 @@ async function initializePostgresSchema() {
       tx_hash TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
-    `CREATE TABLE IF NOT EXISTS referral_tokens (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      token TEXT UNIQUE NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`,
     `CREATE TABLE IF NOT EXISTS bridge_devices (
       id SERIAL PRIMARY KEY,
       device_id TEXT UNIQUE,
       network TEXT,
       phone TEXT,
       status TEXT DEFAULT 'online',
-      sim_balance NUMERIC(12,2) DEFAULT 0,
-      ping_ms INTEGER DEFAULT NULL,
+      sim_balance NUMERIC(12,2) DEFAULT 150000,
+      ping_ms INTEGER DEFAULT 42,
       last_heartbeat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      device_secret TEXT,
-      mtn_merchant_id TEXT,
-      airtel_merchant_id TEXT,
-      mtn_sim_phone TEXT,
-      airtel_sim_phone TEXT
+      device_secret TEXT
     )`,
     `CREATE TABLE IF NOT EXISTS bridge_events (
       id SERIAL PRIMARY KEY,
@@ -232,22 +220,11 @@ async function initializePostgresSchema() {
     `CREATE TABLE IF NOT EXISTS support_tickets (
       id SERIAL PRIMARY KEY,
       user_id INTEGER REFERENCES users(id),
-      assigned_admin_id INTEGER REFERENCES admin_users(id),
       name TEXT,
       phone TEXT,
       subject TEXT,
-      channel TEXT DEFAULT 'ticket',
       priority TEXT DEFAULT 'Medium',
       status TEXT DEFAULT 'open',
-      assigned_at TIMESTAMP,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`,
-    `CREATE TABLE IF NOT EXISTS support_messages (
-      id SERIAL PRIMARY KEY,
-      ticket_id INTEGER NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE,
-      sender_type TEXT NOT NULL,
-      sender_id INTEGER,
-      body TEXT NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
     `CREATE TABLE IF NOT EXISTS notifications (
@@ -270,27 +247,12 @@ async function initializePostgresSchema() {
     await pool.query(statement);
   }
 
-  await pool.query(`INSERT INTO system_settings (key, value) VALUES
-    ('withdrawal_fee', '2000'),
-    ('withdrawal_settlement_fee', '1000'),
-    ('withdrawal_expiry_fee', '1000'),
-    ('withdrawal_monthly_fee', '500'),
-    ('withdrawal_settlement_days', ''),
-    ('withdrawal_fee_priority', 'monthly_cycle,expiry,settlement,normal')
-    ON CONFLICT (key) DO NOTHING`);
-
   await pool.query('ALTER TABLE esim_packages ADD COLUMN IF NOT EXISTS progress_percent_per_hour NUMERIC(8,4) DEFAULT 0.42');
   await pool.query("ALTER TABLE esim_packages ADD COLUMN IF NOT EXISTS renewal_schedule TEXT DEFAULT '[]'");
   await pool.query('ALTER TABLE user_esims ADD COLUMN IF NOT EXISTS progress_percent_per_hour NUMERIC(8,4) DEFAULT 0.42');
   await pool.query('ALTER TABLE user_esims ADD COLUMN IF NOT EXISTS renewal_count INTEGER DEFAULT 0');
   await pool.query('ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS reference TEXT');
   await pool.query('ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS requested_amount NUMERIC(12,2)');
-  await pool.query('ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS fee_amount NUMERIC(12,2) DEFAULT 0');
-  await pool.query('ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS net_amount NUMERIC(12,2)');
-  await pool.query('ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS fee_rule TEXT DEFAULT \'normal_day\'');
-  await pool.query('ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS fee_snapshot TEXT');
-  await pool.query('ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS payment_reference TEXT');
-  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_reserved_balance NUMERIC(12,2) DEFAULT 0');
   await pool.query('ALTER TABLE bridge_devices ADD COLUMN IF NOT EXISTS provider TEXT');
   await pool.query('ALTER TABLE bridge_devices ADD COLUMN IF NOT EXISTS merchant_id TEXT');
   await pool.query('ALTER TABLE bridge_devices ADD COLUMN IF NOT EXISTS app_version TEXT');
@@ -298,22 +260,12 @@ async function initializePostgresSchema() {
   await pool.query('ALTER TABLE bridge_devices ADD COLUMN IF NOT EXISTS device_secret TEXT');
   await pool.query('ALTER TABLE bridge_devices ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMP');
   await pool.query('ALTER TABLE bridge_devices ADD COLUMN IF NOT EXISTS last_sync TIMESTAMP');
-  await pool.query('ALTER TABLE bridge_devices ADD COLUMN IF NOT EXISTS mtn_merchant_id TEXT');
-  await pool.query('ALTER TABLE bridge_devices ADD COLUMN IF NOT EXISTS airtel_merchant_id TEXT');
-  await pool.query('ALTER TABLE bridge_devices ADD COLUMN IF NOT EXISTS mtn_sim_phone TEXT');
-  await pool.query('ALTER TABLE bridge_devices ADD COLUMN IF NOT EXISTS airtel_sim_phone TEXT');
 
   await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS profit_total NUMERIC(12,2) DEFAULT 0');
   await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS joined_users_count INTEGER DEFAULT 0');
   await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS profile_photo TEXT');
-  await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS can_manage_withdrawal_fee BOOLEAN DEFAULT FALSE');
   await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS current_session_token TEXT');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS current_session_token TEXT');
-  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS assigned_admin_id INTEGER REFERENCES admin_users(id) ON DELETE SET NULL');
-  await pool.query('ALTER TABLE esim_packages ADD COLUMN IF NOT EXISTS commission_percent NUMERIC(5,2) DEFAULT 10');
-  await pool.query('ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS assigned_admin_id INTEGER REFERENCES admin_users(id)');
-  await pool.query("ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS channel TEXT DEFAULT 'ticket'");
-  await pool.query('ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS assigned_at TIMESTAMP');
   const bridgeDevices = await pool.query('SELECT id, device_secret FROM bridge_devices WHERE device_secret IS NULL OR device_secret = \'\' OR device_secret NOT LIKE \'v1:%\'');
   for (const device of bridgeDevices.rows) {
     const deviceSecret = device.device_secret || crypto.randomBytes(16).toString('hex');
@@ -323,11 +275,6 @@ async function initializePostgresSchema() {
   await pool.query('ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS processed_at TIMESTAMP');
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS package_id TEXT');
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS target_esim_id INTEGER');
-  await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS customer_reference TEXT');
-  await pool.query('ALTER TABLE airtime_purchase_requests ADD COLUMN IF NOT EXISTS customer_reference TEXT');
-  await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS reviewed_by INTEGER REFERENCES admin_users(id)');
-  await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP');
-  await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS rejection_reason TEXT');
   await pool.query("ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'PAYMENT_AWAITING_VERIFICATION'");
   await pool.query("ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS order_status TEXT DEFAULT 'NOT_APPLICABLE'");
   await pool.query("ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS provisioning_status TEXT DEFAULT 'NOT_APPLICABLE'");
@@ -341,7 +288,6 @@ async function initializePostgresSchema() {
   await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS user_esims_iccid_unique ON user_esims (iccid) WHERE iccid IS NOT NULL');
   await pool.query('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS admin_id INTEGER REFERENCES admin_users(id)');
   await pool.query('ALTER TABLE notifications ALTER COLUMN user_id DROP NOT NULL').catch(() => {});
-  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS payment_requests_customer_reference_unique ON payment_requests (customer_reference) WHERE customer_reference IS NOT NULL AND customer_reference <> \'\'');
 
   const usersWithoutReferral = await pool.query("SELECT id FROM users WHERE referral_code IS NULL OR referral_code = '' ORDER BY id");
   for (const user of usersWithoutReferral.rows) {
@@ -356,16 +302,11 @@ async function initializePostgresSchema() {
 
   const adminCount = await pool.query('SELECT COUNT(*) AS total FROM admin_users');
   if (Number(adminCount.rows[0]?.total || 0) === 0) {
-    const initialAdminEmail = String(process.env.INITIAL_ADMIN_EMAIL || '').trim().toLowerCase();
-    const initialAdminPassword = String(process.env.INITIAL_ADMIN_PASSWORD || '');
-    if (process.env.NODE_ENV === 'production' && (!initialAdminEmail || initialAdminPassword.length < 12)) {
-      throw new Error('INITIAL_ADMIN_EMAIL and INITIAL_ADMIN_PASSWORD (12+ characters) are required for a fresh production database');
-    }
     const bcrypt = await import('bcryptjs');
-    const adminHash = await bcrypt.default.hash(initialAdminPassword || 'admin123', 10);
+    const adminHash = await bcrypt.default.hash('admin123', 10);
     await pool.query(
       'INSERT INTO admin_users (email, password_hash, name, role, status) VALUES ($1, $2, $3, $4, $5)',
-      [initialAdminEmail || 'admin@vsim.com', adminHash, 'Super Admin', 'super_admin', 'active']
+      ['admin@vsim.com', adminHash, 'Super Admin', 'super_admin', 'active']
     );
   }
 
@@ -381,20 +322,6 @@ async function initializePostgresSchema() {
         'VSIM Airtel Pay Digital 1', '771024', 'AIRTEL', 'VSIM CONNECT AIRTEL UG', '+256 702 345 678', 'Dial *185*9# -> Select Pay Merchant -> Enter Merchant ID 771024 -> Enter Amount -> Enter Reference -> Confirm with PIN', 2, 'active'
       ]
     );
-  }
-
-  for (const [network, name, code, accountName, phone, instructions, priority] of [
-    ['MTN', 'VSIM MTN Merchant Line 1', '552109', 'VSIM TELECOM SERVICES UG', '+256 784 567 890', 'Dial *165*3# -> Enter Merchant Code 552109 -> Enter Amount -> Enter Reference -> Confirm PIN', 1],
-    ['AIRTEL', 'VSIM Airtel Pay Digital 1', '771024', 'VSIM CONNECT AIRTEL UG', '+256 702 345 678', 'Dial *185*9# -> Enter Merchant ID 771024 -> Enter Amount -> Enter Reference -> Confirm PIN', 2]
-  ]) {
-    const activeNetwork = await pool.query('SELECT id FROM merchants WHERE UPPER(network) = $1 AND status = \'active\' LIMIT 1', [network]);
-    if (!activeNetwork.rows.length) {
-      await pool.query(
-        `INSERT INTO merchants (name, merchant_code, network, account_name, phone, instructions, priority, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')`,
-        [name, code, network, accountName, phone, instructions, priority]
-      );
-    }
   }
 
   const pkgCount = await pool.query('SELECT COUNT(*) AS total FROM esim_packages');
@@ -425,8 +352,6 @@ if (!['postgres', 'sqlite'].includes(databaseDriver)) {
 }
 if (databaseDriver === 'sqlite' && process.env.NODE_ENV === 'production' && process.env.ALLOW_SQLITE_PRODUCTION !== 'true') {
   throw new Error('SQLite is disabled in production. Set ALLOW_SQLITE_PRODUCTION=true only for an explicitly approved emergency fallback.');
-} else if (databaseDriver === 'sqlite' && process.env.NODE_ENV === 'production') {
-  console.warn('⚠️ WARNING: Using SQLite in production! Ensure your database directory is secure and properly backed up.');
 }
 if (databaseDriver === 'postgres' && !process.env.DB_HOST) {
   throw new Error('DB_HOST is required when DB_DRIVER=postgres');
@@ -492,23 +417,8 @@ if (databaseDriver === 'postgres') {
       wallet_balance REAL DEFAULT 0.0,
       referral_code TEXT UNIQUE NOT NULL,
       referred_by TEXT,
-      profile_photo TEXT,
       current_session_token TEXT,
       status TEXT DEFAULT 'active',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS admin_users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      name TEXT NOT NULL,
-      role TEXT DEFAULT 'super_admin',
-      status TEXT DEFAULT 'active',
-      current_session_token TEXT,
-      profile_photo TEXT,
-      profit_total REAL DEFAULT 0,
-      joined_users_count INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -543,7 +453,6 @@ if (databaseDriver === 'postgres') {
       type TEXT DEFAULT 'Data Only',
       price REAL NOT NULL,
       income REAL NOT NULL,
-      commission_percent REAL DEFAULT 10,
       sold_count INTEGER DEFAULT 0,
       revenue REAL DEFAULT 0,
       image_url TEXT NOT NULL,
@@ -618,10 +527,6 @@ if (databaseDriver === 'postgres') {
       merchant TEXT DEFAULT 'VSIM-M001',
       network TEXT DEFAULT 'MTN',
       reference TEXT,
-      customer_reference TEXT,
-      reviewed_by INTEGER,
-      reviewed_at DATETIME,
-      rejection_reason TEXT,
       status TEXT DEFAULT 'completed',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -635,7 +540,6 @@ if (databaseDriver === 'postgres') {
       payment_amount REAL NOT NULL,
       merchant_number TEXT NOT NULL,
       reference TEXT UNIQUE NOT NULL,
-      customer_reference TEXT,
       status TEXT DEFAULT 'pending',
       processed_by INTEGER,
       processed_at DATETIME,
@@ -688,14 +592,10 @@ if (databaseDriver === 'postgres') {
       network TEXT NOT NULL,
       phone TEXT NOT NULL,
       status TEXT DEFAULT 'online',
-      sim_balance REAL DEFAULT 0,
-      ping_ms INTEGER DEFAULT NULL,
+      sim_balance REAL DEFAULT 150000.0,
+      ping_ms INTEGER DEFAULT 42,
       last_heartbeat DATETIME DEFAULT CURRENT_TIMESTAMP,
-      device_secret TEXT,
-      mtn_merchant_id TEXT,
-      airtel_merchant_id TEXT,
-      mtn_sim_phone TEXT,
-      airtel_sim_phone TEXT
+      device_secret TEXT
     );
 
     CREATE TABLE IF NOT EXISTS bridge_events (
@@ -726,26 +626,13 @@ if (databaseDriver === 'postgres') {
     CREATE TABLE IF NOT EXISTS support_tickets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
-      assigned_admin_id INTEGER,
       name TEXT NOT NULL,
       phone TEXT NOT NULL,
       subject TEXT NOT NULL,
-      channel TEXT DEFAULT 'ticket',
       priority TEXT DEFAULT 'Medium',
       status TEXT DEFAULT 'open',
-      assigned_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
-
-      CREATE TABLE IF NOT EXISTS support_messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        ticket_id INTEGER NOT NULL,
-        sender_type TEXT NOT NULL,
-        sender_id INTEGER,
-        body TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE CASCADE
-      );
 
     CREATE TABLE IF NOT EXISTS notifications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -764,31 +651,15 @@ if (databaseDriver === 'postgres') {
     );
   `);
 
-  try { sqlite.exec('ALTER TABLE users ADD COLUMN profile_photo TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
-  try { sqlite.exec('ALTER TABLE users ADD COLUMN current_session_token TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
-  try { sqlite.exec('ALTER TABLE esim_packages ADD COLUMN commission_percent REAL DEFAULT 10'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
-    try { sqlite.exec('ALTER TABLE support_tickets ADD COLUMN assigned_admin_id INTEGER'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
-    try { sqlite.exec("ALTER TABLE support_tickets ADD COLUMN channel TEXT DEFAULT 'ticket'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
-    try { sqlite.exec('ALTER TABLE support_tickets ADD COLUMN assigned_at DATETIME'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
-  try { sqlite.exec('ALTER TABLE admin_users ADD COLUMN profile_photo TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
-  try { sqlite.exec('ALTER TABLE admin_users ADD COLUMN profit_total REAL DEFAULT 0'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
-  try { sqlite.exec('ALTER TABLE admin_users ADD COLUMN joined_users_count INTEGER DEFAULT 0'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
-  try { sqlite.exec('ALTER TABLE admin_users ADD COLUMN current_session_token TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE esim_packages ADD COLUMN progress_percent_per_hour REAL DEFAULT 0.42'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec("ALTER TABLE esim_packages ADD COLUMN renewal_schedule TEXT DEFAULT '[]'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE user_esims ADD COLUMN progress_percent_per_hour REAL DEFAULT 0.42'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE user_esims ADD COLUMN renewal_count INTEGER DEFAULT 0'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN package_id TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN target_esim_id INTEGER'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
-  try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN customer_reference TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
-  try { sqlite.exec('ALTER TABLE airtime_purchase_requests ADD COLUMN customer_reference TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
-  try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN reviewed_by INTEGER'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
-  try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN reviewed_at DATETIME'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
-  try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN rejection_reason TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec("ALTER TABLE payment_requests ADD COLUMN payment_status TEXT DEFAULT 'PAYMENT_AWAITING_VERIFICATION'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec("ALTER TABLE payment_requests ADD COLUMN order_status TEXT DEFAULT 'NOT_APPLICABLE'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec("ALTER TABLE payment_requests ADD COLUMN provisioning_status TEXT DEFAULT 'NOT_APPLICABLE'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
-  try { sqlite.exec('ALTER TABLE notifications ADD COLUMN admin_id INTEGER'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   sqlite.exec(`
     DELETE FROM user_esims
     WHERE iccid IS NOT NULL
@@ -798,11 +669,7 @@ if (databaseDriver === 'postgres') {
   try { sqlite.exec('ALTER TABLE withdrawals ADD COLUMN reference TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE withdrawals ADD COLUMN processed_by INTEGER'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE withdrawals ADD COLUMN processed_at DATETIME'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
-  try { sqlite.exec("CREATE UNIQUE INDEX IF NOT EXISTS payment_requests_customer_reference_unique ON payment_requests (customer_reference) WHERE customer_reference IS NOT NULL AND customer_reference <> ''"); } catch (error) { if (!String(error.message).includes('already exists')) throw error; }
   for (const column of ['provider TEXT', 'merchant_id TEXT', 'app_version TEXT', 'credential_hash TEXT', 'device_secret TEXT', 'revoked_at DATETIME', 'last_sync DATETIME']) {
-    try { sqlite.exec(`ALTER TABLE bridge_devices ADD COLUMN ${column}`); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
-  }
-  for (const column of ['mtn_merchant_id TEXT', 'airtel_merchant_id TEXT', 'mtn_sim_phone TEXT', 'airtel_sim_phone TEXT']) {
     try { sqlite.exec(`ALTER TABLE bridge_devices ADD COLUMN ${column}`); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   }
   const bridgeDevices = sqlite.prepare('SELECT id, device_secret FROM bridge_devices WHERE device_secret IS NULL OR device_secret = \'\' OR device_secret NOT LIKE \'v1:%\'').all();
@@ -824,22 +691,7 @@ if (databaseDriver === 'postgres') {
     assignReferralCode.run(code, user.id);
   }
 
-  // Seed default admin and merchants in SQLite if tables are empty
-  try {
-    const adminCountRow = sqlite.prepare('SELECT COUNT(*) AS total FROM admin_users').get();
-    if (!adminCountRow || Number(adminCountRow.total || 0) === 0) {
-      const initialAdminEmail = String(process.env.INITIAL_ADMIN_EMAIL || 'admin@vsim.com').trim().toLowerCase();
-      const initialAdminPassword = String(process.env.INITIAL_ADMIN_PASSWORD || 'admin123');
-      const bcrypt = await import('bcryptjs');
-      const adminHash = await bcrypt.default.hash(initialAdminPassword, 10);
-      sqlite.prepare(
-        'INSERT INTO admin_users (email, password_hash, name, role, status) VALUES (?, ?, ?, ?, ?)'
-      ).run(initialAdminEmail, adminHash, 'Super Admin', 'super_admin', 'active');
-    }
-  } catch (seedErr) {
-    console.error('Error seeding default admin in SQLite:', seedErr);
-  }
-
+  // Seed default active merchants in SQLite if table is empty
   try {
     const merchantCountRow = sqlite.prepare('SELECT COUNT(*) AS total FROM merchants').get();
     if (!merchantCountRow || merchantCountRow.total === 0) {

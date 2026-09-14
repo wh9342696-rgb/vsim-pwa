@@ -1749,20 +1749,27 @@ function renderDepositsTable() {
   const tbody = document.getElementById('fullDepositsTbody');
   if (!tbody) return;
 
-  tbody.innerHTML = AdminStore.deposits.map(d => `
-    <tr>
+  tbody.innerHTML = AdminStore.deposits.map(d => {
+    const reference = String(d.reference || d.customer_reference || '').trim();
+    const merchantRef = String(d.merchant_reference || '').trim();
+    const matchStatus = String(d.reference_match || (merchantRef && reference && merchantRef === reference ? 'MATCHED' : 'UNMATCHED')).toUpperCase();
+    const matchClass = matchStatus === 'MATCHED' ? 'active' : 'pending';
+    const merchantProvider = String(d.merchant_provider || d.merchant || '').trim();
+    return `<tr>
       <td style="font-weight: 700;">${d.id}</td>
       <td style="font-weight: 600;">${d.user_name || d.phone || 'Unknown'}<div style="font-size:0.72rem;color:var(--text-muted);">${d.user_phone || d.phone || ''}</div></td>
       <td>${d.target_esim_id ? 'eSIM renewal' : d.package_id ? 'eSIM purchase' : 'Wallet payment'}</td>
-      <td style="font-weight: 800; color: var(--text-white);">UGX ${d.amount.toLocaleString()}</td>
-      <td>${d.customer_reference || d.reference || '-'}</td>
+      <td style="font-weight: 800; color: var(--text-white);">UGX ${Number(d.amount || 0).toLocaleString()}</td>
+      <td style="font-family: monospace; font-size: 0.74rem;">${reference || '-'}</td>
+      <td style="font-family: monospace; font-size: 0.74rem; color: var(--text-muted);">${merchantRef || (merchantProvider ? `${merchantProvider} event` : '-')}</td>
+      <td><span class="status-pill ${matchClass}">${matchStatus}</span></td>
       <td style="color: var(--text-muted);">${d.time || 'Just now'}</td>
       <td><span class="status-pill ${d.status}">${d.status}</span></td>
       <td>${['pending', 'payment_awaiting_verification'].includes(String(d.status).toLowerCase())
         ? `<button class="btn-action-small pay" onclick="processAdminDeposit(${d.id}, 'approve')">Approve</button> <button class="btn-action-small" onclick="processAdminDeposit(${d.id}, 'reject')">Reject</button>`
         : `<span style="font-size:0.75rem;color:var(--text-muted);">${d.reviewed_by ? `Admin #${d.reviewed_by}` : 'Processed'}</span>`}</td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 }
 
 async function processAdminDeposit(id, action) {

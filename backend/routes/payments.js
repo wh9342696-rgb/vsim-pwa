@@ -1,34 +1,9 @@
 import express from 'express';
-import { z } from 'zod';
 import { query } from '../config/db.js';
-import { createUniqueReference } from '../utils/reference.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { validateBody } from '../middleware/validate.js';
 
 const router = express.Router();
 const merchantCursors = new Map();
-
-const confirmDepositSchema = z.object({
-  amount: z.union([z.number(), z.string()]),
-  phone: z.string().optional(),
-  momoNumber: z.string().optional(),
-  merchantId: z.union([z.number(), z.string()]).optional(),
-  merchantCode: z.string().optional(),
-  network: z.string().optional(),
-  reference: z.string().optional(),
-  customerReference: z.string().trim().min(1, 'Mobile Money transaction ID is required').max(160),
-  packageId: z.string().optional(),
-  targetEsimId: z.union([z.number(), z.string()]).optional(),
-  targetEsimIccid: z.string().optional(),
-  renewal: z.boolean().optional(),
-  type: z.string().optional()
-});
-
-const paymentRequestSchema = z.object({
-  amount: z.union([z.number(), z.string()]),
-  phone: z.string().optional(),
-  network: z.string().optional()
-});
 
 function parseDataValue(value) {
   const match = String(value || '').trim().match(/([\d.]+)\s*(KB|MB|GB|TB)?/i);
@@ -62,72 +37,70 @@ router.get('/assigned-merchant', async (req, res) => {
   try {
     const { network, amount, packageId } = req.query;
 
-    const requestedNetwork = String(network || 'MTN').toUpperCase();
-    const bindingColumn = requestedNetwork === 'AIRTEL' ? 'airtel_merchant_id' : 'mtn_merchant_id';
-    const bridgeResult = await query(
-      `SELECT bd.*, m.id AS merchant_id, m.name, m.merchant_code, m.account_name, m.phone AS merchant_phone, m.network, m.instructions
-       FROM bridge_devices bd
-       LEFT JOIN merchants m ON m.merchant_code = CASE WHEN $1 = 'AIRTEL' THEN bd.airtel_merchant_id ELSE bd.mtn_merchant_id END
-       WHERE bd.status = 'active'
-         AND bd.last_heartbeat >= CURRENT_TIMESTAMP - INTERVAL '2 minutes'
-         AND NULLIF(bd.${bindingColumn}, '') IS NOT NULL
-         AND m.id IS NOT NULL
-       ORDER BY bd.last_heartbeat DESC, bd.id ASC
-       LIMIT 1`,
-      [requestedNetwork]
-    );
-    const assignedBridge = bridgeResult.rows[0];
+    // Fetch active merchants ordered by priority and transaction load.
+    let merchantsRes = await query(`SELECT * FROM merchants WHERE status = 'active' ORDER BY priority ASC, total_transactions ASC, total_volume ASC, id ASC`);
+    
+    if (merchantsRes.rows.length === 0) {
+      return res.status(503).json({ 
+        success: false,
+        error: 'No active mobile money merchant is currently available. Please try another payment method or contact support.' 
+      });
+    }
 
-    let selectedMerchant = null;
-    if (assignedBridge) {
-      selectedMerchant = {
-        id: assignedBridge.merchant_id,
-        name: assignedBridge.name || `${requestedNetwork} Bridge Merchant`,
-        merchant_code: requestedNetwork === 'AIRTEL' ? assignedBridge.airtel_merchant_id : assignedBridge.mtn_merchant_id,
-        network: requestedNetwork,
-        bridgeDeviceId: assignedBridge.device_id,
-        instructions: assignedBridge.instructions || null
-      };
-    } else {
-      const fallbackResult = await query(
-        `SELECT * FROM merchants
-         WHERE UPPER(network) IN ($1, 'ALL') AND status = 'active'
-         ORDER BY CASE WHEN UPPER(network) = $1 THEN 0 ELSE 1 END, priority ASC, id ASC
-         LIMIT 1`,
-        [requestedNetwork]
+    let merchants = merchantsRes.rows;
+
+    // Filter by network preference if specified (MTN / Airtel / Universal)
+    if (network && String(network).toLowerCase() !== 'all') {
+      const netFilter = merchants.filter(m => 
+        String(m.network).toLowerCase() === String(network).toLowerCase() || 
+        String(m.network).toLowerCase() === 'all'
       );
-      const fallbackMerchant = fallbackResult.rows[0];
-      if (fallbackMerchant) {
-        selectedMerchant = {
-          id: fallbackMerchant.id,
-          name: fallbackMerchant.name || `${requestedNetwork} Merchant`,
-          merchant_code: fallbackMerchant.merchant_code,
-          network: fallbackMerchant.network || requestedNetwork,
-          bridgeDeviceId: null,
-          instructions: fallbackMerchant.instructions || null
-        };
+      if (netFilter.length > 0) {
+        merchants = netFilter;
+      } else {
+        return res.status(404).json({
+          success: false,
+          error: `No active mobile money merchant found for ${network}. Please choose another network or payment method.`
+        });
       }
     }
 
-    if (!selectedMerchant) {
-      return res.status(503).json({ success: false, error: `No active ${requestedNetwork} merchant is currently available.` });
-    }
-
-    const merchantCode = selectedMerchant.merchant_code;
-    const refCode = await createUniqueReference('VSIM', async candidate =>
-      (await query('SELECT id FROM payment_requests WHERE reference = $1', [candidate])).rows.length > 0
+    // Recompute after network filtering so newly added eligible merchants participate immediately.
+    merchants.sort((left, right) =>
+      Number(left.priority || 0) - Number(right.priority || 0) ||
+      Number(left.total_transactions || 0) - Number(right.total_transactions || 0) ||
+      Number(left.total_volume || 0) - Number(right.total_volume || 0) ||
+      Number(left.id || 0) - Number(right.id || 0)
     );
+    const bestPriority = Number(merchants[0].priority || 0);
+    const bestTransactions = Number(merchants[0].total_transactions || 0);
+    const bestVolume = Number(merchants[0].total_volume || 0);
+    const leastLoaded = merchants.filter(merchant =>
+      Number(merchant.priority || 0) === bestPriority &&
+      Number(merchant.total_transactions || 0) === bestTransactions &&
+      Number(merchant.total_volume || 0) === bestVolume
+    );
+    const cursorKey = String(network || 'all').toUpperCase();
+    const cursor = merchantCursors.get(cursorKey) || 0;
+    const assignedMerchant = leastLoaded[cursor % leastLoaded.length];
+    merchantCursors.set(cursorKey, cursor + 1);
+    const refCode = `VSIM-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    const isMTN = requestedNetwork === 'MTN';
+    const isMTN = String(assignedMerchant.network).toUpperCase().includes('MTN');
     const defaultInstructions = isMTN
-      ? `Dial *165*3# -> Enter Merchant Code ${merchantCode} -> Enter Amount -> Enter Reference ${refCode} -> Confirm PIN`
-      : `Dial *185*9# -> Enter Merchant ID ${merchantCode} -> Enter Amount -> Enter Reference ${refCode} -> Confirm PIN`;
+      ? `Dial *165*3# -> Enter Merchant Code ${assignedMerchant.merchant_code} -> Enter Amount -> Enter Reference ${refCode} -> Confirm PIN`
+      : `Dial *185*9# -> Enter Merchant ID ${assignedMerchant.merchant_code} -> Enter Amount -> Enter Reference ${refCode} -> Confirm PIN`;
 
     res.json({
       success: true,
       merchant: {
-        ...selectedMerchant,
-        instructions: selectedMerchant.instructions || defaultInstructions
+        id: assignedMerchant.id,
+        name: assignedMerchant.name,
+        merchant_code: assignedMerchant.merchant_code,
+        network: (assignedMerchant.network || 'MTN').toUpperCase(),
+        account_name: assignedMerchant.account_name || assignedMerchant.name,
+        phone: assignedMerchant.phone || '+256 700 000 000',
+        instructions: assignedMerchant.instructions || defaultInstructions
       },
       reference: refCode,
       amount: parseFloat(amount) || 0
@@ -139,9 +112,9 @@ router.get('/assigned-merchant', async (req, res) => {
 });
 
 // 2. User Submits Deposit / Purchase Confirmation to Merchant
-router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, res) => {
+router.post('/confirm-deposit', async (req, res) => {
   try {
-    const { amount, phone, momoNumber, merchantId, merchantCode, network, reference, customerReference, packageId, targetEsimId, targetEsimIccid, renewal = false, type = 'esim_purchase' } = req.body;
+    const { amount, phone, momoNumber, merchantId, merchantCode, network, reference, packageId, targetEsimId, targetEsimIccid, renewal = false, type = 'esim_purchase' } = req.body;
     const num = parseFloat(amount);
     const isRenewal = Boolean(renewal || targetEsimId || targetEsimIccid);
 
@@ -150,36 +123,8 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
     }
 
     const payerPhone = momoNumber || phone || 'Not provided';
-    const requestedNetwork = String(network || 'MTN').toUpperCase();
-    const bindingColumn = requestedNetwork === 'AIRTEL' ? 'airtel_merchant_id' : 'mtn_merchant_id';
-    const assignedBridge = await query(
-      `SELECT id FROM bridge_devices
-       WHERE status = 'active'
-         AND last_heartbeat >= CURRENT_TIMESTAMP - INTERVAL '2 minutes'
-         AND NULLIF(${bindingColumn}, '') = $1
-       LIMIT 1`,
-      [String(merchantCode || '').trim()]
-    );
-    if (!assignedBridge.rows.length) {
-      const configuredMerchant = await query(
-        `SELECT id FROM merchants
-         WHERE merchant_code = $1
-           AND UPPER(network) IN ($2, 'ALL')
-           AND status = 'active'
-         LIMIT 1`,
-        [String(merchantCode || '').trim(), requestedNetwork]
-      );
-      if (!configuredMerchant.rows.length) {
-        return res.status(409).json({ success: false, error: 'Merchant is not currently active.' });
-      }
-    }
-    const txRef = reference || await createUniqueReference('VSIM', async candidate => (await query('SELECT id FROM payment_requests WHERE reference = $1', [candidate])).rows.length > 0);
-    const mCode = String(merchantCode).trim();
-
-    if (customerReference) {
-      const usedReference = await query('SELECT id, user_id, status FROM payment_requests WHERE customer_reference = $1', [customerReference]);
-      if (usedReference.rows.length) return res.status(409).json({ success: false, error: 'This Mobile Money transaction ID has already been submitted.' });
-    }
+    const txRef = reference || `VSIM-${Date.now().toString().slice(-6)}`;
+    const mCode = merchantCode || 'VSIM-M001';
 
     const existingPayment = await query('SELECT user_id, package_id, target_esim_id, status, created_at FROM payment_requests WHERE reference = $1', [txRef]);
     if (existingPayment.rows.length) {
@@ -216,7 +161,7 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
         const token = authHeader.slice(7);
         const jwt = (await import('jsonwebtoken')).default;
         const JWT_SECRET = process.env.JWT_SECRET;
-        const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'], issuer: 'vsim-api', audience: 'vsim-client' });
+        const decoded = jwt.verify(token, JWT_SECRET);
         userId = decoded.id;
       }
     } catch (e) {}
@@ -236,16 +181,13 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
     if (isRenewal && (!userId || (!targetEsimId && !targetEsimIccid))) {
       return res.status(400).json({ success: false, error: 'Renewal must include the existing eSIM and signed-in user.' });
     }
-    if (packageId && !userId) {
-      return res.status(401).json({ success: false, error: 'Sign in before submitting an eSIM payment.' });
-    }
 
     let resolvedTargetEsimId = null;
     if (isRenewal) {
       const targetIdentifier = targetEsimIccid || targetEsimId;
       const targetRes = targetEsimIccid
-        ? await query('SELECT id, iccid FROM user_esims WHERE iccid = $1 AND user_id = $2 AND status <> \'revoked\'', [targetEsimIccid, userId])
-        : await query('SELECT id, iccid FROM user_esims WHERE id = $1 AND user_id = $2 AND status <> \'revoked\'', [targetIdentifier, userId]);
+        ? await query('SELECT id, iccid FROM user_esims WHERE iccid = $1 AND user_id = $2', [targetEsimIccid, userId])
+        : await query('SELECT id, iccid FROM user_esims WHERE id = $1 AND user_id = $2', [targetIdentifier, userId]);
       if (!targetRes.rows.length) return res.status(404).json({ success: false, error: 'Target eSIM not found' });
       resolvedTargetEsimId = targetRes.rows[0].id;
       if (targetEsimId && String(resolvedTargetEsimId) !== String(targetEsimId)) {
@@ -253,26 +195,12 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
       }
     }
 
-    if (packageId) {
-      const packageResult = await query('SELECT * FROM esim_packages WHERE id = $1', [packageId]);
-      if (!packageResult.rows.length) return res.status(400).json({ success: false, error: 'Selected package is no longer available.' });
-      let renewalCount = 0;
-      if (resolvedTargetEsimId) {
-        const esimResult = await query('SELECT renewal_count FROM user_esims WHERE id = $1 AND user_id = $2', [resolvedTargetEsimId, userId]);
-        renewalCount = Number(esimResult.rows[0]?.renewal_count || 0);
-      }
-      const expectedAmount = getRenewalPrice(packageResult.rows[0], renewalCount);
-      if (Math.abs(num - expectedAmount) > 0.01) {
-        return res.status(400).json({ success: false, error: `Payment amount must be UGX ${expectedAmount.toLocaleString()}.` });
-      }
-    }
-
     // Reporting a payment only creates a verification request. The bridge and
     // backend verification path are the only code allowed to fulfill it.
     await query(
-      `INSERT INTO payment_requests (user_id, phone, amount, merchant, network, reference, customer_reference, package_id, target_esim_id, status, payment_status, order_status, provisioning_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PAYMENT_AWAITING_VERIFICATION', 'PAYMENT_AWAITING_VERIFICATION', $10, $11)`,
-      [userId, payerPhone, num, mCode, network || 'MTN', txRef, customerReference || null, packageId || null, resolvedTargetEsimId,
+      `INSERT INTO payment_requests (user_id, phone, amount, merchant, network, reference, package_id, target_esim_id, status, payment_status, order_status, provisioning_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PAYMENT_AWAITING_VERIFICATION', 'PAYMENT_AWAITING_VERIFICATION', $9, $10)`,
+      [userId, payerPhone, num, mCode, network || 'MTN', txRef, packageId || null, resolvedTargetEsimId,
         packageId ? 'PENDING_PAYMENT' : 'NOT_APPLICABLE', packageId ? 'NOT_STARTED' : 'NOT_APPLICABLE']
     );
 
@@ -298,7 +226,7 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
       await query(
         `INSERT INTO admin_notifications (admin_id, type, title, message, reference, status)
          VALUES ($1, $2, $3, $4, $5, $6)`,
-        [admin.id, 'payment', 'Merchant Payment Received', `UGX ${num.toLocaleString()} sent to ${mCode} by ${payerPhone} (SMS Ref: ${customerReference})`, txRef, 'pending']
+        [admin.id, 'payment', 'Merchant Payment Received', `UGX ${num.toLocaleString()} sent to ${mCode} by ${payerPhone}`, txRef, 'pending']
       );
     }
 
@@ -315,7 +243,7 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
     await query(
       `INSERT INTO system_logs (action, details, level, time_ago)
        VALUES ($1, $2, $3, $4)`,
-      ['merchant_payment_reported', `Merchant payment reported: UGX ${num.toLocaleString()} to ${mCode} from ${payerPhone} (Order Ref: ${txRef}, SMS Ref: ${customerReference})`, 'info', 'Just now']
+      ['merchant_payment_reported', `Merchant payment reported: UGX ${num.toLocaleString()} to ${mCode} from ${payerPhone} (Ref: ${txRef})`, 'info', 'Just now']
     );
 
     res.json({
@@ -333,7 +261,7 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
 });
 
 // 3. Create Pending Payment Request (Legacy / Direct prompt)
-router.post('/request', authenticateToken, validateBody(paymentRequestSchema), async (req, res) => {
+router.post('/request', authenticateToken, async (req, res) => {
   try {
     const { amount, phone, network } = req.body;
     const num = parseFloat(amount);
@@ -383,7 +311,7 @@ router.post('/bridge-confirm', async (req, res) => {
     await query(`UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2`, [num, paymentReq.user_id]);
 
     // Log transaction
-    const txRef = reference || await createUniqueReference('SMS-BRIDGE', async candidate => (await query('SELECT id FROM wallet_transactions WHERE reference = $1', [candidate])).rows.length > 0);
+    const txRef = reference || `SMS-BRIDGE-${Date.now()}`;
     await query(
       `INSERT INTO wallet_transactions (user_id, type, title, amount, reference, status)
        VALUES ($1, $2, $3, $4, $5, $6)`,
