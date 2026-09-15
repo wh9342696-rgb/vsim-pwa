@@ -66,7 +66,7 @@ export async function fulfillVerifiedPurchase(payment) {
     const bundleGb = bundleData?.amount || 0;
     const renewedTotal = formatDataValue((existingTotal?.amount || 0) + bundleGb, dataUnit);
     const renewedRemaining = formatDataValue((existingRemaining?.amount || 0) + bundleGb, dataUnit);
-    const updateResult = await query(
+    await query(
       `UPDATE user_esims
        SET package_id = $1, title = $2, status = 'active', data_total = $3,
            data_remaining = $4, daily_income = $5, progress_percent_per_hour = $6,
@@ -75,7 +75,6 @@ export async function fulfillVerifiedPurchase(payment) {
        WHERE id = $8 AND user_id = $9`,
       [pkg.id, pkg.title, renewedTotal, renewedRemaining, pkg.income || 0, Number(pkg.progress_percent_per_hour) || 0.42, expiresAt, payment.target_esim_id, payment.user_id]
     );
-    if (!updateResult.rowCount) throw new Error('TARGET_ESIM_NOT_FOUND');
   } else {
     let iccid = createIccid();
     while ((await query('SELECT id FROM user_esims WHERE iccid = $1', [iccid])).rows.length) iccid = createIccid();
