@@ -1775,11 +1775,19 @@ function renderDepositsTable() {
 }
 
 async function processAdminDeposit(id, action) {
-  if (action === 'approve' && !window.confirm('Have you verified that the exact amount was received in the merchant account and that this transaction belongs to this order?')) return;
+  let merchantReference = '';
+  let merchantAmount = '';
+  if (action === 'approve') {
+    if (!window.confirm('Check the merchant SMS/account before approving. The merchant reference and amount must match the customer payment.')) return;
+    merchantReference = (window.prompt('Enter the merchant SMS transaction reference you verified:') || '').trim();
+    if (!merchantReference) return;
+    merchantAmount = (window.prompt('Enter the amount shown in the merchant payment record:', '') || '').trim();
+    if (!merchantAmount) return;
+  }
   const reason = action === 'reject' ? (window.prompt('Reason for rejecting this payment?') || '').trim() : '';
   if (action === 'reject' && !reason) return;
   try {
-    await AdminAPI.processDeposit(id, action, reason);
+    await AdminAPI.processDeposit(id, action, reason, merchantReference, merchantAmount);
     showToast(`Payment ${action === 'approve' ? 'approved' : 'rejected'}`, 'success');
     await refreshAdminData();
     renderDepositsTable();

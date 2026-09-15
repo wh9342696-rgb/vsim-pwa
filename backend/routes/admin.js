@@ -884,20 +884,13 @@ router.post('/deposits/:id/action', adminAuth, ensureSuperAdmin, async (req, res
       return res.json({ message: 'Payment rejected', status: 'rejected' });
     }
 
-    const merchantEvent = await query(
-      `SELECT be.amount, be.transaction_reference
-       FROM bridge_events be
-       WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE($1, ''))
-       ORDER BY be.received_at DESC
-       LIMIT 1`,
-      [payment.reference]
-    );
-    const matchedEvent = merchantEvent.rows[0];
-    if (!matchedEvent) {
+    const merchantReference = String(req.body?.merchantReference || '').trim();
+    const merchantAmount = Number(req.body?.merchantAmount);
+    if (!merchantReference || !payment.customer_reference || merchantReference.toLowerCase() !== String(payment.customer_reference).trim().toLowerCase()) {
       await query(`UPDATE payment_requests SET status = 'PAYMENT_AWAITING_VERIFICATION' WHERE id = $1`, [payment.id]);
-      return res.status(409).json({ error: 'Merchant reference has not been matched yet' });
+      return res.status(409).json({ error: 'Merchant reference does not match the customer SMS reference' });
     }
-    if (Math.abs(Number(matchedEvent.amount) - Number(payment.amount)) > 0.01) {
+    if (!Number.isFinite(merchantAmount) || Math.abs(merchantAmount - Number(payment.amount)) > 0.01) {
       await query(`UPDATE payment_requests SET status = 'PAYMENT_AWAITING_VERIFICATION' WHERE id = $1`, [payment.id]);
       return res.status(409).json({ error: 'Merchant amount does not match the payment request' });
     }

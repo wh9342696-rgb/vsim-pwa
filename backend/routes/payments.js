@@ -198,10 +198,10 @@ router.post('/confirm-deposit', async (req, res) => {
     // Reporting a payment only creates a verification request. The bridge and
     // backend verification path are the only code allowed to fulfill it.
     await query(
-      `INSERT INTO payment_requests (user_id, phone, amount, merchant, network, reference, package_id, target_esim_id, status, payment_status, order_status, provisioning_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PAYMENT_AWAITING_VERIFICATION', 'PAYMENT_AWAITING_VERIFICATION', $9, $10)`,
+      `INSERT INTO payment_requests (user_id, phone, amount, merchant, network, reference, customer_reference, package_id, target_esim_id, status, payment_status, order_status, provisioning_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PAYMENT_AWAITING_VERIFICATION', 'PAYMENT_AWAITING_VERIFICATION', $10, $11)`,
       [userId, payerPhone, num, mCode, network || 'MTN', txRef, packageId || null, resolvedTargetEsimId,
-        packageId ? 'PENDING_PAYMENT' : 'NOT_APPLICABLE', packageId ? 'NOT_STARTED' : 'NOT_APPLICABLE']
+        customerReference || null, packageId ? 'PENDING_PAYMENT' : 'NOT_APPLICABLE', packageId ? 'NOT_STARTED' : 'NOT_APPLICABLE']
     );
 
     // Merchant statistics track reported volume only and do not imply payment success.
