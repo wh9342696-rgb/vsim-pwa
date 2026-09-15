@@ -1042,6 +1042,24 @@
           </div>
         </section>
 
+        <section class="admin-view-screen" id="view-deposits">
+          <div class="dashboard-greeting-bar">
+            <div>
+              <h2 class="dashboard-greeting-title">Pending Mobile Money Payments</h2>
+              <p class="dashboard-greeting-sub">Match the customer reference against the merchant reference received before approving fulfillment.</p>
+            </div>
+          </div>
+          <div class="dashboard-widget-card">
+            <div class="widget-card-body" style="padding: 0;">
+              <div class="table-responsive-wrapper">
+                <table class="admin-data-table">
+                  <thead><tr><th>ID</th><th>Customer</th><th>Type</th><th>Amount</th><th>Customer Ref</th><th>Merchant Ref</th><th>Match</th><th>Submitted</th><th>Status</th><th>Action</th></tr></thead>
+                  <tbody id="fullDepositsTbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <!-- ================================================================
              VIEW: WITHDRAWALS (PAYOUTS)
@@ -1504,6 +1522,13 @@
           <line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline>
         </svg>
         <span>Payouts</span>
+      </button>
+
+      <button class="bottom-tab-btn" title="Deposits" data-view="view-deposits" onclick="navigateToView('view-deposits')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line><polyline points="5 12 12 5 19 12"></polyline>
+        </svg>
+        <span>Deposits</span>
       </button>
 
       <button class="bottom-tab-btn" title="Users" data-view="view-users" onclick="navigateToView('view-users')">
