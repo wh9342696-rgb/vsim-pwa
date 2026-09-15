@@ -32,7 +32,12 @@ const AdminAPI = (() => {
     const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
-    const response = await fetch(`${baseUrl}${endpoint}`, { ...options, headers });
+    let response;
+    try {
+      response = await fetch(`${baseUrl}${endpoint}`, { ...options, headers });
+    } catch (error) {
+      throw new Error(`Network error while contacting ${endpoint}. Check your connection and try again.`);
+    }
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       if (response.status === 401) {

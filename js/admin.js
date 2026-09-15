@@ -2276,7 +2276,11 @@ async function handleCreatePackageSubmit(e) {
     resetRenewalScheduleRows();
     closeAddPackageModal();
     showToast(`Package "${title}" created successfully!`, 'success');
-    await loadAllData();
+    try {
+      await loadAllData();
+    } catch (refreshError) {
+      showToast('Package created, but the dashboard could not refresh. Reload the page to see it.', 'info');
+    }
   } catch (err) {
     showToast(err.message || 'Failed to create package', 'error');
   }
