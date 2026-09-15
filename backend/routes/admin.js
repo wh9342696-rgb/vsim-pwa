@@ -870,6 +870,24 @@ router.post('/deposits/:id/action', adminAuth, ensureSuperAdmin, async (req, res
       return res.json({ message: 'Payment rejected', status: 'rejected' });
     }
 
+    const merchantEvent = await query(
+      `SELECT be.amount, be.transaction_reference
+       FROM bridge_events be
+       WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE($1, ''))
+       ORDER BY be.received_at DESC
+       LIMIT 1`,
+      [payment.reference]
+    );
+    const matchedEvent = merchantEvent.rows[0];
+    if (!matchedEvent) {
+      await query(`UPDATE payment_requests SET status = 'PAYMENT_AWAITING_VERIFICATION' WHERE id = $1`, [payment.id]);
+      return res.status(409).json({ error: 'Merchant reference has not been matched yet' });
+    }
+    if (Math.abs(Number(matchedEvent.amount) - Number(payment.amount)) > 0.01) {
+      await query(`UPDATE payment_requests SET status = 'PAYMENT_AWAITING_VERIFICATION' WHERE id = $1`, [payment.id]);
+      return res.status(409).json({ error: 'Merchant amount does not match the payment request' });
+    }
+
     try {
       const fulfillment = await fulfillVerifiedPurchase(payment);
       if (!fulfillment.fulfilled && payment.user_id) {
