@@ -912,9 +912,10 @@
                 </div>
               </div>
               <div class="payer-input-container">
-                <label class="payer-input-label">Mobile Money Transaction ID (optional)</label>
+                <label class="payer-input-label">SMS Payment Reference <span style="color: var(--accent-red);">*</span></label>
+                <p class="payer-input-help">After paying, copy the transaction reference or ID from your Mobile Money SMS and paste it here. This is required for verification.</p>
                 <div class="payer-input-box">
-                  <input id="merchantCustomerReference" class="modal-form-input modern-payer-input" maxlength="160" required placeholder="Enter the SMS transaction ID after paying" />
+                  <input id="merchantCustomerReference" class="modal-form-input modern-payer-input" maxlength="160" required placeholder="Paste the reference from your payment SMS" />
                 </div>
               </div>
             </div>
@@ -1342,7 +1343,7 @@
               <div class="direction-body"><div id="airtimePurchaseMerchant" class="merchant-meta-sub merchant-name-only">Merchant</div><div id="airtimeMerchantNumber" class="spotlight-code-text">------</div><p id="airtimePurchaseInstructions" class="instruction-text">Use the payment code above, then confirm your deposit.</p></div>
               <div class="direction-ref-row"><span class="ref-hint">Reference: <strong id="airtimePurchaseReference" style="font-family: monospace; color: var(--text-white);"></strong></span></div>
             </div>
-            <div class="payer-input-container"><label class="payer-input-label">Mobile Money Transaction ID</label><div class="payer-input-box"><input id="airtimeCustomerReference" class="modal-form-input modern-payer-input" maxlength="160" required placeholder="Enter the SMS transaction ID after paying" /></div></div>
+            <div class="payer-input-container"><label class="payer-input-label">SMS Payment Reference <span style="color: var(--accent-red);">*</span></label><p class="payer-input-help">Copy the transaction reference or ID from your Mobile Money payment SMS and paste it here.</p><div class="payer-input-box"><input id="airtimeCustomerReference" class="modal-form-input modern-payer-input" maxlength="160" required placeholder="Paste the reference from your payment SMS" /></div></div>
           </div>
           <div class="modal-dialog-footer">
             <button type="button" class="btn-modal-cancel" onclick="closeAirtimePurchaseModal()">Cancel</button>

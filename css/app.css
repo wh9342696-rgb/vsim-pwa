@@ -767,6 +767,13 @@
   margin-bottom: 6px;
 }
 
+.payer-input-help {
+  margin: -1px 0 7px;
+  color: var(--text-gray);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
 .modern-payer-input {
   width: 100%;
   height: 44px;
