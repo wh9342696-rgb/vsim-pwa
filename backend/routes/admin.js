@@ -464,6 +464,9 @@ router.put('/admins/:id', adminAuth, ensureSuperAdmin, async (req, res) => {
 router.delete('/admins/:id', adminAuth, ensureSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
+    if (String(req.admin.id) !== '1') {
+      return res.status(403).json({ error: 'Only the primary admin can delete administrator accounts' });
+    }
     const admin = await query('SELECT * FROM admin_users WHERE id = $1', [id]);
 
     if (admin.rows.length === 0) {
