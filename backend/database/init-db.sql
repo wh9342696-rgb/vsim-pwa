@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS esim_packages (
   type TEXT DEFAULT 'Data Only',
   price NUMERIC(12,2) NOT NULL,
   income NUMERIC(12,2) NOT NULL,
+  commission_percent NUMERIC(5,2) DEFAULT 10,
   sold_count INTEGER DEFAULT 0,
   revenue NUMERIC(12,2) DEFAULT 0,
   image_url TEXT,

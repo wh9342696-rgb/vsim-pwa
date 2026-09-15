@@ -74,6 +74,7 @@ async function initializePostgresSchema() {
       type TEXT DEFAULT 'Data Only',
       price NUMERIC(12,2) NOT NULL,
       income NUMERIC(12,2) NOT NULL,
+      commission_percent NUMERIC(5,2) DEFAULT 10,
       sold_count INTEGER DEFAULT 0,
       revenue NUMERIC(12,2) DEFAULT 0,
       image_url TEXT,
@@ -248,6 +249,7 @@ async function initializePostgresSchema() {
   }
 
   await pool.query('ALTER TABLE esim_packages ADD COLUMN IF NOT EXISTS progress_percent_per_hour NUMERIC(8,4) DEFAULT 0.42');
+  await pool.query('ALTER TABLE esim_packages ADD COLUMN IF NOT EXISTS commission_percent NUMERIC(5,2) DEFAULT 10');
   await pool.query("ALTER TABLE esim_packages ADD COLUMN IF NOT EXISTS renewal_schedule TEXT DEFAULT '[]'");
   await pool.query('ALTER TABLE user_esims ADD COLUMN IF NOT EXISTS progress_percent_per_hour NUMERIC(8,4) DEFAULT 0.42');
   await pool.query('ALTER TABLE user_esims ADD COLUMN IF NOT EXISTS renewal_count INTEGER DEFAULT 0');
@@ -453,6 +455,7 @@ if (databaseDriver === 'postgres') {
       type TEXT DEFAULT 'Data Only',
       price REAL NOT NULL,
       income REAL NOT NULL,
+      commission_percent REAL DEFAULT 10,
       sold_count INTEGER DEFAULT 0,
       revenue REAL DEFAULT 0,
       image_url TEXT NOT NULL,
@@ -652,6 +655,7 @@ if (databaseDriver === 'postgres') {
   `);
 
   try { sqlite.exec('ALTER TABLE esim_packages ADD COLUMN progress_percent_per_hour REAL DEFAULT 0.42'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
+  try { sqlite.exec('ALTER TABLE esim_packages ADD COLUMN commission_percent REAL DEFAULT 10'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec("ALTER TABLE esim_packages ADD COLUMN renewal_schedule TEXT DEFAULT '[]'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE user_esims ADD COLUMN progress_percent_per_hour REAL DEFAULT 0.42'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE user_esims ADD COLUMN renewal_count INTEGER DEFAULT 0'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
