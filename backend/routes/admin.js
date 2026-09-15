@@ -69,7 +69,7 @@ const adminAuth = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'], issuer: 'vsim-api', audience: 'vsim-admin' });
-    const adminRes = await query('SELECT id, email, name, role, status, password_hash, profit_total, joined_users_count, profile_photo, can_manage_withdrawal_fee, can_manage_merchants, current_session_token FROM admin_users WHERE id = $1', [decoded.id]);
+    const adminRes = await query('SELECT id, email, name, role, status, password_hash, profit_total, joined_users_count, profile_photo, can_manage_withdrawal_fee, can_manage_merchants, merchant_edit_restricted, current_session_token FROM admin_users WHERE id = $1', [decoded.id]);
     if (adminRes.rows.length === 0 || adminRes.rows[0].status !== 'active') {
       return res.status(403).json({ error: 'Unauthorized admin account' });
     }
@@ -96,6 +96,11 @@ const ensureSuperAdmin = (req, res, next) => {
 const ensureMerchantManager = (req, res, next) => {
   if (req.admin?.role === 'super_admin' || req.admin?.can_manage_merchants) return next();
   return res.status(403).json({ error: 'Merchant management permission required' });
+};
+
+const ensureMerchantEditor = (req, res, next) => {
+  if (req.admin?.merchant_edit_restricted) return res.status(403).json({ error: 'Merchant editing is restricted for this admin' });
+  return ensureMerchantManager(req, res, next);
 };
 
 router.post('/login', async (req, res) => {
@@ -223,7 +228,7 @@ router.get('/merchants', adminAuth, ensureMerchantManager, async (req, res) => {
   }
 });
 
-router.post('/merchants', adminAuth, ensureMerchantManager, async (req, res) => {
+router.post('/merchants', adminAuth, ensureMerchantEditor, async (req, res) => {
   try {
     const { name, merchant_code, network = 'MTN', account_name, phone, instructions, priority = 10, status = 'active' } = req.body || {};
     if (!name || !merchant_code) {
@@ -262,7 +267,7 @@ router.post('/merchants', adminAuth, ensureMerchantManager, async (req, res) => 
   }
 });
 
-router.put('/merchants/:id', adminAuth, ensureMerchantManager, async (req, res) => {
+router.put('/merchants/:id', adminAuth, ensureMerchantEditor, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, merchant_code, network, account_name, phone, instructions, priority, status } = req.body || {};
@@ -305,7 +310,7 @@ router.put('/merchants/:id', adminAuth, ensureMerchantManager, async (req, res) 
   }
 });
 
-router.patch('/merchants/:id/status', adminAuth, ensureMerchantManager, async (req, res) => {
+router.patch('/merchants/:id/status', adminAuth, ensureMerchantEditor, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body || {};
@@ -327,7 +332,7 @@ router.patch('/merchants/:id/status', adminAuth, ensureMerchantManager, async (r
   }
 });
 
-router.delete('/merchants/:id', adminAuth, ensureSuperAdmin, async (req, res) => {
+router.delete('/merchants/:id', adminAuth, ensureMerchantEditor, async (req, res) => {
   try {
     const { id } = req.params;
     await query('DELETE FROM merchants WHERE id = $1', [id]);

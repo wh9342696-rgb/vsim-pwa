@@ -63,6 +63,7 @@ async function initializePostgresSchema() {
       role TEXT DEFAULT 'super_admin',
       status TEXT DEFAULT 'active',
       can_manage_merchants BOOLEAN DEFAULT FALSE,
+      merchant_edit_restricted BOOLEAN DEFAULT FALSE,
       current_session_token TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
@@ -251,6 +252,7 @@ async function initializePostgresSchema() {
 
   await pool.query('ALTER TABLE esim_packages ADD COLUMN IF NOT EXISTS progress_percent_per_hour NUMERIC(8,4) DEFAULT 0.42');
   await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS can_manage_merchants BOOLEAN DEFAULT FALSE');
+  await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS merchant_edit_restricted BOOLEAN DEFAULT FALSE');
   await pool.query('ALTER TABLE esim_packages ADD COLUMN IF NOT EXISTS commission_percent NUMERIC(5,2) DEFAULT 10');
   await pool.query("ALTER TABLE esim_packages ADD COLUMN IF NOT EXISTS renewal_schedule TEXT DEFAULT '[]'");
   await pool.query('ALTER TABLE user_esims ADD COLUMN IF NOT EXISTS progress_percent_per_hour NUMERIC(8,4) DEFAULT 0.42');
