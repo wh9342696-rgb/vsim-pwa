@@ -69,7 +69,7 @@ const adminAuth = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'], issuer: 'vsim-api', audience: 'vsim-admin' });
-    const adminRes = await query('SELECT id, email, name, role, status, password_hash, profit_total, joined_users_count, profile_photo, can_manage_withdrawal_fee, current_session_token FROM admin_users WHERE id = $1', [decoded.id]);
+    const adminRes = await query('SELECT id, email, name, role, status, password_hash, profit_total, joined_users_count, profile_photo, can_manage_withdrawal_fee, can_manage_merchants, current_session_token FROM admin_users WHERE id = $1', [decoded.id]);
     if (adminRes.rows.length === 0 || adminRes.rows[0].status !== 'active') {
       return res.status(403).json({ error: 'Unauthorized admin account' });
     }
@@ -91,6 +91,11 @@ const ensureSuperAdmin = (req, res, next) => {
     return res.status(403).json({ error: 'Only the main admin can manage sub-admins' });
   }
   next();
+};
+
+const ensureMerchantManager = (req, res, next) => {
+  if (req.admin?.role === 'super_admin' || req.admin?.can_manage_merchants) return next();
+  return res.status(403).json({ error: 'Merchant management permission required' });
 };
 
 router.post('/login', async (req, res) => {
@@ -139,7 +144,7 @@ router.post('/logout', adminAuth, async (req, res) => {
 
 router.get('/me', adminAuth, async (req, res) => {
   const result = await query(
-    `SELECT id, email, name, role, status, created_at, profit_total, joined_users_count, profile_photo, can_manage_withdrawal_fee
+    `SELECT id, email, name, role, status, created_at, profit_total, joined_users_count, profile_photo, can_manage_withdrawal_fee, can_manage_merchants
      FROM admin_users WHERE id = $1`,
     [req.admin.id]
   );
@@ -208,7 +213,7 @@ router.post('/notifications/read-all', adminAuth, async (req, res) => {
   res.json({ message: 'Admin notifications marked as read' });
 });
 
-router.get('/merchants', adminAuth, async (req, res) => {
+router.get('/merchants', adminAuth, ensureMerchantManager, async (req, res) => {
   try {
     const result = await query('SELECT * FROM merchants ORDER BY priority ASC, id DESC');
     res.json({ merchants: result.rows });
@@ -218,7 +223,7 @@ router.get('/merchants', adminAuth, async (req, res) => {
   }
 });
 
-router.post('/merchants', adminAuth, async (req, res) => {
+router.post('/merchants', adminAuth, ensureMerchantManager, async (req, res) => {
   try {
     const { name, merchant_code, network = 'MTN', account_name, phone, instructions, priority = 10, status = 'active' } = req.body || {};
     if (!name || !merchant_code) {
@@ -257,7 +262,7 @@ router.post('/merchants', adminAuth, async (req, res) => {
   }
 });
 
-router.put('/merchants/:id', adminAuth, async (req, res) => {
+router.put('/merchants/:id', adminAuth, ensureMerchantManager, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, merchant_code, network, account_name, phone, instructions, priority, status } = req.body || {};
@@ -300,7 +305,7 @@ router.put('/merchants/:id', adminAuth, async (req, res) => {
   }
 });
 
-router.patch('/merchants/:id/status', adminAuth, async (req, res) => {
+router.patch('/merchants/:id/status', adminAuth, ensureMerchantManager, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body || {};
@@ -322,7 +327,7 @@ router.patch('/merchants/:id/status', adminAuth, async (req, res) => {
   }
 });
 
-router.delete('/merchants/:id', adminAuth, async (req, res) => {
+router.delete('/merchants/:id', adminAuth, ensureSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     await query('DELETE FROM merchants WHERE id = $1', [id]);
@@ -377,7 +382,7 @@ router.post('/kyc/:id/review', adminAuth, async (req, res) => {
 router.get('/admins', adminAuth, ensureSuperAdmin, async (req, res) => {
   try {
     const result = await query(`SELECT a.id, a.email, a.name, a.role, a.status, a.created_at,
-      a.can_manage_withdrawal_fee, COUNT(u.id)::INTEGER AS assigned_users
+      a.can_manage_withdrawal_fee, a.can_manage_merchants, COUNT(u.id)::INTEGER AS assigned_users
       FROM admin_users a LEFT JOIN users u ON u.assigned_admin_id = a.id
       GROUP BY a.id ORDER BY a.created_at DESC`);
     res.json({ admins: result.rows });
@@ -389,7 +394,7 @@ router.get('/admins', adminAuth, ensureSuperAdmin, async (req, res) => {
 
 router.post('/admins', adminAuth, ensureSuperAdmin, async (req, res) => {
   try {
-    const { name, email, password, role = 'sub_admin', status = 'active', can_manage_withdrawal_fee = false } = req.body || {};
+    const { name, email, password, role = 'sub_admin', status = 'active', can_manage_withdrawal_fee = false, can_manage_merchants = false } = req.body || {};
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Name, email, and password are required' });
@@ -405,10 +410,10 @@ router.post('/admins', adminAuth, ensureSuperAdmin, async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const result = await query(
-      `INSERT INTO admin_users (email, password_hash, name, role, status, can_manage_withdrawal_fee)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, email, name, role, status, created_at, can_manage_withdrawal_fee`,
-      [normalizedEmail, passwordHash, name.trim(), normalizedRole, status === 'inactive' ? 'inactive' : 'active', normalizedRole === 'sub_admin' && Boolean(can_manage_withdrawal_fee)]
+      `INSERT INTO admin_users (email, password_hash, name, role, status, can_manage_withdrawal_fee, can_manage_merchants)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, email, name, role, status, created_at, can_manage_withdrawal_fee, can_manage_merchants`,
+      [normalizedEmail, passwordHash, name.trim(), normalizedRole, status === 'inactive' ? 'inactive' : 'active', normalizedRole === 'sub_admin' && Boolean(can_manage_withdrawal_fee), normalizedRole === 'sub_admin' && Boolean(can_manage_merchants)]
     );
 
     res.status(201).json({ message: 'Sub-admin created successfully', admin: result.rows[0] });
@@ -421,7 +426,7 @@ router.post('/admins', adminAuth, ensureSuperAdmin, async (req, res) => {
 router.put('/admins/:id', adminAuth, ensureSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, role, status, can_manage_withdrawal_fee } = req.body || {};
+    const { name, email, role, status, can_manage_withdrawal_fee, can_manage_merchants } = req.body || {};
 
     const existing = await query('SELECT * FROM admin_users WHERE id = $1', [id]);
     if (existing.rows.length === 0) {
@@ -437,10 +442,11 @@ router.put('/admins/:id', adminAuth, ensureSuperAdmin, async (req, res) => {
            email = COALESCE($2, email),
            role = COALESCE($3, role),
              status = COALESCE($4, status),
-             can_manage_withdrawal_fee = COALESCE($5, can_manage_withdrawal_fee)
-           WHERE id = $6
-           RETURNING id, email, name, role, status, created_at, can_manage_withdrawal_fee`,
-          [name?.trim() || existing.rows[0].name, email?.trim().toLowerCase() || existing.rows[0].email, nextRole, nextStatus, can_manage_withdrawal_fee === undefined ? existing.rows[0].can_manage_withdrawal_fee : Boolean(can_manage_withdrawal_fee), id]
+             can_manage_withdrawal_fee = COALESCE($5, can_manage_withdrawal_fee),
+             can_manage_merchants = COALESCE($6, can_manage_merchants)
+           WHERE id = $7
+           RETURNING id, email, name, role, status, created_at, can_manage_withdrawal_fee, can_manage_merchants`,
+          [name?.trim() || existing.rows[0].name, email?.trim().toLowerCase() || existing.rows[0].email, nextRole, nextStatus, can_manage_withdrawal_fee === undefined ? existing.rows[0].can_manage_withdrawal_fee : Boolean(can_manage_withdrawal_fee), can_manage_merchants === undefined ? existing.rows[0].can_manage_merchants : Boolean(can_manage_merchants), id]
     );
 
     res.json({ message: 'Admin updated successfully', admin: result.rows[0] });

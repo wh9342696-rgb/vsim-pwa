@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS admin_users (
   name TEXT NOT NULL,
   role TEXT DEFAULT 'super_admin',
   status TEXT DEFAULT 'active',
+  can_manage_merchants BOOLEAN DEFAULT FALSE,
   can_manage_withdrawal_fee BOOLEAN DEFAULT FALSE,
   current_session_token TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

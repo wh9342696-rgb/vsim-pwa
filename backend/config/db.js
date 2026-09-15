@@ -62,6 +62,7 @@ async function initializePostgresSchema() {
       name TEXT NOT NULL,
       role TEXT DEFAULT 'super_admin',
       status TEXT DEFAULT 'active',
+      can_manage_merchants BOOLEAN DEFAULT FALSE,
       current_session_token TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
@@ -249,6 +250,7 @@ async function initializePostgresSchema() {
   }
 
   await pool.query('ALTER TABLE esim_packages ADD COLUMN IF NOT EXISTS progress_percent_per_hour NUMERIC(8,4) DEFAULT 0.42');
+  await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS can_manage_merchants BOOLEAN DEFAULT FALSE');
   await pool.query('ALTER TABLE esim_packages ADD COLUMN IF NOT EXISTS commission_percent NUMERIC(5,2) DEFAULT 10');
   await pool.query("ALTER TABLE esim_packages ADD COLUMN IF NOT EXISTS renewal_schedule TEXT DEFAULT '[]'");
   await pool.query('ALTER TABLE user_esims ADD COLUMN IF NOT EXISTS progress_percent_per_hour NUMERIC(8,4) DEFAULT 0.42');
@@ -654,6 +656,7 @@ if (databaseDriver === 'postgres') {
     );
   `);
 
+  try { sqlite.exec('ALTER TABLE admin_users ADD COLUMN can_manage_merchants INTEGER DEFAULT 0'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE esim_packages ADD COLUMN progress_percent_per_hour REAL DEFAULT 0.42'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE esim_packages ADD COLUMN commission_percent REAL DEFAULT 10'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec("ALTER TABLE esim_packages ADD COLUMN renewal_schedule TEXT DEFAULT '[]'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }

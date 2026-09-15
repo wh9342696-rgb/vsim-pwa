@@ -324,7 +324,7 @@ async function loadAllData() {
       AdminAPI.getAirtimePurchases(),
       AdminAPI.getAirtimeSales(),
       AdminAPI.getPackages(),
-      isSubAdmin ? Promise.resolve(null) : AdminAPI.getMerchants(),
+      (isSubAdmin && !AdminStore.admin.can_manage_merchants) ? Promise.resolve(null) : AdminAPI.getMerchants(),
       AdminAPI.getBridgeDevices(),
       AdminAPI.getBridgeEvents(),
       isSubAdmin ? Promise.resolve(null) : AdminAPI.getLogs(),
@@ -766,6 +766,7 @@ async function reviewKyc(id, action) {
 // ============================================================================
 function navigateToView(viewId) {
   const allowedSubAdminViews = new Set(['view-dashboard', 'view-users', 'view-withdrawals', 'view-airtime-purchases', 'view-airtime-sales', 'view-packages', 'view-tickets', 'view-notifications', 'view-settings']);
+  if (AdminStore.admin?.can_manage_merchants) allowedSubAdminViews.add('view-merchants');
   if (AdminStore.admin?.role === 'sub_admin' && !allowedSubAdminViews.has(viewId)) {
     viewId = 'view-dashboard';
   }
@@ -1689,6 +1690,7 @@ async function handleCreateAdminSubmit(event) {
   const email = document.getElementById('newAdminEmail').value.trim();
   const password = document.getElementById('newAdminPassword').value;
   const role = document.getElementById('newAdminRole').value || 'sub_admin';
+  const canManageMerchants = document.getElementById('newAdminCanManageMerchants')?.checked || false;
 
   if (!name || !email || !password) {
     showToast('Name, email and password are required', 'error');
@@ -1696,7 +1698,7 @@ async function handleCreateAdminSubmit(event) {
   }
 
   try {
-    await AdminAPI.createAdmin({ name, email, password, role });
+    await AdminAPI.createAdmin({ name, email, password, role, can_manage_merchants: canManageMerchants });
     closeCreateAdminModal();
     showToast('Sub-admin created successfully', 'success');
     await loadAllData();
