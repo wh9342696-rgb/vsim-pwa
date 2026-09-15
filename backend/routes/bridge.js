@@ -23,6 +23,19 @@ function createIccid() {
   return `8944${Date.now().toString().slice(-8)}${Math.floor(100000 + Math.random() * 900000)}`;
 }
 
+function parseDataValue(value) {
+  const match = String(value || '').trim().match(/([\d.]+)\s*(KB|MB|GB|TB)?/i);
+  if (!match) return null;
+  const unit = (match[2] || 'GB').toUpperCase();
+  const multipliers = { KB: 1 / 1024 / 1024, MB: 1 / 1024, GB: 1, TB: 1024 };
+  return { amount: Number(match[1]) * multipliers[unit], unit };
+}
+
+function formatDataValue(amountGb, unit) {
+  const multipliers = { KB: 1024 * 1024, MB: 1024, GB: 1, TB: 1 / 1024 };
+  return `${Number((amountGb * multipliers[unit]).toFixed(2))} ${unit}`;
+}
+
 export async function fulfillVerifiedPurchase(payment) {
   if (!payment.package_id || !payment.user_id) {
     await query(
@@ -40,12 +53,27 @@ export async function fulfillVerifiedPurchase(payment) {
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
   if (payment.target_esim_id) {
+    const targetResult = await query(
+      'SELECT data_total, data_remaining FROM user_esims WHERE id = $1 AND user_id = $2',
+      [payment.target_esim_id, payment.user_id]
+    );
+    if (!targetResult.rows.length) throw new Error('TARGET_ESIM_NOT_FOUND');
+    const target = targetResult.rows[0];
+    const existingTotal = parseDataValue(target.data_total);
+    const existingRemaining = parseDataValue(target.data_remaining);
+    const bundleData = parseDataValue(pkg.data_quota);
+    const dataUnit = existingTotal?.unit || bundleData?.unit || 'GB';
+    const bundleGb = bundleData?.amount || 0;
+    const renewedTotal = formatDataValue((existingTotal?.amount || 0) + bundleGb, dataUnit);
+    const renewedRemaining = formatDataValue((existingRemaining?.amount || 0) + bundleGb, dataUnit);
     const updateResult = await query(
       `UPDATE user_esims
        SET package_id = $1, title = $2, status = 'active', data_total = $3,
-           data_remaining = $3, daily_income = $4, activated_at = CURRENT_TIMESTAMP, expires_at = $5
-       WHERE id = $6 AND user_id = $7`,
-      [pkg.id, pkg.title, pkg.data_quota || '10 GB', pkg.income || 0, expiresAt, payment.target_esim_id, payment.user_id]
+           data_remaining = $4, daily_income = $5, progress_percent_per_hour = $6,
+           renewal_count = COALESCE(renewal_count, 0) + 1,
+           activated_at = CURRENT_TIMESTAMP, expires_at = $7
+       WHERE id = $8 AND user_id = $9`,
+      [pkg.id, pkg.title, renewedTotal, renewedRemaining, pkg.income || 0, Number(pkg.progress_percent_per_hour) || 0.42, expiresAt, payment.target_esim_id, payment.user_id]
     );
     if (!updateResult.rowCount) throw new Error('TARGET_ESIM_NOT_FOUND');
   } else {
