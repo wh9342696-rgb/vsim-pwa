@@ -189,6 +189,18 @@ function formatWorldTime(value) {
   }).format(date);
 }
 
+function formatRelativeActivityTime(value) {
+  if (!value) return 'Just now';
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
+  if (elapsedSeconds < 10) return 'Just now';
+  if (elapsedSeconds < 60) return `${elapsedSeconds}s ago`;
+  const minutes = Math.floor(elapsedSeconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
 function setupBackToTop() {
   const button = document.getElementById('adminBackToTop');
   const scrollport = document.querySelector('.admin-views-scrollport');
@@ -209,6 +221,19 @@ function startAdminRefreshCoordinator() {
     if (!document.hidden) refresh();
   });
   setInterval(refresh, 60000);
+  setInterval(refreshAdminActivity, 10000);
+}
+
+async function refreshAdminActivity() {
+  if (document.hidden || !AdminAPI.isLoggedIn() || AdminStore.admin?.role === 'sub_admin') return;
+  try {
+    const logsRes = await AdminAPI.getLogs();
+    if (logsRes?.logs) {
+      AdminStore.logs = logsRes.logs;
+      renderActivityLogsStream();
+      if (AdminStore.currentView === 'view-logs') renderFullLogs();
+    }
+  } catch (error) {}
 }
 
 function bindAdminLogin() {
@@ -249,7 +274,9 @@ async function connectAdminRealtimeUpdates() {
   const controller = new AbortController();
   window.adminRealtimeSource = controller;
   try {
-    const response = await fetch(`${AdminAPI.baseUrl}/../realtime`, {
+    const realtimeUrl = new URL(`${AdminAPI.baseUrl}/../realtime`);
+    realtimeUrl.searchParams.set('token', AdminAPI.getToken());
+    const response = await fetch(realtimeUrl, {
       headers: { Authorization: `Bearer ${AdminAPI.getToken()}` },
       signal: controller.signal
     });
@@ -1477,7 +1504,7 @@ function renderActivityLogsStream() {
         <div class="log-dot ${l.level || 'info'}"></div>
         <span style="color: var(--text-white); font-weight: 500;">${l.details}</span>
       </div>
-      <span class="log-time-ago">${l.time_ago || '-'}</span>
+      <span class="log-time-ago">${formatRelativeActivityTime(l.created_at)}</span>
     </div>
   `).join('');
 }
@@ -2149,7 +2176,7 @@ function renderFullLogs() {
           <div style="font-size: 0.7rem; color: var(--text-muted);">${l.action || 'system_event'}</div>
         </div>
       </div>
-      <span class="log-time-ago">${l.time_ago || 'Just now'}</span>
+      <span class="log-time-ago">${formatRelativeActivityTime(l.created_at)}</span>
     </div>
   `).join('');
 }
