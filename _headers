@@ -5,6 +5,10 @@
   Cache-Control: no-cache
   Service-Worker-Allowed: /
 
+/.well-known/assetlinks.json
+  Content-Type: application/json
+  Cache-Control: no-cache
+
 /*
   Cache-Control: no-cache
   X-Content-Type-Options: nosniff
