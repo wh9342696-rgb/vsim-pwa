@@ -2140,6 +2140,53 @@ html, body {
   line-height: 1.2;
 }
 
+.home-package-section-title { margin-top: 22px; }
+
+.home-package-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(148px, 1fr);
+  grid-template-columns: none;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.home-package-card {
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  color: var(--text-white);
+  cursor: pointer;
+  box-shadow: var(--card-shadow);
+}
+
+.home-package-card:active { transform: scale(0.98); }
+
+.home-package-image {
+  display: block;
+  height: 72px;
+  background-color: var(--bg-card-secondary);
+  background-position: center;
+  background-size: cover;
+}
+
+.home-package-card-body {
+  display: block;
+  padding: 9px;
+}
+
+.home-package-card-body strong,
+.home-package-card-body span { display: block; }
+.home-package-card-body strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.78rem; }
+.home-package-card-body span { margin-top: 3px; color: var(--text-gray); font-size: 0.67rem; line-height: 1.3; }
+.home-package-card-body .home-package-price { color: var(--primary-purple); font-size: 0.74rem; font-weight: 800; }
+.home-package-empty { grid-column: 1 / -1; color: var(--text-gray); font-size: 0.78rem; padding: 14px 2px; }
+
 /* Activity Items */
 .activity-stream {
   display: flex;

@@ -410,6 +410,7 @@ async function fetchBackendDataInternal() {
         renewal_schedule: p.renewal_schedule || '[]'
       }));
       applyCatalogFilters();
+      renderHomePackages(appState.packages);
     }
   } catch (err) {
     if (!appState.packages.length) renderPackages([]);
@@ -725,6 +726,7 @@ async function refreshCatalog() {
       region: p.region || 'global'
     })) : [];
     applyCatalogFilters();
+    renderHomePackages(appState.packages);
   } catch (error) {
     if (!appState.packages.length) renderPackages([]);
   }
@@ -1109,6 +1111,28 @@ function renderPackages(list) {
     `;
     container.appendChild(card);
   });
+}
+
+function renderHomePackages(packages = []) {
+  const container = document.getElementById('homePackageStrip');
+  if (!container) return;
+
+  const available = packages.slice(0, 3);
+  if (!available.length) {
+    container.innerHTML = '<div class="home-package-empty">Packages will appear here when available.</div>';
+    return;
+  }
+
+  container.innerHTML = available.map(pkg => `
+    <button type="button" class="home-package-card" onclick="selectAndOpenPackage('${String(pkg.id).replace(/'/g, '\\&#39;')}')">
+      <span class="home-package-image" style="background-image: url('${String(pkg.imageUrl || '').replace(/'/g, '\\&#39;')}')"></span>
+      <span class="home-package-card-body">
+        <strong>${pkg.country || 'Global'}</strong>
+        <span>${pkg.data || 'Data bundle'} · ${pkg.validity || 'Flexible'}</span>
+        <span class="home-package-price">UGX ${Number(pkg.price || 0).toLocaleString()}</span>
+      </span>
+    </button>
+  `).join('');
 }
 
 function applyCatalogFilters() {
