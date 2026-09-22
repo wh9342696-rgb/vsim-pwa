@@ -1000,15 +1000,21 @@ router.get('/airtime-sales', adminAuth, async (req, res) => {
 
 router.post('/airtime-sales/:id/action', adminAuth, async (req, res) => {
   try {
-    const { action } = req.body || {};
+    const { action, merchantReference, merchantAmount } = req.body || {};
     const current = await query('SELECT * FROM airtime_sale_requests WHERE id = $1', [req.params.id]);
     const request = current.rows[0];
     if (!request) return res.status(404).json({ error: 'Airtime sale not found' });
     if (request.status !== 'pending') return res.status(409).json({ error: 'Airtime sale already processed' });
     const status = action === 'reject' ? 'rejected' : action === 'approve' ? 'approved' : null;
     if (!status) return res.status(400).json({ error: 'Choose approve or reject' });
+    if (status === 'approved' && (!String(merchantReference || '').trim() || !Number.isFinite(Number(merchantAmount)) || Math.abs(Number(merchantAmount) - Number(request.airtime_amount)) > 0.01)) {
+      return res.status(400).json({ error: 'Enter the merchant transaction reference and verify the exact airtime amount' });
+    }
     const claimed = await query('UPDATE airtime_sale_requests SET status = $1, processed_by = $2, processed_at = CURRENT_TIMESTAMP WHERE id = $3 AND status = \'pending\' RETURNING id', [status, req.admin.id, request.id]);
     if (!claimed.rows.length) return res.status(409).json({ error: 'Airtime sale was already processed' });
+    if (status === 'approved') {
+      await query(`UPDATE airtime_sale_requests SET verified_transaction_reference = $1, verified_amount = $2, verified_at = CURRENT_TIMESTAMP, verified_by = $3 WHERE id = $4`, [String(merchantReference).trim(), Number(merchantAmount), req.admin.id, request.id]);
+    }
     if (status === 'approved') {
       const existingCredit = await query('SELECT id FROM wallet_transactions WHERE reference = $1 AND type = \'airtime_sell\' AND status = \'completed\'', [request.reference]);
       if (!existingCredit.rows.length) await query('UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2', [request.payout_amount, request.user_id]);
@@ -1022,15 +1028,21 @@ router.post('/airtime-sales/:id/action', adminAuth, async (req, res) => {
 
 router.post('/airtime-purchases/:id/action', adminAuth, async (req, res) => {
   try {
-    const { action } = req.body || {};
+    const { action, merchantReference, merchantAmount } = req.body || {};
     const current = await query('SELECT * FROM airtime_purchase_requests WHERE id = $1', [req.params.id]);
     const request = current.rows[0];
     if (!request) return res.status(404).json({ error: 'Airtime purchase not found' });
     if (request.status !== 'pending') return res.status(409).json({ error: 'Airtime purchase already processed' });
     const status = action === 'reject' ? 'rejected' : action === 'approve' ? 'approved' : null;
     if (!status) return res.status(400).json({ error: 'Choose approve or reject' });
+    if (status === 'approved' && (!String(merchantReference || '').trim() || !Number.isFinite(Number(merchantAmount)) || Math.abs(Number(merchantAmount) - Number(request.payment_amount)) > 0.01)) {
+      return res.status(400).json({ error: 'Enter the merchant transaction reference and verify the exact payment amount' });
+    }
     const claimed = await query('UPDATE airtime_purchase_requests SET status = $1, processed_by = $2, processed_at = CURRENT_TIMESTAMP WHERE id = $3 AND status = \'pending\' RETURNING id', [status, req.admin.id, request.id]);
     if (!claimed.rows.length) return res.status(409).json({ error: 'Airtime purchase was already processed' });
+    if (status === 'approved') {
+      await query(`UPDATE airtime_purchase_requests SET verified_transaction_reference = $1, verified_amount = $2, verified_at = CURRENT_TIMESTAMP, verified_by = $3 WHERE id = $4`, [String(merchantReference).trim(), Number(merchantAmount), req.admin.id, request.id]);
+    }
     await query('UPDATE wallet_transactions SET status = $1 WHERE user_id = $2 AND reference = $3 AND type = $4', [status, request.user_id, request.reference, 'airtime_buy']);
     res.json({ message: `Airtime purchase marked as ${status}`, request: { ...request, status } });
   } catch (err) {

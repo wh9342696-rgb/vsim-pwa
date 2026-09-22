@@ -299,6 +299,15 @@ async function initializePostgresSchema() {
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP');
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS verified_by INTEGER REFERENCES admin_users(id)');
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS admin_notes TEXT');
+  await pool.query('ALTER TABLE airtime_purchase_requests ADD COLUMN IF NOT EXISTS customer_reference TEXT');
+  await pool.query('ALTER TABLE airtime_purchase_requests ADD COLUMN IF NOT EXISTS verified_transaction_reference TEXT');
+  await pool.query('ALTER TABLE airtime_purchase_requests ADD COLUMN IF NOT EXISTS verified_amount NUMERIC(12,2)');
+  await pool.query('ALTER TABLE airtime_purchase_requests ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP');
+  await pool.query('ALTER TABLE airtime_purchase_requests ADD COLUMN IF NOT EXISTS verified_by INTEGER REFERENCES admin_users(id)');
+  await pool.query('ALTER TABLE airtime_sale_requests ADD COLUMN IF NOT EXISTS verified_transaction_reference TEXT');
+  await pool.query('ALTER TABLE airtime_sale_requests ADD COLUMN IF NOT EXISTS verified_amount NUMERIC(12,2)');
+  await pool.query('ALTER TABLE airtime_sale_requests ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP');
+  await pool.query('ALTER TABLE airtime_sale_requests ADD COLUMN IF NOT EXISTS verified_by INTEGER REFERENCES admin_users(id)');
   await pool.query(`
     DELETE FROM user_esims older
     USING user_esims newer

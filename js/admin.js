@@ -398,17 +398,20 @@ async function loadAllData() {
 function renderAirtimePurchases() {
   const tbody = document.getElementById('airtimePurchasesTbody');
   if (!tbody) return;
-  tbody.innerHTML = (AdminStore.airtimePurchases || []).map(request => `<tr><td>${request.id}</td><td>${request.phone}</td><td>${request.network}</td><td>UGX ${Number(request.airtime_amount).toLocaleString()}</td><td>UGX ${Number(request.payment_amount).toLocaleString()}</td><td>${request.merchant_number}</td><td style="font-family:monospace; font-size:0.75rem;">${request.customer_reference || '-'}</td><td><span class="status-pill ${request.status}">${request.status}</span></td><td>${request.status === 'pending' ? `<button class="btn-action-small pay" onclick="processAirtimePurchase(${request.id}, 'approve')">Approve</button> <button class="btn-action-small" onclick="processAirtimePurchase(${request.id}, 'reject')">Reject</button>` : 'Processed'}</td></tr>`).join('') || '<tr><td colspan="9">No airtime purchase requests</td></tr>';
+  tbody.innerHTML = (AdminStore.airtimePurchases || []).map(request => `<tr><td>${request.id}</td><td>${request.phone}</td><td>${request.network}</td><td>UGX ${Number(request.airtime_amount).toLocaleString()}</td><td>UGX ${Number(request.payment_amount).toLocaleString()}</td><td>${request.merchant_number}</td><td style="font-family:monospace; font-size:0.75rem;">${request.customer_reference || '-'}</td>${request.status === 'pending' ? `<td><div class="deposit-verification-fields"><input id="airtimePurchaseRef-${request.id}" class="deposit-verification-input" type="text" placeholder="Merchant SMS ref" aria-label="Merchant SMS reference for airtime purchase ${request.id}"><input id="airtimePurchaseAmount-${request.id}" class="deposit-verification-input" type="number" min="0" step="0.01" placeholder="Amount" aria-label="Verified merchant amount for airtime purchase ${request.id}"></div></td>` : `<td>${request.verified_transaction_reference || '-'}</td>`}<td><span class="status-pill ${request.status}">${request.status}</span></td><td>${request.status === 'pending' ? `<button class="btn-action-small pay" onclick="processAirtimePurchase(${request.id}, 'approve')">Approve</button> <button class="btn-action-small" onclick="processAirtimePurchase(${request.id}, 'reject')">Reject</button>` : 'Processed'}</td></tr>`).join('') || '<tr><td colspan="10">No airtime purchase requests</td></tr>';
 }
 
 function renderAirtimeSales() {
   const tbody = document.getElementById('airtimeSalesTbody');
   if (!tbody) return;
-  tbody.innerHTML = (AdminStore.airtimeSales || []).map(request => `<tr><td>${request.id}</td><td>${request.payout_phone}</td><td>${request.network}</td><td>UGX ${Number(request.airtime_amount).toLocaleString()}</td><td>UGX ${Number(request.payout_amount).toLocaleString()}</td><td>${request.merchant_number}</td><td><span class="status-pill ${request.status}">${request.status}</span></td><td>${request.status === 'pending' ? `<button class="btn-action-small pay" onclick="processAirtimeSale(${request.id}, 'approve')">Approve payout</button> <button class="btn-action-small" onclick="processAirtimeSale(${request.id}, 'reject')">Reject</button>` : 'Processed'}</td></tr>`).join('') || '<tr><td colspan="8">No airtime sale requests</td></tr>';
+  tbody.innerHTML = (AdminStore.airtimeSales || []).map(request => `<tr><td>${request.id}</td><td>${request.payout_phone}</td><td>${request.network}</td><td>UGX ${Number(request.airtime_amount).toLocaleString()}</td><td>UGX ${Number(request.payout_amount).toLocaleString()}</td><td>${request.merchant_number}</td>${request.status === 'pending' ? `<td><div class="deposit-verification-fields"><input id="airtimeSaleRef-${request.id}" class="deposit-verification-input" type="text" placeholder="Merchant SMS ref" aria-label="Merchant SMS reference for airtime sale ${request.id}"><input id="airtimeSaleAmount-${request.id}" class="deposit-verification-input" type="number" min="0" step="0.01" placeholder="Airtime amount" aria-label="Verified merchant airtime amount for sale ${request.id}"></div></td>` : `<td>${request.verified_transaction_reference || '-'}</td>`}<td><span class="status-pill ${request.status}">${request.status}</span></td><td>${request.status === 'pending' ? `<button class="btn-action-small pay" onclick="processAirtimeSale(${request.id}, 'approve')">Approve payout</button> <button class="btn-action-small" onclick="processAirtimeSale(${request.id}, 'reject')">Reject</button>` : 'Processed'}</td></tr>`).join('') || '<tr><td colspan="9">No airtime sale requests</td></tr>';
 }
 
 async function processAirtimeSale(id, action) {
-  try { await AdminAPI.processAirtimeSale(id, action); showToast(`Airtime sale ${action}d`, 'success'); await loadAllData(); } catch (error) { showToast(error.message || 'Could not update airtime sale', 'error'); }
+  const merchantReference = document.getElementById(`airtimeSaleRef-${id}`)?.value.trim() || '';
+  const merchantAmount = document.getElementById(`airtimeSaleAmount-${id}`)?.value.trim() || '';
+  if (action === 'approve' && (!merchantReference || !merchantAmount)) return showToast('Enter the merchant reference and verified airtime amount first.', 'error');
+  try { await AdminAPI.processAirtimeSale(id, action, merchantReference, merchantAmount); showToast(`Airtime sale ${action}d`, 'success'); await loadAllData(); } catch (error) { showToast(error.message || 'Could not update airtime sale', 'error'); }
 }
 
 function renderReferralReport() {
@@ -473,7 +476,10 @@ function renderTransactionLedger() {
 window.filterAdminTransactions = renderTransactionLedger;
 
 async function processAirtimePurchase(id, action) {
-  try { await AdminAPI.processAirtimePurchase(id, action); showToast(`Airtime request ${action}d`, 'success'); await loadAllData(); } catch (error) { showToast(error.message || 'Could not update airtime request', 'error'); }
+  const merchantReference = document.getElementById(`airtimePurchaseRef-${id}`)?.value.trim() || '';
+  const merchantAmount = document.getElementById(`airtimePurchaseAmount-${id}`)?.value.trim() || '';
+  if (action === 'approve' && (!merchantReference || !merchantAmount)) return showToast('Enter the merchant reference and verified payment amount first.', 'error');
+  try { await AdminAPI.processAirtimePurchase(id, action, merchantReference, merchantAmount); showToast(`Airtime request ${action}d`, 'success'); await loadAllData(); } catch (error) { showToast(error.message || 'Could not update airtime request', 'error'); }
 }
 
 // ============================================================================
