@@ -2150,7 +2150,11 @@ html, body {
   gap: 10px;
   overflow-x: auto;
   padding-bottom: 2px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
 }
+
+.home-package-strip::-webkit-scrollbar { display: none; }
 
 .home-package-card {
   min-width: 0;
@@ -2163,6 +2167,7 @@ html, body {
   color: var(--text-white);
   cursor: pointer;
   box-shadow: var(--card-shadow);
+  scroll-snap-align: start;
 }
 
 .home-package-card:active { transform: scale(0.98); }

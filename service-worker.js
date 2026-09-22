@@ -1,11 +1,11 @@
 
-const CACHE = 'vsim-v22-home-packages';
+const CACHE = 'vsim-v23-home-packages-scroll';
 const ASSETS = [
   './',
   './index.html',
-  './css/app.css?v=20260922-home-packages',
+  './css/app.css?v=20260922-home-packages-scroll',
   './js/api.js?v=20260922-auth-errors',
-  './js/app.js?v=20260922-home-packages',
+  './js/app.js?v=20260922-home-packages-scroll',
   './js/pwa-register.js?v=20260906-kyc-mobile',
   './icons/vsim.svg',
   './manifest.json'

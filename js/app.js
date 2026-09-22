@@ -52,6 +52,7 @@ const appState = {
   targetEsimId: null,
   targetEsimIccid: null,
   renewalPackages: [],
+  homePackageScrollTimer: null,
   kyc: { tier: 'Tier 0 Unverified', limits: { daily: 100000, monthly: 500000 }, submissions: [] },
   selectedPayMethod: 'momo'
 };
@@ -1117,7 +1118,12 @@ function renderHomePackages(packages = []) {
   const container = document.getElementById('homePackageStrip');
   if (!container) return;
 
-  const available = packages.slice(0, 3);
+  if (appState.homePackageScrollTimer) {
+    clearInterval(appState.homePackageScrollTimer);
+    appState.homePackageScrollTimer = null;
+  }
+
+  const available = packages;
   if (!available.length) {
     container.innerHTML = '<div class="home-package-empty">Packages will appear here when available.</div>';
     return;
@@ -1133,6 +1139,23 @@ function renderHomePackages(packages = []) {
       </span>
     </button>
   `).join('');
+
+  const startAutoScroll = () => {
+    if (container.scrollWidth <= container.clientWidth) return;
+    appState.homePackageScrollTimer = setInterval(() => {
+      const firstCard = container.querySelector('.home-package-card');
+      const cardStep = (firstCard?.offsetWidth || 148) + 10;
+      const atEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 2;
+      container.scrollTo({ left: atEnd ? 0 : container.scrollLeft + cardStep, behavior: 'smooth' });
+    }, 3500);
+  };
+
+  container.onmouseenter = () => {
+    if (appState.homePackageScrollTimer) clearInterval(appState.homePackageScrollTimer);
+    appState.homePackageScrollTimer = null;
+  };
+  container.onmouseleave = startAutoScroll;
+  startAutoScroll();
 }
 
 function applyCatalogFilters() {
