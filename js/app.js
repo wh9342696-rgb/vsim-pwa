@@ -28,7 +28,8 @@ const appState = {
     emailAlerts: false,
     promoAlerts: true,
     activeFilter: 'all',
-    items: []
+    items: [],
+    initialized: false
   },
   selectedPkg: {
     id: '',
@@ -486,7 +487,16 @@ async function fetchBackendDataInternal() {
     }
 
     if (notificationsRes.status === 'fulfilled' && notificationsRes.value?.notifications) {
-      appState.notifications.items = notificationsRes.value.notifications;
+      const incomingNotifications = notificationsRes.value.notifications;
+      if (appState.notifications.initialized) {
+        const previousIds = new Set(appState.notifications.items.map(item => String(item.id)));
+        incomingNotifications
+          .filter(item => Number(item.is_read || 0) === 0 && !previousIds.has(String(item.id)))
+          .slice(0, 3)
+          .forEach(showNewNotificationPrompt);
+      }
+      appState.notifications.items = incomingNotifications;
+      appState.notifications.initialized = true;
       renderNotificationList(appState.notifications.items);
       const unread = Number(notificationsRes.value.unreadCount || 0);
       const unreadCount = document.getElementById('notifUnreadCount');
@@ -507,6 +517,7 @@ async function fetchBackendDataInternal() {
       const esimData = await api.fetchMyESIMs();
       if (esimData && esimData.esims) {
         appState.myESIMs = normalizeMyESIMs(esimData.esims);
+        renderEsimEarningReminder();
         renderMyESIMs(appState.myESIMs, appState.myEsimFilter);
         updateProfileUI();
       }
@@ -517,6 +528,44 @@ async function fetchBackendDataInternal() {
     renderPackages([]);
     renderMyESIMs([], 'active');
   }
+}
+
+function showNewNotificationPrompt(notification) {
+  const hub = document.getElementById('toastHub');
+  if (!hub || !notification) return;
+  const toast = document.createElement('div');
+  toast.className = 'toast-item notification-toast-item';
+  const title = document.createElement('strong');
+  title.textContent = notification.title || 'New VSIM notification';
+  const message = document.createElement('span');
+  message.textContent = notification.message || 'Tap to view your latest update.';
+  toast.append(title, message);
+  toast.addEventListener('click', () => {
+    toast.remove();
+    navigateTo('screen-notifications');
+  });
+  hub.appendChild(toast);
+  setTimeout(() => {
+    if (!toast.isConnected) return;
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-10px)';
+    toast.style.transition = 'all 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 6000);
+}
+
+function renderEsimEarningReminder() {
+  const reminder = document.getElementById('esimEarningReminder');
+  if (!reminder) return;
+  const hasActiveEsim = appState.myESIMs.some(esim => String(esim.status || '').toLowerCase() === 'active');
+  const dismissed = localStorage.getItem('vsim_esim_earning_reminder_dismissed') === 'true';
+  reminder.hidden = hasActiveEsim || dismissed;
+}
+
+function dismissEsimEarningReminder(event) {
+  event?.stopPropagation();
+  localStorage.setItem('vsim_esim_earning_reminder_dismissed', 'true');
+  renderEsimEarningReminder();
 }
 
 function renderSupportContacts() {

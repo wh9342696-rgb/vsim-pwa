@@ -1,11 +1,11 @@
 
-const CACHE = 'vsim-v20-auth-errors';
+const CACHE = 'vsim-v21-notification-reminder';
 const ASSETS = [
   './',
   './index.html',
-  './css/app.css?v=20260907-manual-payments',
+  './css/app.css?v=20260922-notification-reminder',
   './js/api.js?v=20260922-auth-errors',
-  './js/app.js?v=20260922-auth-errors',
+  './js/app.js?v=20260922-notification-reminder',
   './js/pwa-register.js?v=20260906-kyc-mobile',
   './icons/vsim.svg',
   './manifest.json'

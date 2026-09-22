@@ -3713,6 +3713,84 @@ html, body {
   animation: slideDownToast 0.25s ease forwards;
 }
 
+.notification-toast-item {
+  pointer-events: auto;
+  cursor: pointer;
+  border-color: var(--accent-green, #10b981);
+}
+
+.notification-toast-item strong,
+.notification-toast-item span {
+  display: block;
+}
+
+.notification-toast-item strong {
+  font-size: 0.82rem;
+  margin-bottom: 2px;
+}
+
+.notification-toast-item span {
+  color: var(--text-gray);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.esim-earning-reminder {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 18px;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(139, 92, 246, 0.12));
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 14px;
+}
+
+.esim-earning-reminder[hidden] { display: none; }
+
+.esim-earning-reminder-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--accent-green, #10b981);
+  color: #06120e;
+  font-weight: 900;
+}
+
+.esim-earning-reminder-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.esim-earning-reminder-copy strong,
+.esim-earning-reminder-copy span { display: block; }
+.esim-earning-reminder-copy strong { color: var(--text-white); font-size: 0.82rem; }
+.esim-earning-reminder-copy span { color: var(--text-gray); font-size: 0.72rem; line-height: 1.35; margin-top: 2px; }
+
+.esim-earning-reminder-action {
+  border: 0;
+  border-radius: 9px;
+  padding: 8px 10px;
+  background: var(--accent-green, #10b981);
+  color: #06120e;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.esim-earning-reminder-close {
+  align-self: flex-start;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
 @keyframes slideDownToast {
   from { opacity: 0; transform: translateY(-12px); }
   to { opacity: 1; transform: translateY(0); }

@@ -17,7 +17,7 @@
   <link rel="icon" href="icons/vsim-192.png" type="image/png" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="VSIM" />
-  <link rel="stylesheet" href="css/app.css?v=20260906-kyc-mobile" />
+  <link rel="stylesheet" href="css/app.css?v=20260922-notification-reminder" />
   <script src="js/pwa-register.js?v=20260906-kyc-mobile" defer></script>
 </head>
 <body data-service-worker="/service-worker.js">
@@ -572,6 +572,16 @@
               </div>
             </div>
             <div class="badge-green-pill">+12%</div>
+          </div>
+
+          <div class="esim-earning-reminder" id="esimEarningReminder" hidden>
+            <div class="esim-earning-reminder-icon">V</div>
+            <div class="esim-earning-reminder-copy">
+              <strong>Start earning with an eSIM</strong>
+              <span>Buy an eSIM to activate daily income on your account.</span>
+            </div>
+            <button type="button" class="esim-earning-reminder-action" onclick="navigateTo('screen-esims')">Buy eSIM</button>
+            <button type="button" class="esim-earning-reminder-close" onclick="dismissEsimEarningReminder(event)" aria-label="Dismiss eSIM reminder">X</button>
           </div>
 
           <!-- Quick Actions Grid -->
@@ -2371,6 +2381,6 @@
   </div>
 
   <script src="js/api.js?v=20260922-auth-errors"></script>
-  <script src="js/app.js?v=20260922-auth-errors"></script>
+  <script src="js/app.js?v=20260922-notification-reminder"></script>
 </body>
 </html>
