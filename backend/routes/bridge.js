@@ -173,44 +173,6 @@ router.post('/events', bridgeAuth, async (req, res) => {
     const eventId = result.rows[0]?.id;
     let status = 'REVIEW_REQUIRED';
     if (event.transactionType === 'deposit') {
-      const requestedReference = String(event.metadata.orderReference || event.metadata.reference || '').trim();
-      const pending = await query(
-        `SELECT * FROM payment_requests
-         WHERE status IN ('pending', 'PAYMENT_AWAITING_VERIFICATION')
-           AND amount = $1
-           AND (merchant = $2 OR network = $3)
-           AND ($4 = '' OR reference = $4)
-         ORDER BY created_at ASC LIMIT 2`,
-        [event.amount, event.merchantId, event.provider, requestedReference]
-      );
-      const senderPhone = String(event.metadata.senderPhone || event.metadata.senderNumber || '').replace(/\s+/g, '');
-      const candidates = pending.rows.filter(payment => !senderPhone || !payment.phone || payment.phone === 'Not provided' || String(payment.phone).replace(/\s+/g, '') === senderPhone);
-      if (pending.rows.length === 1 && candidates.length === 1) {
-        const deposit = pending.rows[0];
-        const fulfillment = await fulfillVerifiedPurchase(deposit);
-        const txReference = `BRIDGE-${event.provider}-${event.transactionReference}`;
-        const duplicateCredit = await query('SELECT id FROM wallet_transactions WHERE reference = $1', [txReference]);
-        if (!duplicateCredit.rows.length && deposit.user_id && !fulfillment.fulfilled) {
-          await query('UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2', [event.amount, deposit.user_id]);
-          await query(
-            `INSERT INTO wallet_transactions (user_id, type, title, amount, reference, status)
-             VALUES ($1, 'topup', $2, $3, $4, 'completed')`,
-            [deposit.user_id, `Bridge deposit (${event.provider})`, event.amount, txReference]
-          );
-          await query(
-            `INSERT INTO notifications (user_id, title, message, category)
-             VALUES ($1, $2, $3, $4)`,
-            [deposit.user_id, 'Deposit Confirmed', `UGX ${event.amount.toLocaleString()} was verified by the ${event.provider} bridge.`, 'wallet']
-          );
-          status = 'MATCHED';
-        } else if (fulfillment.fulfilled) {
-          status = 'MATCHED';
-        }
-      } else if (pending.rows.length > 1) {
-        status = 'REVIEW_REQUIRED';
-      } else {
-        status = 'UNMATCHED';
-      }
       await query('UPDATE bridge_events SET status = $1 WHERE id = $2', [status, eventId]);
     }
     res.status(201).json({ acknowledged: true, duplicate: false, eventId, status });
