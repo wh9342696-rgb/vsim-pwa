@@ -1,9 +1,27 @@
 import express from 'express';
+import { z } from 'zod';
 import { query } from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { validateBody } from '../middleware/validate.js';
 
 const router = express.Router();
 const merchantCursors = new Map();
+
+const confirmDepositSchema = z.object({
+  amount: z.union([z.number(), z.string()]),
+  phone: z.string().optional().nullable(),
+  momoNumber: z.string().optional().nullable(),
+  merchantId: z.union([z.number(), z.string()]).optional().nullable(),
+  merchantCode: z.string().optional().nullable(),
+  network: z.string().optional().nullable(),
+  reference: z.string().optional().nullable(),
+  customerReference: z.string().trim().min(1, 'Mobile Money transaction ID is required').max(160),
+  packageId: z.string().optional().nullable(),
+  targetEsimId: z.union([z.number(), z.string()]).optional().nullable(),
+  targetEsimIccid: z.string().optional().nullable(),
+  renewal: z.boolean().optional(),
+  type: z.string().optional()
+});
 
 function parseDataValue(value) {
   const match = String(value || '').trim().match(/([\d.]+)\s*(KB|MB|GB|TB)?/i);
@@ -112,9 +130,9 @@ router.get('/assigned-merchant', async (req, res) => {
 });
 
 // 2. User Submits Deposit / Purchase Confirmation to Merchant
-router.post('/confirm-deposit', async (req, res) => {
+router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, res) => {
   try {
-    const { amount, phone, momoNumber, merchantId, merchantCode, network, reference, packageId, targetEsimId, targetEsimIccid, renewal = false, type = 'esim_purchase' } = req.body;
+    const { amount, phone, momoNumber, merchantId, merchantCode, network, reference, customerReference, packageId, targetEsimId, targetEsimIccid, renewal = false, type = 'esim_purchase' } = req.body;
     const num = parseFloat(amount);
     const isRenewal = Boolean(renewal || targetEsimId || targetEsimIccid);
 
@@ -200,8 +218,8 @@ router.post('/confirm-deposit', async (req, res) => {
     await query(
       `INSERT INTO payment_requests (user_id, phone, amount, merchant, network, reference, customer_reference, package_id, target_esim_id, status, payment_status, order_status, provisioning_status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PAYMENT_AWAITING_VERIFICATION', 'PAYMENT_AWAITING_VERIFICATION', $10, $11)`,
-      [userId, payerPhone, num, mCode, network || 'MTN', txRef, packageId || null, resolvedTargetEsimId,
-        customerReference || null, packageId ? 'PENDING_PAYMENT' : 'NOT_APPLICABLE', packageId ? 'NOT_STARTED' : 'NOT_APPLICABLE']
+      [userId, payerPhone, num, mCode, network || 'MTN', txRef, customerReference || null, packageId || null,
+        resolvedTargetEsimId, packageId ? 'PENDING_PAYMENT' : 'NOT_APPLICABLE', packageId ? 'NOT_STARTED' : 'NOT_APPLICABLE']
     );
 
     // Merchant statistics track reported volume only and do not imply payment success.

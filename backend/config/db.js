@@ -240,6 +240,16 @@ async function initializePostgresSchema() {
       is_read INTEGER DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
+    `CREATE TABLE IF NOT EXISTS admin_notifications (
+      id SERIAL PRIMARY KEY,
+      admin_id INTEGER REFERENCES admin_users(id) ON DELETE CASCADE,
+      type TEXT,
+      title TEXT NOT NULL,
+      message TEXT,
+      reference TEXT,
+      status TEXT DEFAULT 'pending',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`,
     `CREATE TABLE IF NOT EXISTS system_settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
