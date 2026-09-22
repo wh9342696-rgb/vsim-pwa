@@ -15,13 +15,14 @@ router.get('/config', async (req, res) => {
   try {
     const result = await query(
       `SELECT key, value FROM system_settings
-       WHERE key IN ('support_email', 'support_whatsapp', 'support_telegram', 'support_call_center')`
+      WHERE key IN ('support_email', 'support_whatsapp', 'support_whatsapp_group', 'support_telegram', 'support_call_center')`
     );
     const settings = Object.fromEntries(result.rows.map(row => [row.key, row.value]));
     res.json({
       support: {
         email: settings.support_email || '',
         whatsapp: settings.support_whatsapp || '',
+        whatsappGroup: settings.support_whatsapp_group || '',
         telegram: settings.support_telegram || '',
         callCenter: settings.support_call_center || ''
       }

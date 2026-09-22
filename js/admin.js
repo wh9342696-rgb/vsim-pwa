@@ -1118,7 +1118,7 @@ function renderSettingsView() {
   const form = document.getElementById('adminSettingsForm');
   if (!form) return;
   const settings = AdminStore.settings || {};
-  ['platform_name', 'support_email', 'support_whatsapp', 'support_telegram', 'support_call_center', 'withdrawal_fee', 'withdrawal_settlement_fee', 'withdrawal_expiry_fee', 'withdrawal_monthly_fee', 'withdrawal_settlement_days', 'airtime_buy_markup_percent', 'airtime_sell_payout_percent', 'maintenance_mode', 'esim_progress_enabled', 'esim_progress_percent_per_hour'].forEach(key => {
+  ['platform_name', 'support_email', 'support_whatsapp', 'support_whatsapp_group', 'support_telegram', 'support_call_center', 'withdrawal_fee', 'withdrawal_settlement_fee', 'withdrawal_expiry_fee', 'withdrawal_monthly_fee', 'withdrawal_settlement_days', 'airtime_buy_markup_percent', 'airtime_sell_payout_percent', 'maintenance_mode', 'esim_progress_enabled', 'esim_progress_percent_per_hour'].forEach(key => {
     const input = form.elements[key];
     if (input && settings[key] !== undefined) input.value = settings[key];
   });
@@ -1322,6 +1322,7 @@ async function handleSettingsSubmit(event) {
         platform_name: payload.platform_name,
         support_email: payload.support_email,
         support_whatsapp: payload.support_whatsapp,
+        support_whatsapp_group: payload.support_whatsapp_group,
         support_telegram: payload.support_telegram,
         support_call_center: payload.support_call_center,
         airtime_buy_markup_percent: payload.airtime_buy_markup_percent,
@@ -1342,6 +1343,7 @@ async function handleSettingsSubmit(event) {
         platform_name: payload.platform_name,
         support_email: payload.support_email,
         support_whatsapp: payload.support_whatsapp,
+        support_whatsapp_group: payload.support_whatsapp_group,
         support_telegram: payload.support_telegram,
         support_call_center: payload.support_call_center,
         withdrawal_fee: payload.withdrawal_fee,

@@ -60,6 +60,7 @@ const appState = {
 const supportContacts = {
   email: '',
   whatsapp: '',
+  whatsappGroup: '',
   telegram: '',
   callCenter: ''
 };
@@ -578,6 +579,13 @@ function renderSupportContacts() {
       valueId: 'supportWhatsAppValue',
       emptyText: 'Currently unavailable',
       getHref: value => `https://wa.me/${value.replace(/\D/g, '')}?text=Hello%20VSIM%20Support`
+    },
+    {
+      key: 'whatsappGroup',
+      cardId: 'supportWhatsAppGroupCard',
+      valueId: 'supportWhatsAppGroupValue',
+      emptyText: 'Currently unavailable',
+      getHref: value => value.startsWith('http') ? value : `https://${value}`
     },
     {
       key: 'telegram',
