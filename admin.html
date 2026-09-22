@@ -1849,34 +1849,6 @@
           <div class="package-modal-heading">
             <div class="package-modal-icon">UGX</div>
             <div>
-
-            <div class="modal-overlay-backdrop" id="airtimeNumberModalOverlay">
-              <div class="modal-dialog-box package-modal-dialog">
-                <div class="modal-dialog-header">
-                  <div class="package-modal-heading">
-                    <div class="package-modal-icon">☎</div>
-                    <div>
-                      <span class="modal-dialog-title">Provision Airtime Number</span>
-                      <span class="package-modal-subtitle" id="airtimeNumberMerchantName">Merchant</span>
-                    </div>
-                  </div>
-                  <button type="button" class="modal-close-btn" onclick="closeAirtimeNumberModal()">✕</button>
-                </div>
-                <form id="airtimeNumberForm" onsubmit="saveAirtimeNumber(event)">
-                  <div class="modal-dialog-body">
-                    <input type="hidden" id="airtimeNumberMerchantId" />
-                    <div class="modal-form-group">
-                      <label for="airtimeNumberInput">Phone number that receives customer airtime</label>
-                      <input id="airtimeNumberInput" class="modal-form-input" type="tel" placeholder="e.g. +256 784 567 890" required />
-                    </div>
-                  </div>
-                  <div class="modal-dialog-footer">
-                    <button type="button" class="btn-secondary" onclick="closeAirtimeNumberModal()">Cancel</button>
-                    <button type="submit" class="btn-primary">Save Airtime Number</button>
-                  </div>
-                </form>
-              </div>
-            </div>
               <span class="modal-dialog-title">Edit renewal pricing</span>
               <span class="package-modal-subtitle" id="renewalPricingPackageTitle">Bundle renewal schedule</span>
             </div>
@@ -1896,6 +1868,34 @@
               <button type="button" class="btn-secondary" onclick="closeRenewalPricingModal()">Cancel</button>
               <button type="submit" class="btn-primary">Save renewal prices</button>
             </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-overlay-backdrop" id="airtimeNumberModalOverlay">
+      <div class="modal-dialog-box package-modal-dialog">
+        <div class="modal-dialog-header">
+          <div class="package-modal-heading">
+            <div class="package-modal-icon">TEL</div>
+            <div>
+              <span class="modal-dialog-title">Enter Airtime Number</span>
+              <span class="package-modal-subtitle" id="airtimeNumberMerchantName">Merchant</span>
+            </div>
+          </div>
+          <button type="button" class="modal-close-btn" onclick="closeAirtimeNumberModal()">X</button>
+        </div>
+        <form id="airtimeNumberForm" onsubmit="saveAirtimeNumber(event)">
+          <div class="modal-dialog-body">
+            <input type="hidden" id="airtimeNumberMerchantId" />
+            <div class="modal-form-group">
+              <label for="airtimeNumberInput">Phone number</label>
+              <input id="airtimeNumberInput" class="modal-form-input" type="tel" inputmode="tel" placeholder="e.g. +256 784 567 890" required />
+            </div>
+          </div>
+          <div class="modal-dialog-footer">
+            <button type="button" class="btn-secondary" onclick="closeAirtimeNumberModal()">Cancel</button>
+            <button type="submit" class="btn-primary">Save Number</button>
           </div>
         </form>
       </div>
