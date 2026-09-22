@@ -645,8 +645,8 @@ async function handleMerchantSubmit(event) {
   const status = document.getElementById('merchantStatusInput').value;
   const instructions = document.getElementById('merchantInstructionsInput').value.trim();
 
-  if (!name || !merchant_code) {
-    showToast('Merchant name and code are required', 'error');
+  if (!name || !merchant_code || !phone) {
+    showToast('Merchant name, code, and airtime receiving phone number are required', 'error');
     return;
   }
 

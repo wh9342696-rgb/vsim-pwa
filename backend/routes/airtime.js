@@ -148,13 +148,13 @@ router.post('/request-sell', authenticateToken, async (req, res) => {
        ORDER BY CASE WHEN UPPER(network) = $1 THEN 0 ELSE 1 END, priority ASC, total_transactions ASC, id ASC LIMIT 1`,
       [normalizedNetwork]
     );
-    if (!merchantRes.rows.length) return res.status(503).json({ error: `No active ${normalizedNetwork} airtime receiving number is available` });
+    if (!merchantRes.rows.length || !String(merchantRes.rows[0].phone || '').trim()) return res.status(503).json({ error: `No active ${normalizedNetwork} airtime receiving number is configured` });
     const payoutPercent = await getAirtimeRate('airtime_sell_payout_percent', 90);
     const payoutAmount = Math.round(airtimeAmount * payoutPercent / 100);
     const merchant = merchantRes.rows[0];
-    const merchantNumber = merchant.merchant_code;
+    const merchantNumber = String(merchant.phone).trim();
     const reference = await createUniqueReference('AIR-SELL', async candidate => (await query('SELECT id FROM airtime_sale_requests WHERE reference = $1', [candidate])).rows.length > 0);
-    res.json({ airtimeAmount, payoutAmount, merchantNumber, reference, payoutPhone: recipientPhone, network: normalizedNetwork, merchant: { id: merchant.id, name: merchant.name, merchant_code: merchant.merchant_code, network: merchant.network || normalizedNetwork, instructions: merchant.instructions } });
+    res.json({ airtimeAmount, payoutAmount, merchantNumber, reference, payoutPhone: recipientPhone, network: normalizedNetwork, merchant: { id: merchant.id, name: merchant.name, phone: merchantNumber, network: merchant.network || normalizedNetwork, instructions: merchant.instructions } });
   } catch (err) {
     res.status(500).json({ error: 'Could not prepare airtime sale' });
   }
