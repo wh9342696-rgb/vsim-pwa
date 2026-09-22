@@ -21,14 +21,14 @@
       "sizes": "390x844",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "VSIM home screen on mobile"
+      "label": "VSIM app launch screen on mobile"
     },
     {
       "src": "/screenshots/vsim-desktop-home.png",
       "sizes": "1365x768",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "VSIM home screen on desktop"
+      "label": "VSIM app launch screen on desktop"
     }
   ],
   "shortcuts": [
