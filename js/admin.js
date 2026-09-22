@@ -582,6 +582,7 @@ function filterMerchantsTable() {
         <td>
           <div style="display: flex; gap: 6px;">
             <button class="btn-action-small view" onclick="openMerchantModal(${m.id})">Edit</button>
+            <button class="btn-action-small pay" onclick="openAirtimeNumberModal(${m.id})">${m.phone ? 'Edit Airtime Number' : 'Provision Airtime Number'}</button>
             <button class="btn-action-small ${m.status === 'active' ? 'pending' : 'pay'}" onclick="toggleMerchantStatus(${m.id}, '${m.status === 'active' ? 'inactive' : 'active'}')">
               ${m.status === 'active' ? 'Disable' : 'Enable'}
             </button>
@@ -633,6 +634,34 @@ function closeMerchantModal() {
   if (form) form.reset();
 }
 
+function openAirtimeNumberModal(merchantId) {
+  const merchant = (AdminStore.merchants || []).find(item => item.id === merchantId);
+  if (!merchant) return;
+  document.getElementById('airtimeNumberMerchantId').value = merchant.id;
+  document.getElementById('airtimeNumberMerchantName').textContent = merchant.name || 'Merchant';
+  document.getElementById('airtimeNumberInput').value = merchant.phone || '';
+  document.getElementById('airtimeNumberModalOverlay').classList.add('open');
+}
+
+function closeAirtimeNumberModal() {
+  document.getElementById('airtimeNumberModalOverlay')?.classList.remove('open');
+}
+
+async function saveAirtimeNumber(event) {
+  event.preventDefault();
+  const merchantId = document.getElementById('airtimeNumberMerchantId').value;
+  const phone = document.getElementById('airtimeNumberInput').value.trim();
+  if (!phone) return;
+  try {
+    await AdminAPI.updateMerchant(merchantId, { phone });
+    closeAirtimeNumberModal();
+    showToast('Airtime receiving number saved', 'success');
+    await loadAllData();
+  } catch (error) {
+    showToast(error.message || 'Could not save Airtime number', 'error');
+  }
+}
+
 async function handleMerchantSubmit(event) {
   event.preventDefault();
   const editId = document.getElementById('merchantEditId')?.value;
@@ -645,8 +674,8 @@ async function handleMerchantSubmit(event) {
   const status = document.getElementById('merchantStatusInput').value;
   const instructions = document.getElementById('merchantInstructionsInput').value.trim();
 
-  if (!name || !merchant_code || !phone) {
-    showToast('Merchant name, code, and airtime receiving phone number are required', 'error');
+  if (!name || !merchant_code) {
+    showToast('Merchant name and code are required', 'error');
     return;
   }
 

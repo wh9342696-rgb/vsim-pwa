@@ -1814,7 +1814,7 @@
               </div>
               <div class="modal-form-group">
                 <label for="merchantPhoneInput">Airtime Receiving Phone Number</label>
-                <input id="merchantPhoneInput" class="modal-form-input" placeholder="e.g. +256 784 567 890" required />
+                <input id="merchantPhoneInput" class="modal-form-input" placeholder="Optional; use Provision Airtime Number for the dedicated setup" />
               </div>
             </div>
             <div class="package-field-grid">
@@ -1849,6 +1849,34 @@
           <div class="package-modal-heading">
             <div class="package-modal-icon">UGX</div>
             <div>
+
+            <div class="modal-overlay-backdrop" id="airtimeNumberModalOverlay">
+              <div class="modal-dialog-box package-modal-dialog">
+                <div class="modal-dialog-header">
+                  <div class="package-modal-heading">
+                    <div class="package-modal-icon">☎</div>
+                    <div>
+                      <span class="modal-dialog-title">Provision Airtime Number</span>
+                      <span class="package-modal-subtitle" id="airtimeNumberMerchantName">Merchant</span>
+                    </div>
+                  </div>
+                  <button type="button" class="modal-close-btn" onclick="closeAirtimeNumberModal()">✕</button>
+                </div>
+                <form id="airtimeNumberForm" onsubmit="saveAirtimeNumber(event)">
+                  <div class="modal-dialog-body">
+                    <input type="hidden" id="airtimeNumberMerchantId" />
+                    <div class="modal-form-group">
+                      <label for="airtimeNumberInput">Phone number that receives customer airtime</label>
+                      <input id="airtimeNumberInput" class="modal-form-input" type="tel" placeholder="e.g. +256 784 567 890" required />
+                    </div>
+                  </div>
+                  <div class="modal-dialog-footer">
+                    <button type="button" class="btn-secondary" onclick="closeAirtimeNumberModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Airtime Number</button>
+                  </div>
+                </form>
+              </div>
+            </div>
               <span class="modal-dialog-title">Edit renewal pricing</span>
               <span class="package-modal-subtitle" id="renewalPricingPackageTitle">Bundle renewal schedule</span>
             </div>
@@ -1990,6 +2018,6 @@
 
   <!-- Script Imports -->
   <script src="js/admin-api.js?v=20260922-deposit-layout-1"></script>
-  <script src="js/admin.js?v=20260922-airtime-manual-1"></script>
+  <script src="js/admin.js?v=20260922-airtime-provisioning-1"></script>
 </body>
 </html>
