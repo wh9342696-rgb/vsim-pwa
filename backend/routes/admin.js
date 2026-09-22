@@ -895,6 +895,17 @@ router.post('/deposits/:id/action', adminAuth, ensureSuperAdmin, async (req, res
       return res.status(409).json({ error: 'Merchant amount does not match the payment request' });
     }
 
+    await query(
+      `UPDATE payment_requests
+       SET verified_transaction_reference = $1,
+           verified_amount = $2,
+           verified_at = CURRENT_TIMESTAMP,
+           verified_by = $3,
+           admin_notes = $4
+       WHERE id = $5`,
+      [merchantReference, merchantAmount, req.admin.id, String(req.body?.reason || '').trim() || null, payment.id]
+    );
+
     try {
       const fulfillment = await fulfillVerifiedPurchase(payment);
       if (!fulfillment.fulfilled && payment.user_id) {

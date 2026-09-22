@@ -1761,6 +1761,8 @@ function renderDepositsTable() {
       <td style="font-weight: 700;">${d.id}</td>
       <td style="font-weight: 600;">${d.user_name || d.phone || 'Unknown'}<div style="font-size:0.72rem;color:var(--text-muted);">${d.user_phone || d.phone || ''}</div></td>
       <td>${d.target_esim_id ? 'eSIM renewal' : d.package_id ? 'eSIM purchase' : 'Wallet payment'}</td>
+      <td>${d.network || '-'}</td>
+      <td style="font-family: monospace; font-size: 0.74rem;">${d.merchant || '-'}</td>
       <td style="font-weight: 800; color: var(--text-white);">UGX ${Number(d.amount || 0).toLocaleString()}</td>
       <td style="font-family: monospace; font-size: 0.74rem;">${reference || '-'}</td>
       <td style="font-family: monospace; font-size: 0.74rem; color: var(--text-muted);">${merchantRef || (merchantProvider ? `${merchantProvider} event` : '-')}</td>
