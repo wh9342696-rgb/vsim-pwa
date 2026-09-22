@@ -142,6 +142,12 @@ function getPostAuthScreen() {
   return target || 'screen-home';
 }
 
+function initPwaShortcutHandler() {
+  const target = new URLSearchParams(window.location.search).get('screen');
+  if (target === 'wallet') pendingProtectedScreen = 'screen-wallet';
+  if (target === 'esims') pendingProtectedScreen = 'screen-esims';
+}
+
 window.addEventListener('vsim:session-expired', () => {
   authStatus = 'signed-out';
   pendingProtectedScreen = null;
@@ -2856,6 +2862,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
   setupUserPwaInstall();
   registerUserServiceWorker();
+  initPwaShortcutHandler();
   initReferralHandler();
   renderPackages(appState.packages);
   renderMyESIMs(appState.myESIMs, 'active');
@@ -2873,7 +2880,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function registerUserServiceWorker() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+    navigator.serviceWorker.register('./sw.js', { scope: '/', updateViaCache: 'none' }).catch(() => {});
   }
 }
 

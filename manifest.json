@@ -1,6 +1,8 @@
 {
   "name": "VSIM - Global eSIM Companion",
   "short_name": "VSIM",
+  "lang": "en",
+  "dir": "ltr",
   "id": "/",
   "start_url": "/",
   "scope": "/",
@@ -13,6 +15,39 @@
   "background_color": "#080B11",
   "theme_color": "#080B11",
   "orientation": "portrait",
+  "screenshots": [
+    {
+      "src": "/screenshots/vsim-mobile-home.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "VSIM home screen on mobile"
+    },
+    {
+      "src": "/screenshots/vsim-desktop-home.png",
+      "sizes": "1365x768",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "VSIM home screen on desktop"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Wallet",
+      "short_name": "Wallet",
+      "description": "Open your VSIM wallet",
+      "url": "/?screen=wallet",
+      "icons": [{ "src": "/icons/vsim-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "eSIM packages",
+      "short_name": "eSIMs",
+      "description": "Browse available eSIM packages",
+      "url": "/?screen=esims",
+      "icons": [{ "src": "/icons/vsim-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
+  "iarc_rating_id": "pending",
   "icons": [
     { "src": "/icons/vsim-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/vsim-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
