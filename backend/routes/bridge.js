@@ -79,9 +79,9 @@ export async function fulfillVerifiedPurchase(payment) {
     let iccid = createIccid();
     while ((await query('SELECT id FROM user_esims WHERE iccid = $1', [iccid])).rows.length) iccid = createIccid();
     await query(
-      `INSERT INTO user_esims (user_id, package_id, title, country, iccid, status, data_total, data_remaining, daily_income, expires_at)
-      VALUES ($1, $2, $3, $4, $5, 'active', $6, $6, $7, $8)`,
-      [payment.user_id, pkg.id, pkg.title, pkg.country || 'Global', iccid, pkg.data_quota || '10 GB', pkg.income || 0, expiresAt]
+      `INSERT INTO user_esims (user_id, package_id, title, country, iccid, status, data_total, data_remaining, daily_income, progress_percent_per_hour, expires_at)
+      VALUES ($1, $2, $3, $4, $5, 'active', $6, $6, $7, $8, $9)`,
+      [payment.user_id, pkg.id, pkg.title, pkg.country || 'Global', iccid, pkg.data_quota || '10 GB', pkg.income || 0, Number(pkg.progress_percent_per_hour) || 0.42, expiresAt]
     );
   }
 
