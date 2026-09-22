@@ -1810,13 +1810,15 @@ function renderWithdrawalsTable() {
     <tr>
       <td style="font-weight: 700;">${w.id}</td>
       <td style="font-weight: 600;">${w.phone}</td>
-      <td style="font-weight: 800; color: var(--text-white);">UGX ${w.amount.toLocaleString()}</td>
+      <td style="font-weight: 800; color: var(--text-white);">UGX ${w.requested_amount.toLocaleString()}</td>
+      <td>UGX ${w.fee_amount.toLocaleString()}</td>
+      <td style="font-weight: 800; color: var(--text-white);">UGX ${w.net_amount.toLocaleString()}</td>
       <td>${w.method || 'Mobile Money'}</td>
       <td style="color: var(--text-muted);">${w.time || 'Just now'}</td>
       <td><span class="status-pill ${w.status}">${w.status}</span></td>
       <td>
         ${w.status === 'pending' && AdminStore.admin?.role === 'super_admin'
-          ? `<button class="btn-action-small pay" onclick="openPayoutModal(${w.id}, '${w.phone}', ${w.amount})">Dispatch Withdrawal</button>`
+          ? `<button class="btn-action-small pay" onclick="openPayoutModal(${w.id}, '${w.phone}', ${w.net_amount})">Dispatch Withdrawal</button>`
           : w.status === 'pending'
             ? `<span style="font-size: 0.75rem; color: var(--text-muted);">Awaiting main admin</span>`
             : `<span style="font-size: 0.75rem; color: var(--text-muted);">Processed</span>`
