@@ -572,14 +572,21 @@ function renderEsimEarningReminder() {
   const reminder = document.getElementById('esimEarningReminder');
   if (!reminder) return;
   const hasActiveEsim = appState.myESIMs.some(esim => String(esim.status || '').toLowerCase() === 'active');
-  const dismissed = localStorage.getItem('vsim_esim_earning_reminder_dismissed') === 'true';
-  reminder.hidden = hasActiveEsim || dismissed;
+  reminder.hidden = hasActiveEsim;
+  if (!hasActiveEsim) {
+    reminder.style.display = 'flex';
+  }
 }
 
 function dismissEsimEarningReminder(event) {
   event?.stopPropagation();
-  localStorage.setItem('vsim_esim_earning_reminder_dismissed', 'true');
-  renderEsimEarningReminder();
+  const reminder = document.getElementById('esimEarningReminder');
+  if (!reminder) return;
+  const hasActiveEsim = appState.myESIMs.some(esim => String(esim.status || '').toLowerCase() === 'active');
+  if (!hasActiveEsim) {
+    reminder.hidden = false;
+    reminder.style.display = 'flex';
+  }
 }
 
 function renderSupportContacts() {
