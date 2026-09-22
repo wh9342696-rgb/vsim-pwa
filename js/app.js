@@ -1792,6 +1792,47 @@ function chooseWithdrawNetwork(network, card) {
   syncWithdrawNetwork();
 }
 
+function showWithdrawalEsimRequirement() {
+  return new Promise((resolve) => {
+    const existing = document.getElementById('customDialogOverlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'customDialogOverlay';
+    overlay.className = 'modal-overlay-backdrop open';
+    overlay.innerHTML = `
+      <div class="modal-dialog-box custom-confirm-dialog" onclick="event.stopPropagation()">
+        <div class="modal-dialog-header">
+          <div class="custom-dialog-title-wrap">
+            <span class="custom-dialog-icon primary">V</span>
+            <span class="modal-dialog-title">Activate an eSIM first</span>
+          </div>
+          <button class="modal-close-btn" type="button" aria-label="Close">X</button>
+        </div>
+        <div class="modal-dialog-body">
+          <p class="custom-dialog-message">Your UGX 5,000 joining bonus can be withdrawn after you have an active eSIM. Use your wallet balance to purchase an eSIM, then come back to withdraw.</p>
+        </div>
+        <div class="modal-dialog-footer">
+          <button type="button" class="btn-modal-cancel btn-cancel">Maybe later</button>
+          <button type="button" class="btn-modal-confirm btn-confirm">Buy an eSIM</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+    const cleanup = (shouldBuy) => {
+      overlay.classList.remove('open');
+      setTimeout(() => overlay.remove(), 200);
+      resolve(shouldBuy);
+    };
+
+    overlay.querySelector('.modal-close-btn').onclick = () => cleanup(false);
+    overlay.querySelector('.btn-cancel').onclick = () => cleanup(false);
+    overlay.onclick = (event) => { if (event.target === overlay) cleanup(false); };
+    overlay.querySelector('.btn-confirm').onclick = () => cleanup(true);
+  });
+}
+
 async function execTopUp() {
   const amount = parseFloat(document.getElementById('topupVal').value) || 0;
   const selectedPackage = appState.selectedPkg?.id ? appState.selectedPkg : null;
@@ -1860,6 +1901,14 @@ async function execWithdraw() {
     showToast('Please log in to withdraw from your wallet', 'error');
     return;
   }
+
+  const hasActiveEsim = appState.myESIMs.some(esim => String(esim.status || '').toLowerCase() === 'active');
+  if (!hasActiveEsim) {
+    const shouldBuyEsim = await showWithdrawalEsimRequirement();
+    if (shouldBuyEsim) navigateTo('screen-esims');
+    return;
+  }
+
   try {
     const quote = await window.VSIM_API.quoteWithdrawal(amount);
     const hasReminder = Boolean(quote?.message && String(quote.message).trim());

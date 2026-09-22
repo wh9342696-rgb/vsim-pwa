@@ -35,6 +35,7 @@ export async function getWithdrawalQuote(userId, requestedAmount, { requireBalan
   const settings = Object.fromEntries(settingsRes.rows.map(row => [row.key, row.value]));
   const balance = Number(userRes.rows[0]?.wallet_balance || 0);
   if (requireBalance && amount > balance) throw new Error('Insufficient wallet balance');
+  if (!esimRes.rows.length) throw new Error('You need an active eSIM before you can withdraw. Purchase an eSIM and try again.');
   const kycTier = String(userRes.rows[0]?.kyc_tier || 'Tier 0 Unverified');
   if (amount >= KYC_WITHDRAWAL_THRESHOLD && /^tier 0\b/i.test(kycTier)) {
     throw new Error('Please verify your identity before withdrawing UGX 100,000 or more.');
