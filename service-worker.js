@@ -1,11 +1,11 @@
 
-const CACHE = 'vsim-v25-support-chat';
+const CACHE = 'vsim-v26-esim-reminder';
 const ASSETS = [
   './',
   './index.html',
-  './css/app.css?v=20260922-support-chat',
-  './js/api.js?v=20260922-support-chat',
-  './js/app.js?v=20260922-support-chat',
+  './css/app.css?v=20260923-esim-reminder',
+  './js/api.js?v=20260923-esim-reminder',
+  './js/app.js?v=20260923-esim-reminder',
   './js/pwa-register.js?v=20260906-kyc-mobile',
   './icons/vsim.svg',
   './manifest.json'
