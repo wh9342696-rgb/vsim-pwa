@@ -193,7 +193,7 @@ async function connectRealtimeUpdates() {
     if (controller.signal.aborted) return;
   } finally {
     clearTimeout(refreshTimer);
-    if (!controller.signal.aborted) {
+    if (!controller.signal.aborted && window.VSIM_API?.getToken()) {
       setTimeout(connectRealtimeUpdates, 3000);
     }
   }

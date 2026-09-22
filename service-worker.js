@@ -1,10 +1,11 @@
 
-const CACHE = 'vsim-v19-withdrawal-faq-top';
+const CACHE = 'vsim-v20-auth-errors';
 const ASSETS = [
   './',
   './index.html',
   './css/app.css?v=20260907-manual-payments',
-  './js/app.js?v=20260912-withdrawal-terms',
+  './js/api.js?v=20260922-auth-errors',
+  './js/app.js?v=20260922-auth-errors',
   './js/pwa-register.js?v=20260906-kyc-mobile',
   './icons/vsim.svg',
   './manifest.json'

@@ -56,13 +56,26 @@ const VSIM_API = {
         headers
       });
 
-      const data = await response.json();
+      const responseText = await response.text();
+      let data = {};
+      if (responseText.trim()) {
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          data = {};
+        }
+      }
       if (!response.ok) {
         if ([401, 403].includes(response.status)) {
           this.setToken('');
           window.dispatchEvent(new CustomEvent('vsim:session-expired'));
         }
-        const error = new Error(data.error || 'Server request failed');
+        const fallbackMessage = endpoint === '/auth/login'
+          ? 'Invalid phone or password'
+          : response.status === 401 || response.status === 403
+            ? 'Your session has expired. Please log in again.'
+            : `Server request failed (${response.status})`;
+        const error = new Error(data.error || fallbackMessage);
         error.status = response.status;
         throw error;
       }
