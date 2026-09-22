@@ -1096,6 +1096,29 @@ html, body {
   white-space: nowrap;
 }
 
+.deposit-verification-fields {
+  display: grid;
+  gap: 5px;
+  min-width: 150px;
+}
+
+.deposit-verification-input {
+  width: 150px;
+  min-height: 30px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--bg-input);
+  color: var(--text-white);
+  font: inherit;
+  font-size: 0.72rem;
+}
+
+.deposit-verification-input:focus {
+  outline: 2px solid var(--accent-purple);
+  outline-offset: 1px;
+}
+
 #view-tickets .admin-data-table td {
   vertical-align: middle;
   padding-top: 14px;

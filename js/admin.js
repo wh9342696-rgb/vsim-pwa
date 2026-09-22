@@ -1769,6 +1769,9 @@ function renderDepositsTable() {
       <td><span class="status-pill ${matchClass}">${matchStatus}</span></td>
       <td style="color: var(--text-muted);">${d.time || 'Just now'}</td>
       <td><span class="status-pill ${d.status}">${d.status}</span></td>
+      ${['pending', 'payment_awaiting_verification'].includes(String(d.status).toLowerCase())
+        ? `<td><div class="deposit-verification-fields"><input id="merchantReference-${d.id}" class="deposit-verification-input" type="text" placeholder="Merchant SMS ref" aria-label="Merchant SMS reference for payment ${d.id}"><input id="merchantAmount-${d.id}" class="deposit-verification-input" type="number" min="0" step="0.01" placeholder="Amount" aria-label="Verified merchant amount for payment ${d.id}"></div></td>`
+        : `<td><span style="font-size:0.75rem;color:var(--text-muted);">${d.verified_transaction_reference || '-'}</span></td>`}
       <td>${['pending', 'payment_awaiting_verification'].includes(String(d.status).toLowerCase())
         ? `<button class="btn-action-small pay" onclick="processAdminDeposit(${d.id}, 'approve')">Approve</button> <button class="btn-action-small" onclick="processAdminDeposit(${d.id}, 'reject')">Reject</button>`
         : `<span style="font-size:0.75rem;color:var(--text-muted);">${d.reviewed_by ? `Admin #${d.reviewed_by}` : 'Processed'}</span>`}</td>
@@ -1777,14 +1780,14 @@ function renderDepositsTable() {
 }
 
 async function processAdminDeposit(id, action) {
-  let merchantReference = '';
-  let merchantAmount = '';
+  let merchantReference = document.getElementById(`merchantReference-${id}`)?.value.trim() || '';
+  let merchantAmount = document.getElementById(`merchantAmount-${id}`)?.value.trim() || '';
   if (action === 'approve') {
     if (!window.confirm('Check the merchant SMS/account before approving. The merchant reference and amount must match the customer payment.')) return;
-    merchantReference = (window.prompt('Enter the merchant SMS transaction reference you verified:') || '').trim();
-    if (!merchantReference) return;
-    merchantAmount = (window.prompt('Enter the amount shown in the merchant payment record:', '') || '').trim();
-    if (!merchantAmount) return;
+    if (!merchantReference || !merchantAmount) {
+      showToast('Enter the merchant SMS reference and verified amount first.', 'error');
+      return;
+    }
   }
   const reason = action === 'reject' ? (window.prompt('Reason for rejecting this payment?') || '').trim() : '';
   if (action === 'reject' && !reason) return;
