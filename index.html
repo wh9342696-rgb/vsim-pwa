@@ -17,6 +17,15 @@
   <link rel="icon" href="icons/vsim-192.png" type="image/png" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="VSIM" />
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
+          .then(registration => console.log('SW registered successfully:', registration.scope))
+          .catch(error => console.error('SW registration failed:', error));
+      });
+    }
+  </script>
   <link rel="stylesheet" href="css/app.css?v=20260922-support-chat" />
   <script src="js/pwa-register.js?v=20260906-kyc-mobile" defer></script>
 </head>
