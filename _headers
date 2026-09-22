@@ -1,6 +1,10 @@
 /service-worker.js
   Cache-Control: no-cache
 
+/sw.js
+  Cache-Control: no-cache
+  Service-Worker-Allowed: /
+
 /*
   Cache-Control: no-cache
   X-Content-Type-Options: nosniff
