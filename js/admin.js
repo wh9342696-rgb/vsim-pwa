@@ -1760,6 +1760,9 @@ function renderDepositsTable() {
     return `<tr>
       <td style="font-weight: 700;">${d.id}</td>
       <td style="font-weight: 600;">${d.user_name || d.phone || 'Unknown'}<div style="font-size:0.72rem;color:var(--text-muted);">${d.user_phone || d.phone || ''}</div></td>
+      ${['pending', 'payment_awaiting_verification'].includes(String(d.status).toLowerCase())
+        ? `<td><div class="deposit-verification-fields"><input id="merchantReference-${d.id}" class="deposit-verification-input" type="text" placeholder="Merchant SMS ref" aria-label="Merchant SMS reference for payment ${d.id}"><input id="merchantAmount-${d.id}" class="deposit-verification-input" type="number" min="0" step="0.01" placeholder="Amount" aria-label="Verified merchant amount for payment ${d.id}"></div></td>`
+        : `<td><span style="font-size:0.75rem;color:var(--text-muted);">${d.verified_transaction_reference || '-'}</span></td>`}
       <td>${d.target_esim_id ? 'eSIM renewal' : d.package_id ? 'eSIM purchase' : 'Wallet payment'}</td>
       <td>${d.network || '-'}</td>
       <td style="font-family: monospace; font-size: 0.74rem;">${d.merchant || '-'}</td>
@@ -1769,9 +1772,6 @@ function renderDepositsTable() {
       <td><span class="status-pill ${matchClass}">${matchStatus}</span></td>
       <td style="color: var(--text-muted);">${d.time || 'Just now'}</td>
       <td><span class="status-pill ${d.status}">${d.status}</span></td>
-      ${['pending', 'payment_awaiting_verification'].includes(String(d.status).toLowerCase())
-        ? `<td><div class="deposit-verification-fields"><input id="merchantReference-${d.id}" class="deposit-verification-input" type="text" placeholder="Merchant SMS ref" aria-label="Merchant SMS reference for payment ${d.id}"><input id="merchantAmount-${d.id}" class="deposit-verification-input" type="number" min="0" step="0.01" placeholder="Amount" aria-label="Verified merchant amount for payment ${d.id}"></div></td>`
-        : `<td><span style="font-size:0.75rem;color:var(--text-muted);">${d.verified_transaction_reference || '-'}</span></td>`}
       <td>${['pending', 'payment_awaiting_verification'].includes(String(d.status).toLowerCase())
         ? `<button class="btn-action-small pay" onclick="processAdminDeposit(${d.id}, 'approve')">Approve</button> <button class="btn-action-small" onclick="processAdminDeposit(${d.id}, 'reject')">Reject</button>`
         : `<span style="font-size:0.75rem;color:var(--text-muted);">${d.reviewed_by ? `Admin #${d.reviewed_by}` : 'Processed'}</span>`}</td>
