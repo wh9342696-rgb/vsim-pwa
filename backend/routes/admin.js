@@ -803,29 +803,29 @@ router.get('/deposits', adminAuth, ensureSuperAdmin, async (req, res) => {
       COALESCE((
         SELECT be.transaction_reference
         FROM bridge_events be
-        WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE(p.reference, ''))
+        WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE(p.customer_reference, ''))
         ORDER BY be.received_at DESC
         LIMIT 1
       ), '') AS merchant_reference,
       COALESCE((
         SELECT be.provider
         FROM bridge_events be
-        WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE(p.reference, ''))
+        WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE(p.customer_reference, ''))
         ORDER BY be.received_at DESC
         LIMIT 1
       ), '') AS merchant_provider,
       COALESCE((
         SELECT be.status
         FROM bridge_events be
-        WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE(p.reference, ''))
+        WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE(p.customer_reference, ''))
         ORDER BY be.received_at DESC
         LIMIT 1
       ), '') AS merchant_event_status,
       CASE
-        WHEN COALESCE(TRIM(p.reference), '') = '' THEN 'UNMATCHED'
+        WHEN COALESCE(TRIM(p.customer_reference), '') = '' THEN 'UNMATCHED'
         WHEN EXISTS (
           SELECT 1 FROM bridge_events be
-          WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE(p.reference, ''))
+          WHERE LOWER(COALESCE(be.transaction_reference, '')) = LOWER(COALESCE(p.customer_reference, ''))
         ) THEN 'MATCHED'
         ELSE 'UNMATCHED'
       END AS reference_match

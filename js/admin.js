@@ -1752,7 +1752,7 @@ function renderDepositsTable() {
   if (!tbody) return;
 
   tbody.innerHTML = AdminStore.deposits.map(d => {
-    const reference = String(d.reference || d.customer_reference || '').trim();
+    const reference = String(d.customer_reference || '').trim();
     const merchantRef = String(d.merchant_reference || '').trim();
     const matchStatus = String(d.reference_match || (merchantRef && reference && merchantRef === reference ? 'MATCHED' : 'UNMATCHED')).toUpperCase();
     const matchClass = matchStatus === 'MATCHED' ? 'active' : 'pending';
