@@ -38,13 +38,26 @@ const AdminAPI = (() => {
     } catch (error) {
       throw new Error(`Network error while contacting ${endpoint}. Check your connection and try again.`);
     }
-    const data = await response.json().catch(() => ({}));
+    const responseText = await response.text();
+    let data = {};
+    if (responseText.trim()) {
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        data = {};
+      }
+    }
     if (!response.ok) {
       if (response.status === 401) {
         setToken('');
         window.dispatchEvent(new CustomEvent('vsim:admin-session-expired'));
       }
-      throw new Error(data.error || `Request failed (${response.status})`);
+      const fallbackMessage = endpoint === '/login'
+        ? 'Invalid admin email or password'
+        : response.status === 401
+          ? 'Your admin session has expired. Please sign in again.'
+          : `Request failed (${response.status})`;
+      throw new Error(data.error || fallbackMessage);
     }
     return data;
   }
