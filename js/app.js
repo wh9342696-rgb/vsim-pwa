@@ -74,8 +74,12 @@ const withdrawalNetworkPrefixes = {
 
 const authScreens = ['screen-splash', 'screen-onboarding', 'screen-login', 'screen-signup', 'screen-reset-password'];
 const ESIM_REFRESH_INTERVAL_MS = 30000;
+const ESIM_REMINDER_INTERVAL_MS = 4 * 60 * 60 * 1000;
+const ESIM_REMINDER_DAY_START_HOUR = 8;
+const ESIM_REMINDER_DAY_END_HOUR = 21;
 const ESIM_PROGRESS_TICK_MS = 1000;
 let onboardingStep = 0;
+let esimReminderDismissedUntil = 0;
 const onboardingSlides = [
   {
     eyebrow: 'YOUR CONNECTION, EVERYWHERE',
@@ -536,7 +540,7 @@ async function fetchBackendDataInternal() {
         updateProfileUI();
       }
     } catch (e) {
-      // Ignore eSIM fetch errors when the user has no active lines
+      renderEsimEarningReminder();
     }
   } catch (e) {
     renderPackages([]);
@@ -572,21 +576,16 @@ function renderEsimEarningReminder() {
   const reminder = document.getElementById('esimEarningReminder');
   if (!reminder) return;
   const hasActiveEsim = appState.myESIMs.some(esim => String(esim.status || '').toLowerCase() === 'active');
-  reminder.hidden = hasActiveEsim;
-  if (!hasActiveEsim) {
-    reminder.style.display = 'flex';
-  }
+  const currentHour = new Date().getHours();
+  const isDaytime = currentHour >= ESIM_REMINDER_DAY_START_HOUR && currentHour < ESIM_REMINDER_DAY_END_HOUR;
+  const isDismissed = Date.now() < esimReminderDismissedUntil;
+  reminder.hidden = hasActiveEsim || !isDaytime || isDismissed;
 }
 
 function dismissEsimEarningReminder(event) {
   event?.stopPropagation();
-  const reminder = document.getElementById('esimEarningReminder');
-  if (!reminder) return;
-  const hasActiveEsim = appState.myESIMs.some(esim => String(esim.status || '').toLowerCase() === 'active');
-  if (!hasActiveEsim) {
-    reminder.hidden = false;
-    reminder.style.display = 'flex';
-  }
+  esimReminderDismissedUntil = Date.now() + ESIM_REMINDER_INTERVAL_MS;
+  renderEsimEarningReminder();
 }
 
 function renderSupportContacts() {
@@ -657,6 +656,8 @@ function startUserRefreshCoordinator() {
     if (!document.hidden) refresh();
   });
   setInterval(refresh, ESIM_REFRESH_INTERVAL_MS);
+  setInterval(renderEsimEarningReminder, 60000);
+  renderEsimEarningReminder();
 }
 
 function renderKycStatus() {
