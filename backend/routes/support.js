@@ -39,6 +39,7 @@ router.post('/tickets', authenticateToken, async (req, res) => {
     if (!subject || !message || message.length < 10 || String(subject).length > 160) {
       return res.status(400).json({ error: 'Add a subject and at least 10 characters describing the issue' });
     }
+
     const user = await query('SELECT name, phone FROM users WHERE id = $1', [req.user.id]);
     const result = await query(
       `INSERT INTO support_tickets (user_id, name, phone, subject, priority, status)
@@ -50,9 +51,48 @@ router.post('/tickets', authenticateToken, async (req, res) => {
        VALUES ($1, 'user', $2, $3)`,
       [result.rows[0].id, req.user.id, message]
     );
+    emitDataChanged('support', { type: 'support', ticketId: result.rows[0].id, audience: [{ type: 'user', id: req.user.id }, { type: 'admin_role', role: 'super_admin' }] });
     res.status(201).json({ message: 'Support ticket sent to the admin team', ticket: result.rows[0] });
   } catch (err) {
     res.status(500).json({ error: 'Failed to send support ticket' });
+  }
+});
+
+router.get('/tickets', authenticateToken, async (req, res) => {
+  try {
+    const result = await query('SELECT * FROM support_tickets WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50', [req.user.id]);
+    res.json({ tickets: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load support tickets' });
+  }
+});
+
+router.get('/tickets/:ticketId/messages', authenticateToken, async (req, res) => {
+  try {
+    const ticket = await query('SELECT * FROM support_tickets WHERE id = $1 AND user_id = $2', [req.params.ticketId, req.user.id]);
+    if (!ticket.rows[0]) return res.status(404).json({ error: 'Support ticket not found' });
+    const messages = await query('SELECT * FROM support_messages WHERE ticket_id = $1 ORDER BY created_at ASC, id ASC', [req.params.ticketId]);
+    res.json({ ticket: ticket.rows[0], messages: messages.rows });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load support conversation' });
+  }
+});
+
+router.post('/tickets/:ticketId/messages', authenticateToken, async (req, res) => {
+  try {
+    const body = readMessage(req.body?.body);
+    if (!body) return res.status(400).json({ error: 'Message is required' });
+    const ticket = await query("SELECT id, status FROM support_tickets WHERE id = $1 AND user_id = $2 AND status NOT IN ('closed', 'resolved')", [req.params.ticketId, req.user.id]);
+    if (!ticket.rows[0]) return res.status(404).json({ error: 'Support ticket is unavailable' });
+    const result = await query(
+      `INSERT INTO support_messages (ticket_id, sender_type, sender_id, body) VALUES ($1, 'user', $2, $3) RETURNING *`,
+      [req.params.ticketId, req.user.id, body]
+    );
+    await query("UPDATE support_tickets SET status = 'open' WHERE id = $1", [req.params.ticketId]);
+    emitDataChanged('support', { type: 'support', ticketId: req.params.ticketId, audience: [{ type: 'user', id: req.user.id }, { type: 'admin_role', role: 'super_admin' }] });
+    res.status(201).json({ message: result.rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: 'Could not send support message' });
   }
 });
 

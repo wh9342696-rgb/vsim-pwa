@@ -1,11 +1,11 @@
 
-const CACHE = 'vsim-v24-whatsapp-group';
+const CACHE = 'vsim-v25-support-chat';
 const ASSETS = [
   './',
   './index.html',
-  './css/app.css?v=20260922-whatsapp-group',
-  './js/api.js?v=20260922-auth-errors',
-  './js/app.js?v=20260922-whatsapp-group',
+  './css/app.css?v=20260922-support-chat',
+  './js/api.js?v=20260922-support-chat',
+  './js/app.js?v=20260922-support-chat',
   './js/pwa-register.js?v=20260906-kyc-mobile',
   './icons/vsim.svg',
   './manifest.json'

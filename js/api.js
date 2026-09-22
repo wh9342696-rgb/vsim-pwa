@@ -278,6 +278,18 @@ const VSIM_API = {
     return await this.request('/support/tickets', { method: 'POST', body: JSON.stringify({ subject, message, priority }) });
   },
 
+  async fetchSupportTickets() {
+    return await this.request('/support/tickets');
+  },
+
+  async fetchSupportTicketMessages(ticketId) {
+    return await this.request(`/support/tickets/${ticketId}/messages`);
+  },
+
+  async sendSupportTicketMessage(ticketId, body) {
+    return await this.request(`/support/tickets/${ticketId}/messages`, { method: 'POST', body: JSON.stringify({ body }) });
+  },
+
   async startLiveSupport(message = 'I need help') {
     return await this.request('/support/live/start', { method: 'POST', body: JSON.stringify({ message }) });
   },

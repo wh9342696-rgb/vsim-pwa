@@ -2192,6 +2192,49 @@ html, body {
 .home-package-card-body .home-package-price { color: var(--primary-purple); font-size: 0.74rem; font-weight: 800; }
 .home-package-empty { grid-column: 1 / -1; color: var(--text-gray); font-size: 0.78rem; padding: 14px 2px; }
 
+.support-ticket-inbox {
+  margin-top: 20px;
+}
+
+.support-ticket-inbox-title {
+  margin-bottom: 10px;
+  color: var(--text-white);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.support-ticket-card {
+  margin-bottom: 10px;
+  padding: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+}
+
+.support-ticket-card-head,
+.support-ticket-reply-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.support-ticket-card-head { justify-content: space-between; }
+.support-ticket-card-head strong { color: var(--text-white); font-size: 0.82rem; }
+.support-ticket-card-head span { color: var(--primary-purple); font-size: 0.68rem; text-transform: capitalize; }
+.support-ticket-card-meta { margin-top: 4px; color: var(--text-muted); font-size: 0.68rem; }
+.support-ticket-messages { margin: 10px 0; }
+.support-ticket-message { display: flex; flex-direction: column; gap: 3px; max-width: 92%; margin-top: 7px; padding: 8px 10px; border-radius: 10px; font-size: 0.76rem; line-height: 1.4; }
+.support-ticket-message.from-user { margin-left: auto; background: rgba(139, 92, 246, 0.13); }
+.support-ticket-message.from-support { background: rgba(16, 185, 129, 0.12); }
+.support-ticket-message strong { color: var(--text-white); font-size: 0.68rem; }
+.support-ticket-message span { color: var(--text-gray); white-space: pre-wrap; }
+.support-ticket-message small { color: var(--text-muted); font-size: 0.62rem; }
+.support-ticket-reply-form { align-items: stretch; }
+.support-ticket-reply-form .form-input-field { min-width: 0; flex: 1; margin: 0; }
+.support-ticket-reply-form .btn-secondary { white-space: nowrap; }
+.support-ticket-empty,
+.support-ticket-closed { color: var(--text-muted); font-size: 0.74rem; line-height: 1.4; }
+
 /* Activity Items */
 .activity-stream {
   display: flex;

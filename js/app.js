@@ -44,6 +44,7 @@ const appState = {
     region: ''
   },
   packages: [],
+  supportTickets: [],
   catalogRegion: 'all',
   catalogSearch: '',
   myESIMs: [],
@@ -172,7 +173,9 @@ async function connectRealtimeUpdates() {
   window.vsimRealtimeSource = controller;
   let refreshTimer = null;
   try {
-    const response = await fetch(`${window.VSIM_API.baseUrl}/realtime`, {
+    const realtimeUrl = new URL(`${window.VSIM_API.baseUrl}/realtime`);
+    realtimeUrl.searchParams.set('token', window.VSIM_API.getToken());
+    const response = await fetch(realtimeUrl, {
       headers: { Authorization: `Bearer ${window.VSIM_API.getToken()}` },
       signal: controller.signal
     });
@@ -506,6 +509,14 @@ async function fetchBackendDataInternal() {
       if (unreadCount) unreadCount.textContent = String(unread);
       const totalCount = document.getElementById('notifTotalCount');
       if (totalCount) totalCount.textContent = String(notificationsRes.value.notifications.length || 0);
+    }
+
+    try {
+      const supportTicketsRes = await api.fetchSupportTickets();
+      appState.supportTickets = supportTicketsRes?.tickets || [];
+      renderSupportTickets(appState.supportTickets);
+    } catch (error) {
+      renderSupportTickets([]);
     }
 
     if (transactionsRes.status === 'fulfilled' && transactionsRes.value?.transactions) {
@@ -2464,8 +2475,68 @@ async function submitSupportTicket(event) {
   try {
     const result = await window.VSIM_API.createSupportTicket(form.elements.subject.value.trim(), form.elements.message.value.trim(), form.elements.priority.value);
     form.reset();
+    await refreshSupportTickets();
     showToast(result.message || 'Support ticket sent to the admin team', 'success');
   } catch (error) { showToast(error.message || 'Could not send support ticket', 'error'); }
+}
+
+async function refreshSupportTickets() {
+  try {
+    const result = await window.VSIM_API.fetchSupportTickets();
+    appState.supportTickets = result?.tickets || [];
+    renderSupportTickets(appState.supportTickets);
+  } catch (error) {}
+}
+
+async function renderSupportTickets(tickets = []) {
+  const container = document.getElementById('supportTicketList');
+  if (!container) return;
+  if (!tickets.length) {
+    container.innerHTML = '<div class="support-ticket-empty">Your submitted tickets and staff replies will appear here.</div>';
+    return;
+  }
+  container.innerHTML = tickets.map(ticket => `
+    <article class="support-ticket-card" data-ticket-id="${ticket.id}">
+      <div class="support-ticket-card-head">
+        <strong>${escapeDialogHtml(ticket.subject || 'Support request')}</strong>
+        <span>${escapeDialogHtml(ticket.status || 'open')}</span>
+      </div>
+      <div class="support-ticket-card-meta">${ticket.created_at ? new Date(ticket.created_at).toLocaleString() : 'Recently'} · ${escapeDialogHtml(ticket.priority || 'Medium')}</div>
+      <div class="support-ticket-messages" id="supportTicketMessages-${ticket.id}">Loading conversation...</div>
+      ${!['closed', 'resolved'].includes(String(ticket.status || '').toLowerCase()) ? `<form class="support-ticket-reply-form" onsubmit="replyToSupportTicket(event, ${ticket.id})"><input name="body" class="form-input-field" placeholder="Reply to support" required maxlength="2000" /><button class="btn-secondary" type="submit">Send reply</button></form>` : '<div class="support-ticket-closed">This ticket is closed.</div>'}
+    </article>
+  `).join('');
+
+  await Promise.all(tickets.map(ticket => loadSupportTicketMessages(ticket.id)));
+}
+
+async function loadSupportTicketMessages(ticketId) {
+  const container = document.getElementById(`supportTicketMessages-${ticketId}`);
+  if (!container) return;
+  try {
+    const result = await window.VSIM_API.fetchSupportTicketMessages(ticketId);
+    const messages = result?.messages || [];
+    container.innerHTML = messages.length
+      ? messages.map(message => `<div class="support-ticket-message ${message.sender_type === 'admin' ? 'from-support' : 'from-user'}"><strong>${message.sender_type === 'admin' ? 'Support' : 'You'}</strong><span>${escapeDialogHtml(message.body)}</span><small>${message.created_at ? new Date(message.created_at).toLocaleString() : ''}</small></div>`).join('')
+      : '<div class="support-ticket-empty">No replies yet. Support will respond here.</div>';
+  } catch (error) {
+    container.textContent = 'Could not load this conversation.';
+  }
+}
+
+async function replyToSupportTicket(event, ticketId) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const body = form.elements.body.value.trim();
+  if (!body) return;
+  try {
+    await window.VSIM_API.sendSupportTicketMessage(ticketId, body);
+    form.reset();
+    await refreshSupportTickets();
+    showToast('Reply sent to support', 'success');
+  } catch (error) {
+    showToast(error.message || 'Could not send reply', 'error');
+  }
 }
 
 // Handle Get Started button on splash screen
