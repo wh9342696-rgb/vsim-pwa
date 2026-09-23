@@ -559,8 +559,10 @@ function showNewNotificationPrompt(notification) {
   showBrowserNotification(notification);
   const toast = document.createElement('div');
   toast.className = 'toast-item notification-toast-item';
+  toast.setAttribute('role', 'alert');
+  toast.setAttribute('aria-live', 'polite');
   const title = document.createElement('strong');
-  title.textContent = notification.title || 'New VSIM notification';
+  title.textContent = `New notification: ${notification.title || 'VSIM update'}`;
   const message = document.createElement('span');
   message.textContent = notification.message || 'Tap to view your latest update.';
   toast.append(title, message);
@@ -575,7 +577,7 @@ function showNewNotificationPrompt(notification) {
     toast.style.transform = 'translateY(-10px)';
     toast.style.transition = 'all 0.3s ease';
     setTimeout(() => toast.remove(), 300);
-  }, 6000);
+  }, 10000);
 }
 
 function showBrowserNotification(notification) {
