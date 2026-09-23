@@ -2901,7 +2901,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function registerUserServiceWorker() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=20260923-theme-fix', { scope: '/', updateViaCache: 'none' }).catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260923-help-light-fix', { scope: '/', updateViaCache: 'none' }).catch(() => {});
   }
 }
 
