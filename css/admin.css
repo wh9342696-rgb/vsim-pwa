@@ -2862,68 +2862,6 @@ button,
     overscroll-behavior-inline: contain;
   }
 
-  .deposits-data-table {
-    min-width: 0;
-    display: block;
-  }
-
-  .deposits-data-table thead {
-    display: none;
-  }
-
-  .deposits-data-table tbody,
-  .deposits-data-table tr,
-  .deposits-data-table td {
-    display: block;
-    width: 100%;
-  }
-
-  .deposits-data-table tr {
-    padding: 12px;
-    border-bottom: 1px solid var(--border-subtle);
-  }
-
-  .deposits-data-table tr:last-child {
-    border-bottom: none;
-  }
-
-  .deposits-data-table td {
-    display: grid;
-    grid-template-columns: minmax(112px, 38%) minmax(0, 1fr);
-    gap: 10px;
-    align-items: start;
-    padding: 6px 0;
-    border: 0;
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
-
-  .deposits-data-table td::before {
-    content: attr(data-label);
-    color: var(--text-muted);
-    font-size: 0.66rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  .deposits-data-table .deposit-verification-fields,
-  .deposits-data-table .deposit-verification-input {
-    min-width: 0;
-    width: 100%;
-  }
-
-  .deposits-data-table .deposit-verification-fields {
-    grid-column: 2;
-  }
-
-  .deposits-data-table td:has(.deposit-verification-fields)::before {
-    grid-row: 1;
-  }
-
-  .deposits-data-table td:last-child {
-    padding-top: 10px;
-  }
 }
 
 @media (min-width: 1600px) {
