@@ -3,7 +3,7 @@ const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
-  './css/app.css?v=20260923-theme-fix',
+  './css/app.css?v=20260923-help-light-fix',
   './js/api.js?v=20260923-esim-reminder',
   './js/app.js?v=20260923-esim-reminder',
   './js/pwa-register.js?v=20260906-kyc-mobile',
