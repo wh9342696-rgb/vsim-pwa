@@ -549,6 +549,7 @@ async function fetchBackendDataInternal() {
   } catch (e) {
     renderPackages([]);
     renderMyESIMs([], 'active');
+    renderEsimEarningReminder();
   }
 }
 
@@ -2868,6 +2869,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderMyESIMs(appState.myESIMs, 'active');
   renderRecentActivity([]);
   renderNotificationList([]);
+  renderEsimEarningReminder();
   calcWithdrawReceive();
   updateBalanceDisplay();
   await validateAuthSession();
