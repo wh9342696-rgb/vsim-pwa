@@ -1957,7 +1957,7 @@ function showWithdrawalEsimRequirement() {
           <button class="modal-close-btn" type="button" aria-label="Close">X</button>
         </div>
         <div class="modal-dialog-body">
-          <p class="custom-dialog-message">Your UGX 5,000 joining bonus can be withdrawn after you have an active eSIM. Use your wallet balance to purchase an eSIM, then come back to withdraw.</p>
+          <p class="custom-dialog-message">You need at least one owned and active eSIM before you can withdraw. Buy and activate an eSIM, then come back to withdraw your wallet balance.</p>
         </div>
         <div class="modal-dialog-footer">
           <button type="button" class="btn-modal-cancel btn-cancel">Maybe later</button>
