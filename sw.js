@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vsim-pwa-v1';
+const CACHE_NAME = 'vsim-pwa-v2-theme-fix';
 const APP_SHELL = [
   './',
   './index.html',
