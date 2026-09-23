@@ -2882,7 +2882,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function registerUserServiceWorker() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js', { scope: '/', updateViaCache: 'none' }).catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260923-theme-fix', { scope: '/', updateViaCache: 'none' }).catch(() => {});
   }
 }
 

@@ -20,7 +20,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
+        navigator.serviceWorker.register('/sw.js?v=20260923-theme-fix', { scope: '/', updateViaCache: 'none' })
           .then(registration => registration.update().then(() => {
             console.log('SW registered successfully:', registration.scope);
           }))
@@ -31,7 +31,7 @@
   <link rel="stylesheet" href="css/app.css?v=20260923-theme-fix" />
   <script src="js/pwa-register.js?v=20260906-kyc-mobile" defer></script>
 </head>
-<body data-service-worker="/sw.js">
+<body data-service-worker="/sw.js?v=20260923-theme-fix">
   <div class="pwa-install-prompt" id="pwaInstallPrompt" hidden>
     <div class="pwa-install-prompt-copy">
       <strong id="pwaInstallPromptTitle">Install VSIM as an app</strong>
