@@ -556,6 +556,7 @@ async function fetchBackendDataInternal() {
 function showNewNotificationPrompt(notification) {
   const hub = document.getElementById('toastHub');
   if (!hub || !notification) return;
+  showBrowserNotification(notification);
   const toast = document.createElement('div');
   toast.className = 'toast-item notification-toast-item';
   const title = document.createElement('strong');
@@ -575,6 +576,21 @@ function showNewNotificationPrompt(notification) {
     toast.style.transition = 'all 0.3s ease';
     setTimeout(() => toast.remove(), 300);
   }, 6000);
+}
+
+function showBrowserNotification(notification) {
+  if (!appState.notifications.pushMaster || !('Notification' in window) || Notification.permission !== 'granted') return;
+  const title = notification.title || 'New VSIM notification';
+  const options = {
+    body: notification.message || 'Tap to view your latest update.',
+    icon: '/icons/vsim-192.png',
+    badge: '/icons/vsim-192.png',
+    tag: `vsim-notification-${notification.id || Date.now()}`,
+    data: { screen: 'screen-notifications' }
+  };
+  navigator.serviceWorker?.ready
+    .then(registration => registration.showNotification(title, options))
+    .catch(() => new Notification(title, options));
 }
 
 function renderEsimEarningReminder() {
@@ -1010,8 +1026,11 @@ function filterNotificationList(pillElem, filterType) {
   renderNotificationList(appState.notifications.items);
 }
 
-function toggleNotifyOption(key, isChecked) {
+async function toggleNotifyOption(key, isChecked) {
   appState.notifications[key] = isChecked;
+  if (key === 'pushMaster' && isChecked && 'Notification' in window && Notification.permission === 'default') {
+    await Notification.requestPermission();
+  }
   showToast(`${isChecked ? 'Enabled' : 'Disabled'} notification alert`, 'info');
 }
 
