@@ -1,5 +1,5 @@
 // VSIM Admin Panel Service Worker
-const CACHE_NAME = 'vsim-admin-v3.3-mobile-deposits';
+const CACHE_NAME = 'vsim-admin-v3.4-column-table';
 const ASSETS_TO_CACHE = [
   '/admin/',
   '/admin/index.html',
