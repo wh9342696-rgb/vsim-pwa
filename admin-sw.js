@@ -1,5 +1,5 @@
 // VSIM Admin Panel Service Worker
-const CACHE_NAME = 'vsim-admin-v3.5-desktop-install';
+const CACHE_NAME = 'vsim-admin-v3.6-canonical-scope';
 const ASSETS_TO_CACHE = [
   '/admin/',
   '/admin/index.html',
@@ -7,7 +7,7 @@ const ASSETS_TO_CACHE = [
   '/css/admin.css',
   '/js/admin-api.js?v=20260915-package-fix-1',
   '/js/admin.js?v=20260925-desktop-install-1',
-  '/js/pwa-register.js?v=20260915-cache-refresh-1',
+  '/js/pwa-register.js?v=20260925-canonical-scope-1',
   '/icons/vsim-admin-192.png',
   '/icons/vsim-admin-512.png',
   '/admin-manifest.webmanifest'
