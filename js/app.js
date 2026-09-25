@@ -1469,6 +1469,17 @@ async function fetchRealtimeMerchant(network) {
         if (!res || !res.success || !res.merchant) {
           throw new Error(res?.error || `No active ${network} merchant available`);
         }
+        const order = await window.VSIM_API.createPaymentOrder({
+          packageId: pkgId,
+          targetEsimId: appState.targetEsimId,
+          targetEsimIccid: appState.targetEsimIccid,
+          reference: res.reference,
+          merchantId: res.merchant.id,
+          merchantCode: res.merchant.merchant_code,
+          network: res.merchant.network
+        });
+        res.orderId = order.order?.id || null;
+        res.amount = order.order?.amount || res.amount;
         applyMerchantData(res, network);
         return;
       } catch (error) {
@@ -1572,6 +1583,7 @@ async function confirmMobileMoneyPayment() {
       packageId: appState.selectedPkg ? appState.selectedPkg.id : '',
       targetEsimId: appState.targetEsimId,
       targetEsimIccid: appState.targetEsimIccid,
+      orderId: currentAssignedMerchant.orderId,
       renewal: Boolean(appState.targetEsimId || appState.targetEsimIccid),
       type: 'esim_purchase'
     };

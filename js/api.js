@@ -326,6 +326,13 @@ const VSIM_API = {
     return await this.request(`/payments/assigned-merchant?${params.toString()}`);
   },
 
+  async createPaymentOrder(data) {
+    return await this.request('/payments/orders', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
   async confirmMerchantPayment(payload) {
     return await this.request('/payments/confirm-deposit', { method: 'POST', body: JSON.stringify(payload) });
   },
