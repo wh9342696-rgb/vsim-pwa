@@ -6,7 +6,7 @@ const ASSETS_TO_CACHE = [
   '/admin.html',
   '/css/admin.css',
   '/js/admin-api.js?v=20260915-package-fix-1',
-  '/js/admin.js?v=20260915-package-fix-1',
+  '/js/admin.js?v=20260925-desktop-install-1',
   '/js/pwa-register.js?v=20260915-cache-refresh-1',
   '/icons/vsim-admin-192.png',
   '/icons/vsim-admin-512.png',
