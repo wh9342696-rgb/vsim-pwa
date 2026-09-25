@@ -131,13 +131,25 @@ function registerAdminServiceWorker() {
 }
 
 function setupAdminPwaInstall() {
+  const installButton = document.getElementById('installAdminPwaBtn');
+  const setInstallState = (available, message = '') => {
+    if (!installButton) return;
+    installButton.hidden = isAdminStandalonePwa();
+    installButton.disabled = false;
+    if (message) installButton.title = message;
+  };
+
+  setInstallState(false, 'Use the browser menu to install VSIM Admin');
+
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
     adminInstallPrompt = event;
+    setInstallState(true, 'Install VSIM Admin as a desktop or mobile app');
   });
 
   window.addEventListener('appinstalled', () => {
     adminInstallPrompt = null;
+    setInstallState(false);
     if (typeof showToast === 'function') {
       showToast('VSIM Admin installed on this device', 'success');
     }
@@ -155,7 +167,7 @@ async function installAdminPwa() {
 
   if (!adminInstallPrompt) {
     if (typeof showToast === 'function') {
-      showToast('Use your browser install option to add VSIM Admin as an app', 'info');
+      showToast('Open your browser menu and choose Install VSIM Admin or Add to desktop', 'info');
     }
     return;
   }
