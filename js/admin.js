@@ -1828,23 +1828,26 @@ function renderDepositsTable() {
   if (!tbody) return;
 
   tbody.innerHTML = AdminStore.deposits.map(d => {
+    const isWalletPayment = String(d.payment_method || '').toLowerCase() === 'wallet';
     const reference = String(d.customer_reference || '').trim();
     const merchantRef = String(d.merchant_reference || '').trim();
-    const matchStatus = String(d.reference_match || (merchantRef && reference && merchantRef === reference ? 'MATCHED' : 'UNMATCHED')).toUpperCase();
-    const matchClass = matchStatus === 'MATCHED' ? 'active' : 'pending';
+    const matchStatus = isWalletPayment ? 'NOT REQUIRED' : String(d.reference_match || (merchantRef && reference && merchantRef === reference ? 'MATCHED' : 'UNMATCHED')).toUpperCase();
+    const matchClass = isWalletPayment || matchStatus === 'MATCHED' ? 'active' : 'pending';
     const merchantProvider = String(d.merchant_provider || d.merchant || '').trim();
     return `<tr>
       <td data-label="Payment ID" style="font-weight: 700;">${d.id}</td>
       <td data-label="Customer" style="font-weight: 600;">${d.user_name || d.phone || 'Unknown'}<div style="font-size:0.72rem;color:var(--text-muted);">${d.user_phone || d.phone || ''}</div></td>
       ${['pending', 'payment_awaiting_verification'].includes(String(d.status).toLowerCase())
-        ? `<td data-label="Merchant match"><div class="deposit-verification-fields"><input id="merchantReference-${d.id}" class="deposit-verification-input" type="text" placeholder="Merchant SMS ref" aria-label="Merchant SMS reference for payment ${d.id}"><input id="merchantAmount-${d.id}" class="deposit-verification-input" type="number" min="0" step="0.01" placeholder="Amount" aria-label="Verified merchant amount for payment ${d.id}"></div></td>`
+        ? isWalletPayment
+          ? '<td data-label="Merchant match"><span style="font-size:0.75rem;color:var(--text-muted);">Wallet balance checked on approval</span></td>'
+          : `<td data-label="Merchant match"><div class="deposit-verification-fields"><input id="merchantReference-${d.id}" class="deposit-verification-input" type="text" placeholder="Merchant SMS ref" aria-label="Merchant SMS reference for payment ${d.id}"><input id="merchantAmount-${d.id}" class="deposit-verification-input" type="number" min="0" step="0.01" placeholder="Amount" aria-label="Verified merchant amount for payment ${d.id}"></div></td>`
         : `<td data-label="Merchant match"><span style="font-size:0.75rem;color:var(--text-muted);">${d.verified_transaction_reference || '-'}</span></td>`}
-      <td data-label="Purpose">${d.target_esim_id ? 'eSIM renewal' : d.package_id ? 'eSIM purchase' : 'Wallet payment'}</td>
+      <td data-label="Purpose">${isWalletPayment ? (d.target_esim_id ? 'Wallet eSIM renewal' : 'Wallet eSIM purchase') : d.target_esim_id ? 'eSIM renewal' : d.package_id ? 'eSIM purchase' : 'Wallet payment'}</td>
       <td data-label="Network">${d.network || '-'}</td>
       <td data-label="Merchant" style="font-family: monospace; font-size: 0.74rem;">${d.merchant || '-'}</td>
       <td data-label="Amount" style="font-weight: 800; color: var(--text-white);">UGX ${Number(d.amount || 0).toLocaleString()}</td>
       <td data-label="Customer reference" style="font-family: monospace; font-size: 0.74rem;">${reference || '-'}</td>
-      <td data-label="Merchant reference" style="font-family: monospace; font-size: 0.74rem; color: var(--text-muted);">${merchantRef || (merchantProvider ? `${merchantProvider} event` : '-')}</td>
+      <td data-label="Merchant reference" style="font-family: monospace; font-size: 0.74rem; color: var(--text-muted);">${isWalletPayment ? 'Not applicable' : merchantRef || (merchantProvider ? `${merchantProvider} event` : '-')}</td>
       <td data-label="Match"><span class="status-pill ${matchClass}">${matchStatus}</span></td>
       <td data-label="Submitted" style="color: var(--text-muted);">${d.time || 'Just now'}</td>
       <td data-label="Status"><span class="status-pill ${d.status}">${d.status}</span></td>
@@ -1856,11 +1859,16 @@ function renderDepositsTable() {
 }
 
 async function processAdminDeposit(id, action) {
+  const deposit = AdminStore.deposits.find(item => Number(item.id) === Number(id));
+  const isWalletPayment = String(deposit?.payment_method || '').toLowerCase() === 'wallet';
   let merchantReference = document.getElementById(`merchantReference-${id}`)?.value.trim() || '';
   let merchantAmount = document.getElementById(`merchantAmount-${id}`)?.value.trim() || '';
   if (action === 'approve') {
-    if (!window.confirm('Check the merchant SMS/account before approving. The merchant reference and amount must match the customer payment.')) return;
-    if (!merchantReference || !merchantAmount) {
+    const prompt = isWalletPayment
+      ? 'Approve this wallet eSIM request? The user balance will be charged and the eSIM activated.'
+      : 'Check the merchant SMS/account before approving. The merchant reference and amount must match the customer payment.';
+    if (!window.confirm(prompt)) return;
+    if (!isWalletPayment && (!merchantReference || !merchantAmount)) {
       showToast('Enter the merchant SMS reference and verified amount first.', 'error');
       return;
     }

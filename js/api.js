@@ -188,13 +188,6 @@ const VSIM_API = {
     return await this.request(`/esims/packages${queryStr}`);
   },
 
-  async purchasePackage(packageId, payMethod, targetEsimId = null, targetEsimIccid = null) {
-    return await this.request('/esims/purchase', {
-      method: 'POST',
-      body: JSON.stringify({ packageId, payMethod, targetEsimId, targetEsimIccid })
-    });
-  },
-
   async fetchMyESIMs() {
     return await this.request('/esims/my-esims');
   },
@@ -328,6 +321,13 @@ const VSIM_API = {
 
   async createPaymentOrder(data) {
     return await this.request('/payments/orders', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async createWalletEsimOrder(data) {
+    return await this.request('/esims/wallet-orders', {
       method: 'POST',
       body: JSON.stringify(data)
     });

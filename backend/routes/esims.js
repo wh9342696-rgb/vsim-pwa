@@ -1,6 +1,7 @@
 import express from 'express';
 import { query } from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { createUniqueReference } from '../utils/reference.js';
 
 const router = express.Router();
 
@@ -21,25 +22,6 @@ function formatDataValue(amountGb, unit) {
 function classifyEsimStatus(esim, now = Date.now()) {
   if (esim.status === 'revoked') return 'revoked';
   return esim.expires_at && now >= new Date(esim.expires_at).getTime() ? 'expired' : 'active';
-}
-
-function createIccid() {
-  return `8944${Date.now().toString().slice(-8)}${Math.floor(100000 + Math.random() * 900000)}`;
-}
-
-function getValidityDays(value) {
-  const days = Number(String(value || '').match(/\d+(?:\.\d+)?/)?.[0]);
-  return Number.isFinite(days) && days > 0 ? Math.ceil(days) : 30;
-}
-
-function getRenewalPrice(pkg, renewalCount) {
-  const basePrice = Number(pkg.price) || 0;
-  try {
-    const schedule = Array.isArray(pkg.renewal_schedule) ? pkg.renewal_schedule : JSON.parse(pkg.renewal_schedule || '[]');
-    const scheduled = schedule[Number(renewalCount) || 0];
-    if (scheduled && Number(scheduled.price) > basePrice) return Number(scheduled.price);
-  } catch (error) {}
-  return basePrice * (Number(renewalCount) > 0 ? 1.1 : 1);
 }
 
 // 1. Get All Available eSIM Packages (Filterable by region and query)
@@ -85,153 +67,86 @@ router.get('/packages/:id', async (req, res) => {
   }
 });
 
-// 3. Purchase eSIM Package (Wallet Balance or Mobile Money)
-router.post('/purchase', authenticateToken, async (req, res) => {
+// 3. Reject legacy wallet purchases; manual payment verification fulfills eSIM orders.
+router.post('/wallet-orders', authenticateToken, async (req, res) => {
   try {
-    const { packageId, payMethod, targetEsimId, targetEsimIccid } = req.body;
+    const { packageId, targetEsimId, targetEsimIccid } = req.body || {};
+    if (!packageId) return res.status(400).json({ error: 'Choose an eSIM package' });
 
-    const pkgRes = await query('SELECT * FROM esim_packages WHERE id = $1', [packageId]);
-    if (pkgRes.rows.length === 0) {
-      return res.status(404).json({ error: 'Package not found' });
-    }
+    const packageResult = await query('SELECT * FROM esim_packages WHERE id = $1', [packageId]);
+    if (!packageResult.rows.length) return res.status(404).json({ error: 'Package not found' });
+    const pkg = packageResult.rows[0];
 
-    const pkg = pkgRes.rows[0];
-    if (payMethod !== 'wallet') {
-      return res.status(400).json({ error: 'Mobile Money payment must be confirmed before activating an eSIM' });
-    }
-    const userRes = await query('SELECT wallet_balance FROM users WHERE id = $1', [req.user.id]);
-    const currentBalance = Number(userRes.rows[0].wallet_balance) || 0;
-    let packagePrice = Number(pkg.price) || 0;
-
-    let targetEsim = null;
-    const targetIdentifier = targetEsimIccid || targetEsimId;
-    if (targetIdentifier) {
-      const targetRes = targetEsimIccid
-        ? await query('SELECT id, iccid, data_total, data_remaining, renewal_count FROM user_esims WHERE iccid = $1 AND user_id = $2 AND status <> \'revoked\'', [targetEsimIccid, req.user.id])
-        : await query('SELECT id, iccid, data_total, data_remaining, renewal_count FROM user_esims WHERE id = $1 AND user_id = $2 AND status <> \'revoked\'', [targetIdentifier, req.user.id]);
-      if (!targetRes.rows.length) return res.status(404).json({ error: 'Target eSIM not found' });
-      targetEsim = targetRes.rows[0];
-      if (targetEsimId && String(targetEsim.id) !== String(targetEsimId)) {
+    let target = null;
+    if (targetEsimIccid || targetEsimId) {
+      const targetResult = targetEsimIccid
+        ? await query('SELECT id, renewal_count FROM user_esims WHERE iccid = $1 AND user_id = $2 AND status <> \'revoked\'', [targetEsimIccid, req.user.id])
+        : await query('SELECT id, renewal_count FROM user_esims WHERE id = $1 AND user_id = $2 AND status <> \'revoked\'', [targetEsimId, req.user.id]);
+      if (!targetResult.rows.length) return res.status(404).json({ error: 'Target eSIM not found' });
+      target = targetResult.rows[0];
+      if (targetEsimId && String(target.id) !== String(targetEsimId)) {
         return res.status(400).json({ error: 'Target eSIM identifiers do not match' });
       }
     }
-    const resolvedTargetEsimId = targetEsim?.id || null;
-    if (targetEsim) packagePrice = getRenewalPrice(pkg, Number(targetEsim.renewal_count) || 0);
 
-    if (payMethod === 'wallet') {
-      if (currentBalance < packagePrice) {
-        return res.status(400).json({ error: 'Insufficient wallet balance' });
-      }
-      // Deduct balance
-      await query('UPDATE users SET wallet_balance = wallet_balance - $1 WHERE id = $2', [packagePrice, req.user.id]);
+    const amount = getRenewalPrice(pkg, Number(target?.renewal_count) || 0);
+    const existing = await query(
+      `SELECT id, reference, status FROM payment_requests
+       WHERE user_id = $1 AND package_id = $2 AND payment_method = 'wallet'
+         AND status = 'pending'
+         AND (target_esim_id = $3 OR (target_esim_id IS NULL AND $3 IS NULL))
+       ORDER BY created_at DESC LIMIT 1`,
+      [req.user.id, pkg.id, target?.id || null]
+    );
+    if (existing.rows.length) {
+      return res.json({ success: true, order: existing.rows[0], message: 'Your wallet request is already awaiting review.' });
     }
 
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + getValidityDays(pkg.validity));
+    const balanceResult = await query('SELECT wallet_balance FROM users WHERE id = $1', [req.user.id]);
+    if (Number(balanceResult.rows[0]?.wallet_balance || 0) < amount) {
+      return res.status(400).json({ error: 'Insufficient wallet balance for this eSIM request' });
+    }
 
-    let purchasedIccid = null;
-    let renewedEsim = null;
-    if (resolvedTargetEsimId) {
-      purchasedIccid = targetEsim.iccid;
-      const existingTotal = parseDataValue(targetEsim.data_total);
-      const existingRemaining = parseDataValue(targetEsim.data_remaining);
-      const bundleData = parseDataValue(pkg.data_quota);
-      const dataUnit = existingTotal?.unit || bundleData?.unit || 'GB';
-      const bundleGb = bundleData ? bundleData.amount : 0;
-      const existingTotalGb = existingTotal ? existingTotal.amount : 0;
-      const existingRemainingGb = existingRemaining ? existingRemaining.amount : 0;
-      const renewedTotal = formatDataValue(existingTotalGb + bundleGb, dataUnit);
-      const renewedRemaining = formatDataValue(existingRemainingGb + bundleGb, dataUnit);
+    const reference = await createUniqueReference('WALLET-ESIM', async candidate =>
+      (await query('SELECT id FROM payment_requests WHERE reference = $1', [candidate])).rows.length > 0
+    );
+    const inserted = await query(
+      `INSERT INTO payment_requests
+       (user_id, phone, amount, merchant, network, reference, package_id, target_esim_id, payment_method, status, payment_status, order_status, provisioning_status)
+       VALUES ($1, $2, $3, 'VSIM Wallet', 'WALLET', $4, $5, $6, 'wallet', 'pending', 'WALLET_AWAITING_APPROVAL', 'PENDING_PAYMENT', 'NOT_STARTED')
+       RETURNING id, reference, status, amount`,
+      [req.user.id, req.user.phone, amount, reference, pkg.id, target?.id || null]
+    );
+
+    const message = `Wallet-funded eSIM request for ${pkg.title} (UGX ${amount.toLocaleString()}) is awaiting manual approval.`;
+    const admins = await query("SELECT id FROM admin_users WHERE status = 'active'");
+    for (const admin of admins.rows) {
       await query(
-        `UPDATE user_esims
-         SET package_id = $1, title = $2, status = 'active', data_total = $3,
-           data_remaining = $4, daily_income = $5, progress_percent_per_hour = $6,
-           renewal_count = COALESCE(renewal_count, 0) + 1,
-           activated_at = CURRENT_TIMESTAMP, expires_at = $7
-         WHERE id = $8 AND user_id = $9`,
-        [pkg.id, pkg.title, renewedTotal, renewedRemaining, pkg.income, Number(pkg.progress_percent_per_hour) || 0.42, expiresAt.toISOString(), resolvedTargetEsimId, req.user.id]
+        `INSERT INTO notifications (user_id, admin_id, title, message, category)
+         VALUES ($1, $2, $3, $4, 'wallet')`,
+        [req.user.id, admin.id, 'Wallet eSIM Request', message]
       );
-      renewedEsim = (await query(
-        'SELECT * FROM user_esims WHERE id = $1 AND user_id = $2',
-        [resolvedTargetEsimId, req.user.id]
-      )).rows[0];
-    } else {
-      let iccid = createIccid();
-      while ((await query('SELECT id FROM user_esims WHERE iccid = $1', [iccid])).rows.length) {
-        iccid = createIccid();
-      }
-      purchasedIccid = iccid;
       await query(
-        `INSERT INTO user_esims (user_id, package_id, title, country, iccid, status, data_total, data_remaining, daily_income, progress_percent_per_hour, expires_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-        [req.user.id, pkg.id, pkg.title, pkg.country, iccid, 'active', pkg.data_quota, pkg.data_quota, pkg.income, Number(pkg.progress_percent_per_hour) || 0.42, expiresAt.toISOString()]
+        `INSERT INTO admin_notifications (admin_id, type, title, message, reference, status)
+         VALUES ($1, 'payment', 'Wallet eSIM Request', $2, $3, 'pending')`,
+        [admin.id, message, reference]
       );
     }
-
-    // Log transaction
     await query(
-      `INSERT INTO wallet_transactions (user_id, type, title, amount, reference, status)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [req.user.id, resolvedTargetEsimId ? 'bundle_purchase' : 'purchase', `${pkg.title} ${resolvedTargetEsimId ? 'Bundle' : 'Purchase'}`, packagePrice, `ICCID:${purchasedIccid}`, 'completed']
+      `INSERT INTO notifications (user_id, title, message, category)
+       VALUES ($1, 'Wallet Request Submitted', $2, 'wallet')`,
+      [req.user.id, `Your ${pkg.title} wallet request is awaiting admin approval. Your balance will only be charged if approved.`]
     );
 
-    // Update package sales counter & revenue
-    await query(
-      `UPDATE esim_packages SET sold_count = sold_count + 1, revenue = revenue + $1 WHERE id = $2`,
-      [packagePrice, pkg.id]
-    );
-
-    // If user was referred by someone, credit referrer a 10% affiliate commission
-    const currentUserRes = await query('SELECT name, referred_by FROM users WHERE id = $1', [req.user.id]);
-    const currentUser = currentUserRes.rows[0] || { name: req.user.name || 'User' };
-    const referredByCode = currentUser.referred_by;
-    if (referredByCode) {
-      const refUserRes = await query('SELECT id, name FROM users WHERE referral_code = $1', [referredByCode]);
-      if (refUserRes.rows.length > 0) {
-        const referrer = refUserRes.rows[0];
-        const commissionRate = Math.max(0, Math.min(100, Number(pkg.commission_percent) || 10));
-        const commission = Math.round(packagePrice * commissionRate / 100);
-        if (commission > 0) {
-          const commissionRef = `COMM-ESIM-${req.user.id}-${purchasedIccid.replace(/\s/g, '')}`;
-          const existingCommission = await query('SELECT id FROM wallet_transactions WHERE reference = $1', [commissionRef]);
-          if (!existingCommission.rows.length) {
-            await query('UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2', [commission, referrer.id]);
-            await query(
-              `INSERT INTO wallet_transactions (user_id, type, title, amount, reference, status)
-               VALUES ($1, $2, $3, $4, $5, $6)`,
-              [referrer.id, 'referral', `Referral Commission (${pkg.title})`, commission, commissionRef, 'completed']
-            );
-            await query(
-              `INSERT INTO notifications (user_id, title, message, category)
-               VALUES ($1, $2, $3, $4)`,
-              [referrer.id, 'Referral Commission Earned!', `UGX ${commission.toLocaleString()} commission was added to your wallet because ${currentUser.name} purchased ${pkg.title}.`, 'wallet']
-            );
-          }
-        }
-      }
-    }
-
-    // Record system log for Admin Panel
-    const userPhone = req.user.phone || 'Customer';
-    await query(
-      `INSERT INTO system_logs (action, details, level, time_ago)
-       VALUES ($1, $2, $3, $4)`,
-      ['esim_purchase', `eSIM purchased: ${pkg.title} (UGX ${pkg.price.toLocaleString()}) by ${userPhone}`, 'success', 'Just now']
-    );
-
-    const updatedUser = await query('SELECT wallet_balance FROM users WHERE id = $1', [req.user.id]);
-
-    res.json({
-      message: `Successfully purchased ${pkg.title}!`,
-      iccid: purchasedIccid,
-      esimId: resolvedTargetEsimId,
-      esim: renewedEsim,
-      walletBalance: updatedUser.rows[0].wallet_balance
-    });
+    res.status(201).json({ success: true, order: inserted.rows[0], message: 'Wallet request submitted for manual review.' });
   } catch (err) {
-    console.error('Purchase error:', err);
-    res.status(500).json({ error: 'Failed to process eSIM purchase' });
+    console.error('Wallet eSIM order error:', err);
+    res.status(500).json({ error: 'Failed to submit wallet eSIM request' });
   }
+});
+
+router.post('/purchase', authenticateToken, (_req, res) => {
+  res.status(400).json({ error: 'eSIM purchases must be paid through manual Mobile Money checkout and verified before activation' });
 });
 
 // 4. Get User's eSIMs (Active & Expired)

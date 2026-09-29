@@ -331,10 +331,8 @@ function navigateTo(targetScreenId, addToHistory = true) {
     const selectedPackage = appState.selectedPkg?.id ? appState.selectedPkg : null;
     const packageNotice = document.getElementById('topupSelectedPackage');
     if (packageNotice && selectedPackage) {
-      const amountInput = document.getElementById('topupVal');
-      if (amountInput) amountInput.value = Number(selectedPackage.price);
       packageNotice.style.display = 'block';
-      packageNotice.innerHTML = `<strong style="color: var(--text-white);">${selectedPackage.title}</strong><br>Top up exactly <strong style="color: var(--primary-purple);">UGX ${Number(selectedPackage.price).toLocaleString()}</strong> to purchase this eSIM automatically.`;
+      packageNotice.innerHTML = `<strong style="color: var(--text-white);">${selectedPackage.title}</strong><br>Wallet top-ups are separate. Return to checkout to submit a manual Mobile Money or wallet purchase request.`;
     } else if (packageNotice) {
       packageNotice.style.display = 'none';
       packageNotice.textContent = '';
@@ -1279,21 +1277,26 @@ function goToCheckout() {
   document.getElementById('checkoutImgThumb').style.backgroundImage = `url('${pkg.imageUrl}')`;
   document.getElementById('checkoutWalletSub').textContent = `Available: UGX ${appState.walletBalance.toLocaleString()}`;
 
-  // Always reset to MoMo pre-selected on each checkout open
   appState.selectedPayMethod = 'momo';
-  const momoCard = document.getElementById('payMethodMomoCard');
-  const walletCard = document.getElementById('payMethodWalletCard');
-  if (momoCard) momoCard.classList.add('selected');
-  if (walletCard) walletCard.classList.remove('selected');
+  document.getElementById('payMethodMomoCard')?.classList.add('selected');
+  document.getElementById('payMethodWalletCard')?.classList.remove('selected');
   const btn = document.getElementById('checkoutMainBtn');
   if (btn) btn.innerHTML = `
-    <span>Pay with Mobile Money</span>
+    <span>Continue to Manual Payment</span>
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: 6px;">
       <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
     </svg>
   `;
 
   navigateTo('screen-checkout');
+}
+
+function choosePayMethod(elem, method) {
+  document.querySelectorAll('#screen-checkout .network-select-card').forEach(card => card.classList.remove('selected'));
+  elem?.classList.add('selected');
+  appState.selectedPayMethod = method;
+  const btn = document.getElementById('checkoutMainBtn');
+  if (btn) btn.querySelector('span').textContent = method === 'wallet' ? 'Submit Wallet Request' : 'Continue to Manual Payment';
 }
 
 // ============================================================================
@@ -1365,31 +1368,6 @@ function applyMerchantData(res, network) {
   if (errorBox) errorBox.style.display = 'none';
   if (content) content.style.display = 'block';
   if (confirmBtn) confirmBtn.disabled = false;
-}
-
-function choosePayMethod(elem, method) {
-  document.querySelectorAll('#screen-checkout .network-select-card').forEach(c => c.classList.remove('selected'));
-  if (elem) elem.classList.add('selected');
-  appState.selectedPayMethod = method;
-
-  const btn = document.getElementById('checkoutMainBtn');
-  if (btn) {
-    if (method === 'momo') {
-      btn.innerHTML = `
-        <span>Pay with Mobile Money</span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: 6px;">
-          <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
-        </svg>
-      `;
-    } else {
-      btn.innerHTML = `
-        <span>Pay with Wallet Balance</span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: 6px;">
-          <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
-        </svg>
-      `;
-    }
-  }
 }
 
 async function openMobileMoneyModal(preferredNetwork = 'MTN') {
@@ -1641,47 +1619,39 @@ async function submitCheckoutPayment() {
     showToast('Please select a package first', 'error');
     return;
   }
-  
-  if (appState.selectedPayMethod === 'momo') {
-    await openMobileMoneyModal('MTN');
-    return;
-  }
-
   if (appState.selectedPayMethod === 'wallet') {
-    const purchasePrice = getSelectedPurchasePrice(pkg);
-    if (appState.walletBalance < purchasePrice) {
-      showToast(`Top up UGX ${Number(purchasePrice).toLocaleString()} to buy ${pkg.title}.`, 'info');
-      navigateTo('screen-topup');
+    const amount = getSelectedPurchasePrice(pkg);
+    if (appState.walletBalance < amount) {
+      showToast(`Insufficient wallet balance. Available: UGX ${appState.walletBalance.toLocaleString()}.`, 'error');
       return;
     }
-
-    if (!window.VSIM_API || !window.VSIM_API.getToken()) {
-      showToast('Please log in to purchase an eSIM with wallet balance', 'error');
+    if (!window.VSIM_API?.getToken()) {
+      showToast('Please log in to submit a wallet purchase request', 'error');
       return;
     }
+    if (!window.confirm(`Submit a manual wallet request for UGX ${amount.toLocaleString()}? Your balance will only be charged if an admin approves it.`)) return;
 
+    const btn = document.getElementById('checkoutMainBtn');
+    if (btn) btn.disabled = true;
     try {
-      const res = await window.VSIM_API.purchasePackage(pkg.id, 'wallet', appState.targetEsimId, appState.targetEsimIccid);
-      if (appState.targetEsimId && String(res.esimId) !== String(appState.targetEsimId)) {
-        throw new Error('Bundle renewal did not update the selected eSIM. Please try again.');
-      }
-      if (res.esim && appState.targetEsimId) {
-        appState.myESIMs = appState.myESIMs.map(esim => String(esim.id) === String(appState.targetEsimId) ? { ...esim, ...res.esim } : esim);
-        renderMyESIMs(appState.myESIMs, appState.myEsimFilter);
-      }
-      if (res.walletBalance !== undefined) {
-        appState.walletBalance = Number(res.walletBalance) || 0;
-        updateBalanceDisplay();
-      }
-      await fetchBackendData();
-      showToast(`Purchased ${pkg.title}! Provisioned ICCID: ${res.iccid || 'Ready'}`, 'success');
+      await window.VSIM_API.createWalletEsimOrder({
+        packageId: pkg.id,
+        targetEsimId: appState.targetEsimId,
+        targetEsimIccid: appState.targetEsimIccid
+      });
       appState.targetEsimId = null;
       appState.targetEsimIccid = null;
-      navigateTo('screen-my-esims');
-    } catch (err) {
-      showToast(err.message || 'Purchase failed', 'error');
+      await fetchBackendData();
+      showToast('Wallet request submitted for manual review. Your eSIM activates after approval.', 'success');
+      navigateTo('screen-wallet');
+    } catch (error) {
+      showToast(error.message || 'Could not submit wallet request', 'error');
+    } finally {
+      if (btn) btn.disabled = false;
     }
+    return;
   }
+  await openMobileMoneyModal('MTN');
 }
 
 // ============================================================================
@@ -1994,7 +1964,6 @@ function showWithdrawalEsimRequirement() {
 
 async function execTopUp() {
   const amount = parseFloat(document.getElementById('topupVal').value) || 0;
-  const selectedPackage = appState.selectedPkg?.id ? appState.selectedPkg : null;
   if (amount < 1000) {
     showToast('Minimum top up is UGX 1,000', 'error');
     return;
@@ -2008,25 +1977,6 @@ async function execTopUp() {
     const res = await window.VSIM_API.topupWallet(amount, appState.profile.phone, 'MTN');
     appState.walletBalance = Number(res.walletBalance) || 0;
     updateBalanceDisplay();
-
-    if (selectedPackage && Math.round(amount) === Math.round(Number(selectedPackage.price))) {
-      const purchase = await window.VSIM_API.purchasePackage(selectedPackage.id, 'wallet', appState.targetEsimId, appState.targetEsimIccid);
-      if (appState.targetEsimId && String(purchase.esimId) !== String(appState.targetEsimId)) {
-        throw new Error('Bundle renewal did not update the selected eSIM. Please try again.');
-      }
-      if (purchase.esim && appState.targetEsimId) {
-        appState.myESIMs = appState.myESIMs.map(esim => String(esim.id) === String(appState.targetEsimId) ? { ...esim, ...purchase.esim } : esim);
-        renderMyESIMs(appState.myESIMs, appState.myEsimFilter);
-      }
-      appState.walletBalance = Number(purchase.walletBalance) || Math.max(0, appState.walletBalance - amount);
-      updateBalanceDisplay();
-      await fetchBackendData();
-      showToast(`${selectedPackage.title} purchased successfully!`, 'success');
-      appState.targetEsimId = null;
-      appState.targetEsimIccid = null;
-      navigateTo('screen-my-esims');
-      return;
-    }
 
     await fetchBackendData();
     showToast(res.message || `UGX ${amount.toLocaleString()} added to wallet!`, 'success');

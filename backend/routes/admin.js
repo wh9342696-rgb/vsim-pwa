@@ -884,6 +884,68 @@ router.post('/deposits/:id/action', adminAuth, ensureSuperAdmin, async (req, res
       return res.json({ message: 'Payment rejected', status: 'rejected' });
     }
 
+    if (payment.payment_method === 'wallet') {
+      const debit = await query(
+        `UPDATE users SET wallet_balance = wallet_balance - $1
+         WHERE id = $2 AND wallet_balance >= $1 RETURNING id`,
+        [payment.amount, payment.user_id]
+      );
+      if (!debit.rows.length) {
+        await query(
+          `UPDATE payment_requests
+           SET status = 'failed', payment_status = 'WALLET_BALANCE_INSUFFICIENT', order_status = 'PAYMENT_REJECTED'
+           WHERE id = $1`,
+          [payment.id]
+        );
+        await query(
+          `INSERT INTO notifications (user_id, title, message, category)
+           VALUES ($1, 'Wallet request not approved', $2, 'wallet')`,
+          [payment.user_id, `Your ${payment.amount.toLocaleString()} UGX wallet balance is no longer sufficient to approve this eSIM request.`]
+        );
+        return res.status(409).json({ error: 'The user no longer has enough wallet balance to approve this request.' });
+      }
+
+      const transactionReference = `WALLET-ESIM-${payment.id}`;
+      try {
+        await query(
+          `INSERT INTO wallet_transactions (user_id, type, title, amount, reference, status)
+           VALUES ($1, $2, $3, $4, $5, 'pending')`,
+          [payment.user_id, payment.target_esim_id ? 'bundle_purchase' : 'purchase', `${payment.payment_method} eSIM purchase`, payment.amount, transactionReference]
+        );
+        const fulfillment = await fulfillVerifiedPurchase(payment);
+        if (!fulfillment.fulfilled) throw new Error('Wallet eSIM request was not fulfilled');
+        await query(
+          `UPDATE wallet_transactions SET title = $1, status = 'completed' WHERE reference = $2`,
+          [`${payment.target_esim_id ? 'Bundle' : 'eSIM'} purchase (${payment.reference})`, transactionReference]
+        );
+        await query(
+          `UPDATE payment_requests
+           SET status = 'completed', payment_status = 'WALLET_APPROVED', order_status = 'ESIM_READY',
+               provisioning_status = 'COMPLETED', verified_by = $1, verified_at = CURRENT_TIMESTAMP
+           WHERE id = $2`,
+          [req.admin.id, payment.id]
+        );
+        await query(
+          `INSERT INTO system_logs (action, details, level, time_ago)
+           VALUES ($1, $2, 'success', 'Just now')`,
+          ['wallet_esim_approved', `Wallet eSIM request #${payment.id} approved by admin #${req.admin.id}`]
+        );
+        return res.json({ message: 'Wallet request approved and eSIM activated', status: 'completed' });
+      } catch (error) {
+        await query('UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2', [payment.amount, payment.user_id]);
+        await query(
+          `UPDATE wallet_transactions SET status = 'failed' WHERE reference = $1`,
+          [transactionReference]
+        );
+        await query(
+          `UPDATE payment_requests SET status = 'failed', payment_status = 'FULFILLMENT_FAILED',
+             order_status = 'PAYMENT_REJECTED', rejection_reason = $2 WHERE id = $1`,
+          [payment.id, String(error.message || 'Fulfillment failed').slice(0, 500)]
+        );
+        throw error;
+      }
+    }
+
     const merchantReference = String(req.body?.merchantReference || '').trim();
     const merchantAmount = Number(req.body?.merchantAmount);
     if (!merchantReference || !payment.customer_reference || merchantReference.toLowerCase() !== String(payment.customer_reference).trim().toLowerCase()) {

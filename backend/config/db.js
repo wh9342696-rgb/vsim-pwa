@@ -294,6 +294,7 @@ async function initializePostgresSchema() {
   await pool.query("ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'PAYMENT_AWAITING_VERIFICATION'");
   await pool.query("ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS order_status TEXT DEFAULT 'NOT_APPLICABLE'");
   await pool.query("ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS provisioning_status TEXT DEFAULT 'NOT_APPLICABLE'");
+  await pool.query("ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS payment_method TEXT DEFAULT 'mobile_money'");
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS verified_transaction_reference TEXT');
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS verified_amount NUMERIC(12,2)');
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP');
@@ -692,6 +693,7 @@ if (databaseDriver === 'postgres') {
   try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN target_esim_id INTEGER'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec("ALTER TABLE payment_requests ADD COLUMN payment_status TEXT DEFAULT 'PAYMENT_AWAITING_VERIFICATION'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec("ALTER TABLE payment_requests ADD COLUMN order_status TEXT DEFAULT 'NOT_APPLICABLE'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
+  try { sqlite.exec("ALTER TABLE payment_requests ADD COLUMN payment_method TEXT DEFAULT 'mobile_money'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec("ALTER TABLE payment_requests ADD COLUMN provisioning_status TEXT DEFAULT 'NOT_APPLICABLE'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   sqlite.exec(`
     DELETE FROM user_esims
