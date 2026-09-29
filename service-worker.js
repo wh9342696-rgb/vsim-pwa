@@ -1,11 +1,11 @@
 
-const CACHE = 'vsim-v29-mobile-money-reference';
+const CACHE = 'vsim-v30-sms-transaction-instructions';
 const ASSETS = [
   './',
   './index.html',
   './css/app.css?v=20260923-help-light-fix',
   './js/api.js?v=20260930-payment-referral-config-v1',
-  './js/app-referral-row-fix.js?v=20260930-mobile-money-reference-v2',
+  './js/app-referral-row-fix.js?v=20260930-sms-transaction-instructions-v3',
   './js/pwa-register.js?v=20260906-kyc-mobile',
   './icons/vsim.svg',
   './manifest.json'

@@ -1367,8 +1367,12 @@ function applyMerchantData(res, network) {
   if (amtElem) amtElem.textContent = `UGX ${Number(res.amount || pkgPrice).toLocaleString()}`;
   if (codeElem) codeElem.textContent = m.merchant_code;
   if (refElem) refElem.textContent = res.reference;
-  const instructions = String(m.instructions || 'Send the exact amount and confirm with your PIN.')
-    .replace(/\s*->\s*Enter Reference\s+VSIM-[A-Z0-9-]+/gi, '');
+  const baseInstructions = String(m.instructions || 'Send the exact amount and confirm with your PIN.')
+    .replace(/\s*->\s*Enter Reference\s+VSIM-[A-Z0-9-]+/gi, '')
+    .trim();
+  const instructions = /SMS transaction ID/i.test(baseInstructions)
+    ? baseInstructions
+    : `${baseInstructions} After payment, enter the SMS transaction ID in the field below.`;
   if (instElem) instElem.textContent = instructions;
 
   if (loading) loading.style.display = 'none';

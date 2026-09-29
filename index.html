@@ -20,7 +20,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=20260930-mobile-money-reference-v2', { scope: '/', updateViaCache: 'none' })
+        navigator.serviceWorker.register('/sw.js?v=20260930-sms-transaction-instructions-v3', { scope: '/', updateViaCache: 'none' })
           .then(registration => registration.update().then(() => {
             console.log('SW registered successfully:', registration.scope);
           }))
@@ -31,7 +31,7 @@
   <link rel="stylesheet" href="css/app.css?v=20260923-help-light-fix" />
   <script src="js/pwa-register.js?v=20260906-kyc-mobile" defer></script>
 </head>
-<body data-service-worker="/sw.js?v=20260930-mobile-money-reference-v2">
+<body data-service-worker="/sw.js?v=20260930-sms-transaction-instructions-v3">
   <div class="pwa-install-prompt" id="pwaInstallPrompt" hidden>
     <div class="pwa-install-prompt-copy">
       <strong id="pwaInstallPromptTitle">Install VSIM as an app</strong>
@@ -925,7 +925,7 @@
                 <div class="direction-body">
                   <p id="merchantInstructions" class="instruction-text"></p>
                 </div>
-                <p class="payer-input-help payment-reference-reminder"><strong>Payment reference:</strong> Use the transaction ID from your Mobile Money SMS after payment.</p>
+                <p class="payer-input-help payment-reference-reminder"><strong>After confirming payment, enter the SMS transaction ID from your confirmation message in the field below.</strong></p>
               </div>
 
               <!-- Payer Phone Input Field -->
@@ -2397,6 +2397,6 @@
   </div>
 
   <script src="js/api.js?v=20260930-payment-referral-config-v1"></script>
-  <script src="js/app-referral-row-fix.js?v=20260930-mobile-money-reference-v2"></script>
+  <script src="js/app-referral-row-fix.js?v=20260930-sms-transaction-instructions-v3"></script>
 </body>
 </html>

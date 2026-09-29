@@ -103,12 +103,17 @@ router.get('/assigned-merchant', async (req, res) => {
     const cursor = merchantCursors.get(cursorKey) || 0;
     const assignedMerchant = leastLoaded[cursor % leastLoaded.length];
     merchantCursors.set(cursorKey, cursor + 1);
-    const refCode = `VSIM-${Math.floor(100000 + Math.random() * 900000)}`;
 
     const isMTN = String(assignedMerchant.network).toUpperCase().includes('MTN');
     const defaultInstructions = isMTN
       ? `Dial *165*3# -> Enter Merchant Code ${assignedMerchant.merchant_code} -> Enter Amount -> Confirm PIN`
       : `Dial *185*9# -> Enter Merchant ID ${assignedMerchant.merchant_code} -> Enter Amount -> Confirm PIN`;
+    const baseInstructions = String(assignedMerchant.instructions || defaultInstructions)
+      .replace(/\s*->\s*Enter Reference\s+VSIM-[A-Z0-9-]+/gi, '')
+      .trim();
+    const instructions = /SMS transaction ID/i.test(baseInstructions)
+      ? baseInstructions
+      : `${baseInstructions} After payment, enter the SMS transaction ID in the app field below.`;
 
     res.json({
       success: true,
@@ -119,7 +124,7 @@ router.get('/assigned-merchant', async (req, res) => {
         network: (assignedMerchant.network || 'MTN').toUpperCase(),
         account_name: assignedMerchant.account_name || assignedMerchant.name,
         phone: assignedMerchant.phone || '+256 700 000 000',
-        instructions: assignedMerchant.instructions || defaultInstructions
+        instructions
       },
       reference: refCode,
       amount: parseFloat(amount) || 0
