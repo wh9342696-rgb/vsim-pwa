@@ -2865,7 +2865,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function registerUserServiceWorker() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=20260930-wallet-manual', { scope: '/', updateViaCache: 'none' }).catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260930-wallet-approval-copy', { scope: '/', updateViaCache: 'none' }).catch(() => {});
   }
 }
 

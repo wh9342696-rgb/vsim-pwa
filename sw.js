@@ -1,11 +1,11 @@
-const CACHE_NAME = 'vsim-pwa-v3-wallet-manual';
+const CACHE_NAME = 'vsim-pwa-v4-wallet-approval-copy';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
   './css/app.css?v=20260923-help-light-fix',
-  './js/api.js?v=20260930-wallet-manual',
-  './js/app.js?v=20260930-wallet-manual',
+  './js/api.js?v=20260930-wallet-approval-copy',
+  './js/app.js?v=20260930-wallet-approval-copy',
   './js/pwa-register.js?v=20260906-kyc-mobile',
   './icons/vsim-192.png',
   './icons/vsim-512.png'
