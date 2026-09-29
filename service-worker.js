@@ -1,11 +1,11 @@
 
-const CACHE = 'vsim-v26-esim-reminder';
+const CACHE = 'vsim-v27-referral-row-fix';
 const ASSETS = [
   './',
   './index.html',
-  './css/app.css?v=20260923-esim-reminder',
-  './js/api.js?v=20260923-esim-reminder',
-  './js/app.js?v=20260923-esim-reminder',
+  './css/app.css?v=20260923-help-light-fix',
+  './js/api.js?v=20260930-referral-row-fix',
+  './js/app.js?v=20260930-referral-row-fix',
   './js/pwa-register.js?v=20260906-kyc-mobile',
   './icons/vsim.svg',
   './manifest.json'

@@ -20,7 +20,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=20260930-referral-copy', { scope: '/', updateViaCache: 'none' })
+        navigator.serviceWorker.register('/sw.js?v=20260930-referral-row-fix-v2', { scope: '/', updateViaCache: 'none' })
           .then(registration => registration.update().then(() => {
             console.log('SW registered successfully:', registration.scope);
           }))
@@ -31,7 +31,7 @@
   <link rel="stylesheet" href="css/app.css?v=20260923-help-light-fix" />
   <script src="js/pwa-register.js?v=20260906-kyc-mobile" defer></script>
 </head>
-<body data-service-worker="/sw.js?v=20260930-referral-copy">
+<body data-service-worker="/sw.js?v=20260930-referral-row-fix-v2">
   <div class="pwa-install-prompt" id="pwaInstallPrompt" hidden>
     <div class="pwa-install-prompt-copy">
       <strong id="pwaInstallPromptTitle">Install VSIM as an app</strong>
@@ -1519,7 +1519,7 @@
                 <span>Referral & Affiliate</span>
               </div>
               <div class="menu-row-right">
-                <span>UGX 0</span>
+                <span id="profileReferralAmount">UGX 0</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
               </div>
             </div>
@@ -2405,7 +2405,7 @@
 
   </div>
 
-  <script src="js/api.js?v=20260930-referral-copy"></script>
-  <script src="js/app.js?v=20260930-referral-copy"></script>
+  <script src="js/api.js?v=20260930-referral-row-fix-v2"></script>
+  <script src="js/app-referral-row-fix.js?v=20260930-referral-row-fix-v2"></script>
 </body>
 </html>
