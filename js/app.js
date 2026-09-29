@@ -1629,7 +1629,7 @@ async function submitCheckoutPayment() {
       showToast('Please log in to submit a wallet purchase request', 'error');
       return;
     }
-    if (!window.confirm(`Submit a manual wallet request for UGX ${amount.toLocaleString()}? Your balance will only be charged if an admin approves it.`)) return;
+    if (!window.confirm(`Submit a manual wallet request for UGX ${amount.toLocaleString()}? Your balance will only be charged after approval.`)) return;
 
     const btn = document.getElementById('checkoutMainBtn');
     if (btn) btn.disabled = true;
