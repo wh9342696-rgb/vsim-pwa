@@ -1,5 +1,5 @@
 // VSIM Admin Panel Service Worker
-const CACHE_NAME = 'vsim-admin-v3.7-referral-bonus-config';
+const CACHE_NAME = 'vsim-admin-v3.8-airtime-number-dialog';
 const ASSETS_TO_CACHE = [
   '/admin/',
   '/admin/index.html',
