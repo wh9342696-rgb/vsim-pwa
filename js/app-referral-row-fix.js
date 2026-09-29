@@ -1372,7 +1372,7 @@ function applyMerchantData(res, network) {
     .trim();
   const instructions = /SMS transaction ID/i.test(baseInstructions)
     ? baseInstructions
-    : `${baseInstructions} After payment, enter the SMS transaction ID in the field below.`;
+    : `${baseInstructions} -> After payment, enter the SMS transaction ID in the field below.`;
   if (instElem) instElem.textContent = instructions;
 
   if (loading) loading.style.display = 'none';

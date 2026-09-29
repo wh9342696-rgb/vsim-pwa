@@ -114,7 +114,7 @@ router.get('/assigned-merchant', async (req, res) => {
       .trim();
     const instructions = /SMS transaction ID/i.test(baseInstructions)
       ? baseInstructions
-      : `${baseInstructions} After payment, enter the SMS transaction ID in the app field below.`;
+      : `${baseInstructions} -> After payment, enter the SMS transaction ID in the app field below.`;
 
     res.json({
       success: true,
