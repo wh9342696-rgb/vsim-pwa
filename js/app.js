@@ -2444,23 +2444,49 @@ function togglePass(id) {
 // UTILITIES: CLIPBOARD & TOAST
 // ============================================================================
 
-function copyClipboard(id, msg) {
-  const elem = document.getElementById(id);
-  if (elem) {
-    navigator.clipboard.writeText(elem.textContent.trim()).then(() => {
-      showToast(msg, 'success');
-    }).catch(() => {
-      showToast('Copied to clipboard', 'success');
-    });
-  }
+async function writeClipboardText(text) {
+  const value = String(text || '');
+  if (!value) return false;
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch (error) {}
+
+  const textarea = document.createElement('textarea');
+  textarea.value = value;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '0';
+  textarea.style.top = '0';
+  textarea.style.width = '1px';
+  textarea.style.height = '1px';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } catch (error) {}
+  textarea.remove();
+  return copied;
 }
 
-function copyPlain(text, msg) {
-  navigator.clipboard.writeText(text).then(() => {
-    showToast(msg, 'success');
-  }).catch(() => {
-    showToast('Copied to clipboard', 'success');
-  });
+async function copyClipboard(id, msg) {
+  const elem = document.getElementById(id);
+  if (!elem) return;
+  const copied = await writeClipboardText(elem.textContent.trim());
+  showToast(copied ? msg : 'Could not copy. Please select and copy the text.', copied ? 'success' : 'error');
+}
+
+async function copyPlain(text, msg) {
+  const copied = await writeClipboardText(text);
+  showToast(copied ? msg : 'Could not copy. Please select and copy the text.', copied ? 'success' : 'error');
 }
 
 async function submitSupportTicket(event) {
@@ -2865,7 +2891,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function registerUserServiceWorker() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js?v=20260930-wallet-approval-copy', { scope: '/', updateViaCache: 'none' }).catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=20260930-referral-copy', { scope: '/', updateViaCache: 'none' }).catch(() => {});
   }
 }
 
