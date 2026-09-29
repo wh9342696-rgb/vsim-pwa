@@ -68,7 +68,9 @@ router.post('/request-buy', authenticateToken, async (req, res) => {
 
     const merchantRes = await query(
       `SELECT id, name, merchant_code, account_name, phone, network, instructions FROM merchants
-       WHERE status = 'active' AND (UPPER(network) = $1 OR UPPER(network) = 'ALL')
+       WHERE status = 'active'
+         AND (UPPER(network) = $1 OR UPPER(network) = 'ALL')
+         AND COALESCE(TRIM(phone), '') <> ''
        ORDER BY CASE WHEN UPPER(network) = $1 THEN 0 ELSE 1 END, priority ASC, total_transactions ASC, id ASC LIMIT 1`,
       [normalizedNetwork]
     );
@@ -148,7 +150,7 @@ router.post('/request-sell', authenticateToken, async (req, res) => {
        ORDER BY CASE WHEN UPPER(network) = $1 THEN 0 ELSE 1 END, priority ASC, total_transactions ASC, id ASC LIMIT 1`,
       [normalizedNetwork]
     );
-    if (!merchantRes.rows.length || !String(merchantRes.rows[0].phone || '').trim()) return res.status(503).json({ error: `No active ${normalizedNetwork} airtime receiving number is configured` });
+    if (!merchantRes.rows.length) return res.status(503).json({ error: `No active ${normalizedNetwork} airtime receiving number is configured` });
     const payoutPercent = await getAirtimeRate('airtime_sell_payout_percent', 90);
     const payoutAmount = Math.round(airtimeAmount * payoutPercent / 100);
     const merchant = merchantRes.rows[0];

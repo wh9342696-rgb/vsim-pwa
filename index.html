@@ -20,7 +20,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=20260930-sms-transaction-instructions-v3', { scope: '/', updateViaCache: 'none' })
+        navigator.serviceWorker.register('/sw.js?v=20260930-airtime-destination-v1', { scope: '/', updateViaCache: 'none' })
           .then(registration => registration.update().then(() => {
             console.log('SW registered successfully:', registration.scope);
           }))
@@ -31,7 +31,7 @@
   <link rel="stylesheet" href="css/app.css?v=20260923-help-light-fix" />
   <script src="js/pwa-register.js?v=20260906-kyc-mobile" defer></script>
 </head>
-<body data-service-worker="/sw.js?v=20260930-sms-transaction-instructions-v3">
+<body data-service-worker="/sw.js?v=20260930-airtime-destination-v1">
   <div class="pwa-install-prompt" id="pwaInstallPrompt" hidden>
     <div class="pwa-install-prompt-copy">
       <strong id="pwaInstallPromptTitle">Install VSIM as an app</strong>
@@ -1375,7 +1375,7 @@
         <div class="modal-dialog-box mobile-money-dialog" onclick="event.stopPropagation()">
           <div class="modal-dialog-header"><div><span class="modal-dialog-title">Sell Airtime</span><span class="package-modal-subtitle">Transfer airtime and receive your payout after review.</span></div><button class="modal-close-btn" type="button" onclick="closeAirtimeSaleModal()" aria-label="Close dialog">&#10005;</button></div>
           <div class="modal-dialog-body">
-            <div class="modern-merchant-hero"><div class="merchant-hero-top"><span class="verified-tag">Manual review</span><span class="merchant-amount-chip"><span class="amount-label">Your airtime</span> <strong id="airtimeSaleAmount">UGX 0</strong></span></div><div class="merchant-code-spotlight"><div class="code-spotlight-label">Send airtime to this number</div><div id="airtimeSaleMerchant" class="merchant-meta-sub merchant-name-only">Merchant</div><div id="airtimeSaleMerchantNumber" class="spotlight-code-text">------</div><div id="airtimeSaleInstructions" class="merchant-meta-sub">Transfer the exact airtime amount to this phone number, then confirm your transfer.</div></div></div>
+            <div class="modern-merchant-hero"><div class="merchant-hero-top"><span class="verified-tag">Manual review</span><span class="merchant-amount-chip"><span class="amount-label">Your airtime</span> <strong id="airtimeSaleAmount">UGX 0</strong></span></div><div class="merchant-code-spotlight"><div class="code-spotlight-label">Airtime receiving number</div><div id="airtimeSaleMerchant" class="spotlight-code-text">------</div><div id="airtimeSaleInstructions" class="merchant-meta-sub">Transfer the exact airtime amount to this phone number, then confirm your transfer.</div></div></div>
             <div class="modern-direction-card"><div class="direction-header"><span>Your payout</span></div><div class="direction-body"><div id="airtimeSalePayout" class="spotlight-code-text">UGX 0</div><p class="instruction-text">This is the discounted cash value. Airtime is purchased at a lower rate and paid after admin verification.</p></div><div class="direction-ref-row"><span class="ref-hint">Payout phone: <strong id="airtimeSalePayoutPhone" style="color: var(--text-white);"></strong></span></div></div>
           </div>
           <div class="modal-dialog-footer"><button type="button" class="btn-modal-cancel" onclick="closeAirtimeSaleModal()">Cancel</button><button type="button" class="btn-modal-confirm" onclick="confirmAirtimeSale()">I Have Sent Airtime</button></div>
@@ -2397,6 +2397,6 @@
   </div>
 
   <script src="js/api.js?v=20260930-payment-referral-config-v1"></script>
-  <script src="js/app-referral-row-fix.js?v=20260930-sms-transaction-instructions-v3"></script>
+  <script src="js/app-referral-row-fix.js?v=20260930-airtime-destination-v1"></script>
 </body>
 </html>

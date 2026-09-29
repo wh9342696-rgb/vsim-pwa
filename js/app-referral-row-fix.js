@@ -2139,8 +2139,7 @@ function openAirtimeSaleModal(details) {
   modal.dataset.request = JSON.stringify(details);
   document.getElementById('airtimeSaleAmount').textContent = `UGX ${Number(details.airtimeAmount).toLocaleString()}`;
   document.getElementById('airtimeSalePayout').textContent = `UGX ${Number(details.payoutAmount).toLocaleString()}`;
-  document.getElementById('airtimeSaleMerchantNumber').textContent = details.merchantNumber;
-  document.getElementById('airtimeSaleMerchant').textContent = details.merchant?.name || 'Merchant';
+  document.getElementById('airtimeSaleMerchant').textContent = details.merchantNumber;
   document.getElementById('airtimeSaleInstructions').textContent = details.merchant?.instructions || 'Use the merchant code above, then confirm your transfer.';
   document.getElementById('airtimeSalePayoutPhone').textContent = details.payoutPhone;
   modal.classList.add('open');
