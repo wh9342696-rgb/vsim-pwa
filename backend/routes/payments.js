@@ -103,6 +103,7 @@ router.get('/assigned-merchant', async (req, res) => {
     const cursor = merchantCursors.get(cursorKey) || 0;
     const assignedMerchant = leastLoaded[cursor % leastLoaded.length];
     merchantCursors.set(cursorKey, cursor + 1);
+    const refCode = `VSIM-${Math.floor(100000 + Math.random() * 900000)}`;
 
     const isMTN = String(assignedMerchant.network).toUpperCase().includes('MTN');
     const defaultInstructions = isMTN
