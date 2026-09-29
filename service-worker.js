@@ -1,11 +1,11 @@
 
-const CACHE = 'vsim-v31-airtime-destination';
+const CACHE = 'vsim-v32-withdrawal-fee-sync';
 const ASSETS = [
   './',
   './index.html',
   './css/app.css?v=20260923-help-light-fix',
   './js/api.js?v=20260930-payment-referral-config-v1',
-  './js/app-referral-row-fix.js?v=20260930-airtime-destination-v1',
+  './js/app-referral-row-fix.js?v=20260930-withdrawal-fee-sync-v1',
   './js/pwa-register.js?v=20260906-kyc-mobile',
   './icons/vsim.svg',
   './manifest.json'

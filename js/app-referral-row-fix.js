@@ -302,6 +302,10 @@ function navigateTo(targetScreenId, addToHistory = true) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   targetElem.classList.add('active');
 
+  if (targetScreenId === 'screen-withdraw' && window.VSIM_API?.getToken()) {
+    refreshWithdrawQuote();
+  }
+
   if (authScreens.includes(targetScreenId)) {
     appShell.classList.add('hide-nav');
   } else {
@@ -674,10 +678,19 @@ function startUserRefreshCoordinator() {
   const refresh = () => {
     if (!document.hidden && window.VSIM_API?.getToken()) fetchBackendData();
   };
+  const refreshVisibleWithdrawalQuote = () => {
+    if (!document.hidden && document.getElementById('screen-withdraw')?.classList.contains('active') && window.VSIM_API?.getToken()) {
+      refreshWithdrawQuote();
+    }
+  };
   window.addEventListener('pageshow', refresh);
   window.addEventListener('online', refresh);
+  window.addEventListener('focus', refreshVisibleWithdrawalQuote);
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) refresh();
+    if (!document.hidden) {
+      refresh();
+      refreshVisibleWithdrawalQuote();
+    }
   });
   setInterval(refresh, ESIM_REFRESH_INTERVAL_MS);
   setInterval(renderEsimEarningReminder, 60000);

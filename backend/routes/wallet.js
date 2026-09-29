@@ -2,6 +2,7 @@ import express from 'express';
 import { z } from 'zod';
 import { query } from '../config/db.js';
 import { createUniqueReference } from '../utils/reference.js';
+import { normalizeWithdrawalSettlementDays, selectWithdrawalFeeRule } from '../utils/withdrawal-fee.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
 
@@ -43,21 +44,23 @@ export async function getWithdrawalQuote(userId, requestedAmount, { requireBalan
   const now = new Date();
   const calendar = getUgandaCalendarDay(now);
   const day = calendar.day;
-  const configuredSettlementDays = String(settings.withdrawal_settlement_days || '').split(',').map(value => Number(value.trim())).filter(Number.isInteger);
-  const settlementDays = [...new Set([5, ...configuredSettlementDays])];
+  const settlementDays = normalizeWithdrawalSettlementDays(settings.withdrawal_settlement_days);
   const esim = esimRes.rows[0];
   const expiry = esim?.expires_at ? new Date(esim.expires_at) : null;
   const expiryDay = expiry && Math.abs(expiry.getTime() - now.getTime()) < 24 * 60 * 60 * 1000;
   const monthlyCycle = esim?.activated_at && now.getTime() - new Date(esim.activated_at).getTime() >= 30 * 24 * 60 * 60 * 1000;
   const conditions = { monthly_cycle: monthlyCycle, expiry: Boolean(expiryDay), settlement: settlementDays.includes(day), normal: true };
   const priority = String(settings.withdrawal_fee_priority || 'monthly_cycle,expiry,settlement,normal').split(',').map(value => value.trim()).filter(Boolean);
-  const rule = day === 5
-    ? priority.find(candidate => conditions[candidate]) || 'normal'
-    : 'normal';
+  const rule = selectWithdrawalFeeRule(priority, conditions);
   const feeKey = { monthly_cycle: 'withdrawal_monthly_fee', expiry: 'withdrawal_expiry_fee', settlement: 'withdrawal_settlement_fee', normal: 'withdrawal_fee' }[rule];
   const fee = Math.max(0, Number(settings[feeKey]) || 0);
   const netAmount = Math.max(0, amount - fee);
-  const messages = { normal: 'Today is not Friday, so the higher withdrawal processing fee applies.', settlement: 'Friday is the weekly settlement day, so the lower settlement fee applies.', expiry: 'Your withdrawal is near the active eSIM expiry point.', monthly_cycle: 'Your completed monthly cycle qualifies for the lowest configured fee.' };
+  const messages = {
+    normal: 'The standard withdrawal processing fee applies under the current fee rules.',
+    settlement: day === 5 ? 'Today is the Friday settlement day, so the configured settlement fee applies.' : 'Today is a configured settlement day, so the configured settlement fee applies.',
+    expiry: 'Your withdrawal is near the active eSIM expiry point.',
+    monthly_cycle: 'Your completed monthly cycle qualifies for the configured monthly-cycle fee.'
+  };
   const settlementTerms = rule === 'settlement' && day === 5
     ? 'Friday settlement terms: international bank settlements release bulk funds to our account on the settlement day, so the withdrawal processing fee is lower. Payout timing still depends on bank and mobile-money processing.'
     : rule === 'settlement'
@@ -79,7 +82,9 @@ export async function getWithdrawalQuote(userId, requestedAmount, { requireBalan
       verificationThreshold: KYC_WITHDRAWAL_THRESHOLD,
       verificationRequired: amount >= KYC_WITHDRAWAL_THRESHOLD,
       weekendIncomePaused: calendar.isWeekend,
-      terms: 'Withdrawals are available every day. Friday is the weekly bank settlement day and has the lower settlement fee; the higher standard fee applies on other days. Withdrawals of UGX 100,000 or more require approved identity verification.'
+      terms: settlementDays.includes(day)
+        ? `${calendar.weekday} is a configured settlement day, so the settlement fee applies. Withdrawals of UGX 100,000 or more require approved identity verification.`
+        : `The standard withdrawal fee applies today. Configured settlement weekdays are ${settlementDays.join(', ')}. Withdrawals of UGX 100,000 or more require approved identity verification.`
     },
     canContinue: true,
     balance: userId ? balance : null,
