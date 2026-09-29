@@ -20,7 +20,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=20260930-referral-row-fix-v2', { scope: '/', updateViaCache: 'none' })
+        navigator.serviceWorker.register('/sw.js?v=20260930-payment-referral-config-v1', { scope: '/', updateViaCache: 'none' })
           .then(registration => registration.update().then(() => {
             console.log('SW registered successfully:', registration.scope);
           }))
