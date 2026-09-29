@@ -31,7 +31,7 @@
   <link rel="stylesheet" href="css/app.css?v=20260923-help-light-fix" />
   <script src="js/pwa-register.js?v=20260906-kyc-mobile" defer></script>
 </head>
-<body data-service-worker="/sw.js?v=20260930-referral-row-fix-v2">
+<body data-service-worker="/sw.js?v=20260930-payment-referral-config-v1">
   <div class="pwa-install-prompt" id="pwaInstallPrompt" hidden>
     <div class="pwa-install-prompt-copy">
       <strong id="pwaInstallPromptTitle">Install VSIM as an app</strong>
@@ -925,11 +925,7 @@
                 <div class="direction-body">
                   <p id="merchantInstructions" class="instruction-text"></p>
                 </div>
-                <div class="direction-ref-row">
-                  <span class="ref-hint">Use this VSIM reference when paying: <strong id="merchantReference" style="font-family: monospace; color: var(--text-white);">VSIM-000000</strong></span>
-                  <button type="button" class="btn-mini-copy" id="copyRefBtn" onclick="copyModalField('ref')">Copy</button>
-                </div>
-                <p class="payer-input-help payment-reference-reminder">After payment, enter the transaction reference from your Mobile Money SMS below.</p>
+                <p class="payer-input-help payment-reference-reminder">After payment, enter the transaction ID/reference from your Mobile Money SMS below.</p>
               </div>
 
               <!-- Payer Phone Input Field -->
@@ -940,10 +936,10 @@
                 </div>
               </div>
               <div class="payer-input-container">
-                <label class="payer-input-label">SMS Payment Reference <span style="color: var(--accent-red);">*</span></label>
-                <p class="payer-input-help">After paying, copy the transaction reference or ID from your Mobile Money SMS and paste it here. This is required for verification.</p>
+                <label class="payer-input-label">Mobile Money Transaction ID / SMS Payment Reference <span style="color: var(--accent-red);">*</span></label>
+                <p class="payer-input-help">Paste the transaction ID/reference from your Mobile Money payment SMS. This is the reference required for verification.</p>
                 <div class="payer-input-box">
-                  <input id="merchantCustomerReference" class="modal-form-input modern-payer-input" maxlength="160" required placeholder="Paste the reference from your payment SMS" />
+                  <input id="merchantCustomerReference" class="modal-form-input modern-payer-input" maxlength="160" required placeholder="Paste the transaction ID/reference from your payment SMS" />
                 </div>
               </div>
             </div>
@@ -958,10 +954,6 @@
               <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--text-white); margin-top: 10px;">Payment submitted</h3>
               <p style="font-size: 0.78rem; color: var(--text-gray); margin-top: 4px;">Your payment is awaiting verification. Your eSIM will update after approval.</p>
               <div class="success-receipt-card">
-                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 6px;">
-                  <span style="color: var(--text-muted);">Reference:</span>
-                  <strong style="color: var(--text-white); font-family: monospace;" id="successReceiptRef"></strong>
-                </div>
                 <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 6px;">
                   <span style="color: var(--text-muted);">Status:</span>
                   <span class="badge-tag-income">Pending verification</span>
@@ -1369,9 +1361,8 @@
             <div class="modern-direction-card">
               <div class="direction-header"><span>Payment code</span></div>
               <div class="direction-body"><div id="airtimePurchaseMerchant" class="merchant-meta-sub merchant-name-only">Merchant</div><div id="airtimeMerchantNumber" class="spotlight-code-text">------</div><p id="airtimePurchaseInstructions" class="instruction-text">Use the payment code above, then confirm your deposit.</p></div>
-              <div class="direction-ref-row"><span class="ref-hint">Reference: <strong id="airtimePurchaseReference" style="font-family: monospace; color: var(--text-white);"></strong></span></div>
             </div>
-            <div class="payer-input-container"><label class="payer-input-label">SMS Payment Reference <span style="color: var(--accent-red);">*</span></label><p class="payer-input-help">Copy the transaction reference or ID from your Mobile Money payment SMS and paste it here.</p><div class="payer-input-box"><input id="airtimeCustomerReference" class="modal-form-input modern-payer-input" maxlength="160" required placeholder="Paste the reference from your payment SMS" /></div></div>
+            <div class="payer-input-container"><label class="payer-input-label">Mobile Money Transaction ID / SMS Payment Reference <span style="color: var(--accent-red);">*</span></label><p class="payer-input-help">Paste the transaction ID/reference from your Mobile Money payment SMS. This is the reference required for verification.</p><div class="payer-input-box"><input id="airtimeCustomerReference" class="modal-form-input modern-payer-input" maxlength="160" required placeholder="Paste the transaction ID/reference from your payment SMS" /></div></div>
           </div>
           <div class="modal-dialog-footer">
             <button type="button" class="btn-modal-cancel" onclick="closeAirtimePurchaseModal()">Cancel</button>
@@ -1385,7 +1376,7 @@
           <div class="modal-dialog-header"><div><span class="modal-dialog-title">Sell Airtime</span><span class="package-modal-subtitle">Transfer airtime and receive your payout after review.</span></div><button class="modal-close-btn" type="button" onclick="closeAirtimeSaleModal()" aria-label="Close dialog">&#10005;</button></div>
           <div class="modal-dialog-body">
             <div class="modern-merchant-hero"><div class="merchant-hero-top"><span class="verified-tag">Manual review</span><span class="merchant-amount-chip"><span class="amount-label">Your airtime</span> <strong id="airtimeSaleAmount">UGX 0</strong></span></div><div class="merchant-code-spotlight"><div class="code-spotlight-label">Send airtime to this number</div><div id="airtimeSaleMerchant" class="merchant-meta-sub merchant-name-only">Merchant</div><div id="airtimeSaleMerchantNumber" class="spotlight-code-text">------</div><div id="airtimeSaleInstructions" class="merchant-meta-sub">Transfer the exact airtime amount to this phone number, then confirm your transfer.</div></div></div>
-            <div class="modern-direction-card"><div class="direction-header"><span>Your payout</span></div><div class="direction-body"><div id="airtimeSalePayout" class="spotlight-code-text">UGX 0</div><p class="instruction-text">This is the discounted cash value. Airtime is purchased at a lower rate and paid after admin verification.</p></div><div class="direction-ref-row"><span class="ref-hint">Payout phone: <strong id="airtimeSalePayoutPhone" style="color: var(--text-white);"></strong></span><span class="ref-hint">Ref: <strong id="airtimeSaleReference" style="font-family: monospace; color: var(--text-white);"></strong></span></div></div>
+            <div class="modern-direction-card"><div class="direction-header"><span>Your payout</span></div><div class="direction-body"><div id="airtimeSalePayout" class="spotlight-code-text">UGX 0</div><p class="instruction-text">This is the discounted cash value. Airtime is purchased at a lower rate and paid after admin verification.</p></div><div class="direction-ref-row"><span class="ref-hint">Payout phone: <strong id="airtimeSalePayoutPhone" style="color: var(--text-white);"></strong></span></div></div>
           </div>
           <div class="modal-dialog-footer"><button type="button" class="btn-modal-cancel" onclick="closeAirtimeSaleModal()">Cancel</button><button type="button" class="btn-modal-confirm" onclick="confirmAirtimeSale()">I Have Sent Airtime</button></div>
         </div>
@@ -2405,7 +2396,7 @@
 
   </div>
 
-  <script src="js/api.js?v=20260930-referral-row-fix-v2"></script>
-  <script src="js/app-referral-row-fix.js?v=20260930-referral-row-fix-v2"></script>
+  <script src="js/api.js?v=20260930-payment-referral-config-v1"></script>
+  <script src="js/app-referral-row-fix.js?v=20260930-payment-referral-config-v1"></script>
 </body>
 </html>

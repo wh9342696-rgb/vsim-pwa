@@ -5,6 +5,7 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { query } from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { awardReferralBonus, getReferralSignupBonus } from '../utils/referral-reward.js';
 import {
   generateAuthenticationOptions,
   generateRegistrationOptions,
@@ -173,30 +174,43 @@ router.post(['/signup', '/register'], async (req, res) => {
       referrerUser = referrer;
       referredBy = referrerUser.referral_code;
     }
-    const initialBalance = 5000.0;
+    const referralBonus = await getReferralSignupBonus(referredBy);
 
     const result = await query(
       `INSERT INTO users (phone, name, password_hash, initials, wallet_balance, kyc_tier, referral_code, referred_by, profile_photo)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [phone, name, hash, initials, initialBalance, 'Tier 0 Unverified', userRefCode, referredBy, profilePhoto || null]
+      [phone, name, hash, initials, referralBonus, 'Tier 0 Unverified', userRefCode, referredBy, profilePhoto || null]
     );
 
     const userRes = await query('SELECT id, phone, name, email, initials, wallet_balance, kyc_tier, profile_photo FROM users WHERE phone = $1', [phone]);
     const user = userRes.rows[0];
 
-    // 1. Log welcome bonus transaction for the new user
-    await query(
-      `INSERT INTO wallet_transactions (user_id, type, title, amount, reference, status)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [user.id, 'welcome_bonus', 'Welcome Bonus', initialBalance, `WELCOME-${user.id}`, 'completed']
-    );
+    if (referrerUser && referralBonus > 0) {
+      await awardReferralBonus({
+        referredUserId: user.id,
+        referrerUserId: referrerUser.id,
+        amount: referralBonus,
+        referredUserName: name
+      });
+    }
 
-    // 2. Add Welcome notification for the new user
-    await query(
-      `INSERT INTO notifications (user_id, title, message, category)
-       VALUES ($1, $2, $3, $4)`,
-      [user.id, 'Welcome to VSIM!', 'A welcome bonus of UGX 5,000 has been credited to your wallet balance.', 'wallet']
-    );
+    if (referralBonus > 0) {
+      const rewardReference = `WELCOME-${user.id}`;
+      const existingReward = await query('SELECT id FROM wallet_transactions WHERE reference = $1', [rewardReference]);
+      if (!existingReward.rows.length) {
+        await query(
+          `INSERT INTO wallet_transactions (user_id, type, title, amount, reference, status)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [user.id, 'welcome_bonus', 'Welcome Bonus', referralBonus, rewardReference, 'completed']
+        );
+
+        await query(
+          `INSERT INTO notifications (user_id, title, message, category)
+           VALUES ($1, $2, $3, $4)`,
+          [user.id, 'Welcome to VSIM!', `A welcome bonus of UGX ${Number(referralBonus).toLocaleString()} has been credited to your wallet balance.`, 'wallet']
+        );
+      }
+    }
 
     const sessionToken = createSessionToken();
     await query('UPDATE users SET current_session_token = $1 WHERE id = $2', [sessionToken, user.id]);
@@ -216,7 +230,8 @@ router.post(['/signup', '/register'], async (req, res) => {
     res.status(201).json({
       message: 'Account created successfully',
       token,
-      user
+      user,
+      referralBonus
     });
   } catch (err) {
     console.error('Signup error:', err);

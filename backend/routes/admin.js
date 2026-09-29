@@ -734,6 +734,12 @@ router.get('/settings', adminAuth, async (req, res) => {
 
 router.put('/settings', adminAuth, ensureSuperAdmin, async (req, res) => {
   const entries = Object.entries(req.body || {});
+  if (Object.hasOwn(req.body || {}, 'referral_bonus_amount')) {
+    const amount = Number(req.body.referral_bonus_amount);
+    if (!Number.isSafeInteger(amount) || amount < 0) {
+      return res.status(400).json({ error: 'Referral bonus amount must be a non-negative whole number' });
+    }
+  }
   for (const [key, value] of entries) {
     await query(
       `INSERT INTO system_settings (key, value) VALUES ($1, $2)

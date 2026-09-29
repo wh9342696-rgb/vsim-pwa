@@ -31,9 +31,12 @@ CREATE TABLE IF NOT EXISTS payment_requests (
   type TEXT, -- topup, esim_purchase, airtime_buy
   method TEXT, -- momo, wallet, card
   merchant TEXT,
+  assigned_merchant_id INTEGER,
   network TEXT,
   reference TEXT UNIQUE NOT NULL,
+  customer_reference TEXT,
   related_id INTEGER,
+  provisioned_esim_id INTEGER,
   status TEXT DEFAULT 'pending', -- pending, completed, failed, cancelled
   verified_by INTEGER,
   verified_at DATETIME,
@@ -87,3 +90,13 @@ CREATE INDEX IF NOT EXISTS idx_admin_notif_type ON admin_notifications(type);
 
 CREATE INDEX IF NOT EXISTS idx_system_logs_action ON system_logs(action);
 CREATE INDEX IF NOT EXISTS idx_system_logs_level ON system_logs(level);
+
+CREATE TABLE IF NOT EXISTS referral_rewards (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  referred_user_id INTEGER UNIQUE NOT NULL,
+  referrer_user_id INTEGER NOT NULL,
+  amount REAL NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (referred_user_id) REFERENCES users(id),
+  FOREIGN KEY (referrer_user_id) REFERENCES users(id)
+);

@@ -1580,7 +1580,6 @@ async function confirmMobileMoneyPayment() {
     document.getElementById('mobileMoneyError').style.display = 'none';
     document.getElementById('modalNormalFooter').style.display = 'none';
 
-    document.getElementById('successReceiptRef').textContent = currentAssignedMerchant.reference;
     const successDataAdded = document.getElementById('successDataAdded');
     if (successDataAdded) {
       successDataAdded.textContent = 'Awaiting payment verification';
@@ -2085,7 +2084,6 @@ function openAirtimePurchaseModal(details) {
   document.getElementById('airtimePurchaseAmount').textContent = `UGX ${Number(details.airtimeAmount).toLocaleString()}`;
   document.getElementById('airtimeDepositAmount').textContent = `UGX ${Number(details.paymentAmount).toLocaleString()}`;
   document.getElementById('airtimeMerchantNumber').textContent = details.merchantNumber;
-  document.getElementById('airtimePurchaseReference').textContent = details.reference;
   document.getElementById('airtimePurchaseMerchant').textContent = details.merchant?.name || 'Merchant';
   document.getElementById('airtimePurchaseInstructions').textContent = details.merchant?.instructions || 'Use the payment code above, then confirm your deposit.';
   modal.classList.add('open');
@@ -2139,7 +2137,6 @@ function openAirtimeSaleModal(details) {
   document.getElementById('airtimeSaleMerchant').textContent = details.merchant?.name || 'Merchant';
   document.getElementById('airtimeSaleInstructions').textContent = details.merchant?.instructions || 'Use the merchant code above, then confirm your transfer.';
   document.getElementById('airtimeSalePayoutPhone').textContent = details.payoutPhone;
-  document.getElementById('airtimeSaleReference').textContent = details.reference;
   modal.classList.add('open');
 }
 
@@ -2284,11 +2281,12 @@ async function handleSignup(e) {
       updateProfileUI();
       updateBalanceDisplay();
       await fetchBackendData();
-      showToast('Welcome to VSIM! UGX 5,000 bonus added.', 'success');
+      const referralBonus = Number(res.referralBonus ?? 5000);
+      showToast(`Welcome to VSIM! UGX ${referralBonus.toLocaleString()} bonus added.`, 'success');
       if (refCode) {
         await showCustomConfirm({
           title: 'Referral Linked Successfully',
-          message: 'Your account is linked to this referral. You received a UGX 5,000 welcome bonus. When you invite friends, they receive the welcome bonus and you earn 10% commission when they purchase an eSIM. Commission is added to your wallet automatically.',
+          message: `Your account is linked to this referral. You received a UGX ${referralBonus.toLocaleString()} welcome bonus. When you invite friends, they receive the welcome bonus and you earn 10% commission when they purchase an eSIM. Commission is added to your wallet automatically.`,
           confirmText: 'Continue',
           cancelText: 'Close'
         });

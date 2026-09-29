@@ -15,7 +15,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let queryFn;
+let transactionFn;
 let pool;
+let sqlite;
 
 async function initializePostgresSchema() {
   if (!pool) return;
@@ -253,12 +255,21 @@ async function initializePostgresSchema() {
     `CREATE TABLE IF NOT EXISTS system_settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS referral_rewards (
+      id SERIAL PRIMARY KEY,
+      referred_user_id INTEGER UNIQUE NOT NULL REFERENCES users(id),
+      referrer_user_id INTEGER NOT NULL REFERENCES users(id),
+      amount NUMERIC(12,2) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`
   ];
 
   for (const statement of requiredTables) {
     await pool.query(statement);
   }
+
+  await pool.query(`INSERT INTO system_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING`, ['referral_bonus_amount', '5000']);
 
   await pool.query('ALTER TABLE esim_packages ADD COLUMN IF NOT EXISTS progress_percent_per_hour NUMERIC(8,4) DEFAULT 0.42');
   await pool.query('ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS can_manage_merchants BOOLEAN DEFAULT FALSE');
@@ -294,6 +305,9 @@ async function initializePostgresSchema() {
   await pool.query("ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'PAYMENT_AWAITING_VERIFICATION'");
   await pool.query("ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS order_status TEXT DEFAULT 'NOT_APPLICABLE'");
   await pool.query("ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS provisioning_status TEXT DEFAULT 'NOT_APPLICABLE'");
+  await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS provisioned_esim_id INTEGER');
+  await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS customer_reference TEXT');
+  await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS assigned_merchant_id INTEGER');
   await pool.query("ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS payment_method TEXT DEFAULT 'mobile_money'");
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS verified_transaction_reference TEXT');
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS verified_amount NUMERIC(12,2)');
@@ -317,6 +331,7 @@ async function initializePostgresSchema() {
       AND older.id < newer.id
   `);
   await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS user_esims_iccid_unique ON user_esims (iccid) WHERE iccid IS NOT NULL');
+  await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS payment_customer_reference_unique ON payment_requests (LOWER(customer_reference)) WHERE customer_reference IS NOT NULL AND TRIM(customer_reference) <> ''");
   await pool.query('ALTER TABLE notifications ADD COLUMN IF NOT EXISTS admin_id INTEGER REFERENCES admin_users(id)');
   await pool.query('ALTER TABLE notifications ALTER COLUMN user_id DROP NOT NULL').catch(() => {});
 
@@ -420,6 +435,27 @@ if (databaseDriver === 'postgres') {
     if (!sql.toUpperCase().startsWith('SELECT')) emitDataChanged('database');
     return { rows: res.rows };
   };
+  transactionFn = async callback => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const txQuery = async (text, params = []) => {
+        let sql = text.trim();
+        if (sql.toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) sql += ' RETURNING *';
+        const result = await client.query(sql, params);
+        return { rows: result.rows };
+      };
+      const result = await callback(txQuery);
+      await client.query('COMMIT');
+      emitDataChanged('database');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  };
 } else {
   const configuredSqlitePath = process.env.SQLITE_PATH;
   const dbPath = configuredSqlitePath
@@ -429,7 +465,7 @@ if (databaseDriver === 'postgres') {
   if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
   }
-  const sqlite = new Database(dbPath);
+  sqlite = new Database(dbPath);
   sqlite.pragma('journal_mode = WAL');
   sqlite.pragma('foreign_keys = ON');
   sqlite.pragma('busy_timeout = 5000');
@@ -437,6 +473,23 @@ if (databaseDriver === 'postgres') {
 
   // Initialize SQLite Tables
   sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS admin_users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      name TEXT NOT NULL,
+      role TEXT DEFAULT 'super_admin',
+      status TEXT DEFAULT 'active',
+      profit_total REAL DEFAULT 0,
+      joined_users_count INTEGER DEFAULT 0,
+      profile_photo TEXT,
+      can_manage_withdrawal_fee INTEGER DEFAULT 0,
+      can_manage_merchants INTEGER DEFAULT 0,
+      merchant_edit_restricted INTEGER DEFAULT 0,
+      current_session_token TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       phone TEXT UNIQUE NOT NULL,
@@ -681,7 +734,20 @@ if (databaseDriver === 'postgres') {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS referral_rewards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      referred_user_id INTEGER UNIQUE NOT NULL REFERENCES users(id),
+      referrer_user_id INTEGER NOT NULL REFERENCES users(id),
+      amount REAL NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
+
+  const settingsDefault = sqlite.prepare("SELECT value FROM system_settings WHERE key = ?").get('referral_bonus_amount');
+  if (!settingsDefault) {
+    sqlite.prepare("INSERT INTO system_settings (key, value) VALUES (?, ?)").run('referral_bonus_amount', '5000');
+  }
 
   try { sqlite.exec('ALTER TABLE admin_users ADD COLUMN can_manage_merchants INTEGER DEFAULT 0'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE esim_packages ADD COLUMN progress_percent_per_hour REAL DEFAULT 0.42'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
@@ -693,14 +759,18 @@ if (databaseDriver === 'postgres') {
   try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN target_esim_id INTEGER'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec("ALTER TABLE payment_requests ADD COLUMN payment_status TEXT DEFAULT 'PAYMENT_AWAITING_VERIFICATION'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec("ALTER TABLE payment_requests ADD COLUMN order_status TEXT DEFAULT 'NOT_APPLICABLE'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
-  try { sqlite.exec("ALTER TABLE payment_requests ADD COLUMN payment_method TEXT DEFAULT 'mobile_money'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec("ALTER TABLE payment_requests ADD COLUMN provisioning_status TEXT DEFAULT 'NOT_APPLICABLE'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
+  try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN provisioned_esim_id INTEGER'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
+  try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN customer_reference TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
+  try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN assigned_merchant_id INTEGER'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
+  try { sqlite.exec("ALTER TABLE payment_requests ADD COLUMN payment_method TEXT DEFAULT 'mobile_money'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   sqlite.exec(`
     DELETE FROM user_esims
     WHERE iccid IS NOT NULL
       AND rowid NOT IN (SELECT MAX(rowid) FROM user_esims WHERE iccid IS NOT NULL GROUP BY iccid)
   `);
   sqlite.exec('CREATE UNIQUE INDEX IF NOT EXISTS user_esims_iccid_unique ON user_esims (iccid) WHERE iccid IS NOT NULL');
+  sqlite.exec("CREATE UNIQUE INDEX IF NOT EXISTS payment_customer_reference_unique ON payment_requests (LOWER(customer_reference)) WHERE customer_reference IS NOT NULL AND TRIM(customer_reference) <> ''");
   try { sqlite.exec('ALTER TABLE withdrawals ADD COLUMN reference TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE withdrawals ADD COLUMN processed_by INTEGER'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE withdrawals ADD COLUMN processed_at DATETIME'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
@@ -762,13 +832,37 @@ if (databaseDriver === 'postgres') {
       return { rows: [{ id: info.lastInsertRowid, changes: info.changes }] };
     }
   };
+  transactionFn = async callback => {
+    sqlite.exec('BEGIN IMMEDIATE');
+    const txQuery = async (text, params = []) => {
+      const sql = text.trim().replace(/\$(\d+)/g, '?');
+      if (sql.toUpperCase().startsWith('SELECT') || sql.toUpperCase().includes('RETURNING')) {
+        return { rows: sqlite.prepare(sql).all(...params) };
+      }
+      const info = sqlite.prepare(sql).run(...params);
+      return { rows: [{ id: info.lastInsertRowid, changes: info.changes }] };
+    };
+    try {
+      const result = await callback(txQuery);
+      sqlite.exec('COMMIT');
+      emitDataChanged('database');
+      return result;
+    } catch (error) {
+      sqlite.exec('ROLLBACK');
+      throw error;
+    }
+  };
 }
 
 export const query = queryFn;
+export const withTransaction = transactionFn;
 
 export async function closeDatabase() {
   if (pool) {
     await pool.end();
+  }
+  if (sqlite?.open) {
+    sqlite.close();
   }
 }
 

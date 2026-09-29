@@ -1056,7 +1056,7 @@
           <div class="dashboard-greeting-bar">
             <div>
               <h2 class="dashboard-greeting-title">Pending Mobile Money Payments</h2>
-              <p class="dashboard-greeting-sub">Match the customer reference against the merchant reference received before approving fulfillment.</p>
+              <p class="dashboard-greeting-sub">Match the submitted Mobile Money transaction ID against the merchant SMS reference before approving fulfillment.</p>
             </div>
           </div>
           <div class="dashboard-widget-card">
@@ -1113,7 +1113,7 @@
             <div><h2 class="dashboard-greeting-title">Airtime Purchase Requests</h2><p class="dashboard-greeting-sub">Review deposits and manually deliver approved airtime orders.</p></div>
           </div>
           <div class="dashboard-widget-card"><div class="widget-card-body" style="padding: 0;"><div class="table-responsive-wrapper"><table class="admin-data-table">
-            <thead><tr><th>ID</th><th>Recipient</th><th>Network</th><th>Airtime</th><th>Deposit Due</th><th>Merchant</th><th>SMS Ref</th><th>Admin Verification</th><th>Status</th><th>Action</th></tr></thead>
+            <thead><tr><th>ID</th><th>Recipient</th><th>Network</th><th>Airtime</th><th>Deposit Due</th><th>Merchant</th><th>Mobile Money Transaction ID (SMS)</th><th>Admin Verification</th><th>Status</th><th>Action</th></tr></thead>
             <tbody id="airtimePurchasesTbody"></tbody>
           </table></div></div></div>
         </section>
@@ -1446,6 +1446,7 @@
                 <div class="modal-form-group"><label>WhatsApp Group Link</label><input name="support_whatsapp_group" type="url" class="modal-form-input" placeholder="https://chat.whatsapp.com/your-group" /></div>
                 <div class="modal-form-group"><label>Telegram Username or Link</label><input name="support_telegram" class="modal-form-input" placeholder="vsim_support or https://t.me/vsim_support" /></div>
                 <div class="modal-form-group"><label>Call Center Number</label><input name="support_call_center" type="tel" class="modal-form-input" placeholder="0800 100 200" /></div>
+                <div class="modal-form-group"><label>Referral Bonus Amount (UGX)</label><input name="referral_bonus_amount" type="number" min="0" step="1" class="modal-form-input" value="5000" required /></div>
                 <div id="withdrawalFeeRulesSection">
                   <div class="package-section-divider settings-section-divider"><span>Withdrawal fee rules</span></div>
                   <div class="modal-form-group"><label>Normal Fee (UGX)</label><input name="withdrawal_fee" type="number" class="modal-form-input" min="0" step="1" placeholder="Configured by Super Admin" /></div>
@@ -2024,6 +2025,6 @@
 
   <!-- Script Imports -->
   <script src="js/admin-api.js?v=20260922-auth-errors"></script>
-  <script src="js/admin.js?v=20260925-desktop-install-1"></script>
+  <script src="js/admin.js?v=20260930-referral-bonus-config-v1"></script>
 </body>
 </html>

@@ -19,6 +19,7 @@ const confirmDepositSchema = z.object({
   packageId: z.string().optional().nullable(),
   targetEsimId: z.union([z.number(), z.string()]).optional().nullable(),
   targetEsimIccid: z.string().optional().nullable(),
+  orderId: z.union([z.number(), z.string()]).optional().nullable(),
   renewal: z.boolean().optional(),
   type: z.string().optional()
 });
@@ -129,12 +130,56 @@ router.get('/assigned-merchant', async (req, res) => {
   }
 });
 
+router.post('/orders', authenticateToken, async (req, res) => {
+  try {
+    const { packageId, targetEsimId, targetEsimIccid, reference, merchantId, merchantCode, network } = req.body || {};
+    if (!packageId || !reference) return res.status(400).json({ error: 'Package and payment reference are required' });
+
+    const packageResult = await query('SELECT * FROM esim_packages WHERE id = $1', [packageId]);
+    if (!packageResult.rows.length) return res.status(404).json({ error: 'Package not found' });
+    const pkg = packageResult.rows[0];
+    const targetResult = targetEsimIccid
+      ? await query('SELECT id, renewal_count FROM user_esims WHERE iccid = $1 AND user_id = $2 AND status <> \'revoked\'', [targetEsimIccid, req.user.id])
+      : targetEsimId
+        ? await query('SELECT id, renewal_count FROM user_esims WHERE id = $1 AND user_id = $2 AND status <> \'revoked\'', [targetEsimId, req.user.id])
+        : { rows: [] };
+    if (targetEsimId || targetEsimIccid) {
+      if (!targetResult.rows.length) return res.status(404).json({ error: 'Target eSIM not found' });
+    }
+
+    const resolvedTargetEsimId = targetResult.rows[0]?.id || null;
+    const renewalCount = Number(targetResult.rows[0]?.renewal_count) || 0;
+    let schedule = [];
+    try { schedule = Array.isArray(pkg.renewal_schedule) ? pkg.renewal_schedule : JSON.parse(pkg.renewal_schedule || '[]'); } catch (error) {}
+    const scheduled = schedule[renewalCount];
+    const basePrice = Number(pkg.price) || 0;
+    const amount = resolvedTargetEsimId && scheduled && Number(scheduled.price) > basePrice
+      ? Number(scheduled.price)
+      : basePrice * (resolvedTargetEsimId && renewalCount > 0 ? 1.1 : 1);
+    const normalizedReference = String(reference).trim();
+    const existing = await query('SELECT * FROM payment_requests WHERE reference = $1 AND user_id = $2', [normalizedReference, req.user.id]);
+    if (existing.rows.length) return res.json({ success: true, order: existing.rows[0] });
+
+    const inserted = await query(
+      `INSERT INTO payment_requests
+       (user_id, phone, amount, merchant, assigned_merchant_id, network, reference, package_id, target_esim_id, status, payment_status, order_status, provisioning_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'ORDER_CREATED', 'ORDER_CREATED', $10, 'NOT_STARTED')`,
+      [req.user.id, req.user.phone, amount, merchantCode || 'VSIM-M001', merchantId || null, String(network || 'MTN').toUpperCase(), normalizedReference, pkg.id, resolvedTargetEsimId, resolvedTargetEsimId ? 'RENEWAL_PENDING_PAYMENT' : 'PENDING_PAYMENT']
+    );
+    res.status(201).json({ success: true, order: inserted.rows[0] });
+  } catch (err) {
+    console.error('Create payment order error:', err);
+    res.status(500).json({ error: 'Failed to create payment order' });
+  }
+});
+
 // 2. User Submits Deposit / Purchase Confirmation to Merchant
 router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, res) => {
   try {
-    const { amount, phone, momoNumber, merchantId, merchantCode, network, reference, customerReference, packageId, targetEsimId, targetEsimIccid, renewal = false, type = 'esim_purchase' } = req.body;
+    const { amount, phone, momoNumber, merchantId, merchantCode, network, reference, customerReference, orderId, packageId, targetEsimId, targetEsimIccid, renewal = false, type = 'esim_purchase' } = req.body;
     const num = parseFloat(amount);
-    const isRenewal = Boolean(renewal || targetEsimId || targetEsimIccid);
+    const savedTargetEsimId = targetEsimId || null;
+    const isRenewal = Boolean(renewal || savedTargetEsimId || targetEsimIccid);
 
     if (isNaN(num) || num < 1000) {
       return res.status(400).json({ success: false, error: 'Invalid payment amount (Minimum UGX 1,000)' });
@@ -144,9 +189,13 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
     const txRef = reference || `VSIM-${Date.now().toString().slice(-6)}`;
     const mCode = merchantCode || 'VSIM-M001';
 
-    const existingPayment = await query('SELECT user_id, package_id, target_esim_id, status, created_at FROM payment_requests WHERE reference = $1', [txRef]);
+    const existingPayment = orderId
+      ? await query('SELECT id, user_id, package_id, target_esim_id, amount, status, created_at, customer_reference FROM payment_requests WHERE id = $1', [orderId])
+      : await query('SELECT id, user_id, package_id, target_esim_id, amount, status, created_at, customer_reference FROM payment_requests WHERE reference = $1', [txRef]);
+    let existingOrder = null;
     if (existingPayment.rows.length) {
       const existing = existingPayment.rows[0];
+      if (!existing.customer_reference && orderId) existingOrder = existing;
       if (existing.target_esim_id && existing.status === 'completed') {
         const renewed = await query('SELECT id, iccid, title, data_total, data_remaining FROM user_esims WHERE id = $1 AND user_id = $2', [existing.target_esim_id, existing.user_id]);
         return res.json({
@@ -168,7 +217,7 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
           });
         }
       }
-      return res.status(409).json({ success: false, error: 'This payment reference has already been submitted.' });
+      if (!existingOrder) return res.status(409).json({ success: false, error: 'This payment reference has already been submitted.' });
     }
 
     // Optional user ID if authenticated via token
@@ -196,31 +245,55 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
       } catch (err) {}
     }
 
-    if (isRenewal && (!userId || (!targetEsimId && !targetEsimIccid))) {
+    if (existingOrder) userId = existingOrder.user_id;
+    const orderTargetEsimId = existingOrder?.target_esim_id || savedTargetEsimId;
+    if (isRenewal && (!userId || (!orderTargetEsimId && !targetEsimIccid))) {
       return res.status(400).json({ success: false, error: 'Renewal must include the existing eSIM and signed-in user.' });
     }
 
     let resolvedTargetEsimId = null;
     if (isRenewal) {
-      const targetIdentifier = targetEsimIccid || targetEsimId;
+      const targetIdentifier = targetEsimIccid || orderTargetEsimId;
       const targetRes = targetEsimIccid
         ? await query('SELECT id, iccid FROM user_esims WHERE iccid = $1 AND user_id = $2', [targetEsimIccid, userId])
         : await query('SELECT id, iccid FROM user_esims WHERE id = $1 AND user_id = $2', [targetIdentifier, userId]);
       if (!targetRes.rows.length) return res.status(404).json({ success: false, error: 'Target eSIM not found' });
       resolvedTargetEsimId = targetRes.rows[0].id;
-      if (targetEsimId && String(resolvedTargetEsimId) !== String(targetEsimId)) {
+      if (orderTargetEsimId && String(resolvedTargetEsimId) !== String(orderTargetEsimId)) {
         return res.status(400).json({ success: false, error: 'Target eSIM identifiers do not match' });
       }
     }
 
     // Reporting a payment only creates a verification request. The bridge and
     // backend verification path are the only code allowed to fulfill it.
-    await query(
-      `INSERT INTO payment_requests (user_id, phone, amount, merchant, network, reference, customer_reference, package_id, target_esim_id, status, payment_status, order_status, provisioning_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PAYMENT_AWAITING_VERIFICATION', 'PAYMENT_AWAITING_VERIFICATION', $10, $11)`,
-      [userId, payerPhone, num, mCode, network || 'MTN', txRef, customerReference || null, packageId || null,
-        resolvedTargetEsimId, packageId ? 'PENDING_PAYMENT' : 'NOT_APPLICABLE', packageId ? 'NOT_STARTED' : 'NOT_APPLICABLE']
-    );
+    if (existingOrder) {
+      if (Math.abs(Number(existingOrder.amount) - num) > 0.01) return res.status(409).json({ success: false, error: 'Payment amount does not match the saved order' });
+      const duplicateTransaction = await query(
+        `SELECT id, reference, status FROM payment_requests
+         WHERE LOWER(customer_reference) = LOWER($1) AND id <> $2
+         LIMIT 1`,
+        [customerReference, existingOrder.id]
+      );
+      if (duplicateTransaction.rows.length) {
+        return res.status(409).json({
+          success: false,
+          error: 'This Mobile Money transaction ID has already been submitted for another order.'
+        });
+      }
+      await query(
+        `UPDATE payment_requests
+         SET phone = $1, customer_reference = $2, status = 'PAYMENT_AWAITING_VERIFICATION', payment_status = 'PAYMENT_AWAITING_VERIFICATION', order_status = $3, provisioning_status = 'NOT_STARTED'
+         WHERE id = $4`,
+        [payerPhone, customerReference, packageId ? 'PENDING_PAYMENT' : 'NOT_APPLICABLE', existingOrder.id]
+      );
+    } else {
+      await query(
+        `INSERT INTO payment_requests (user_id, phone, amount, merchant, assigned_merchant_id, network, reference, customer_reference, package_id, target_esim_id, status, payment_status, order_status, provisioning_status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'PAYMENT_AWAITING_VERIFICATION', 'PAYMENT_AWAITING_VERIFICATION', $11, $12)`,
+        [userId, payerPhone, num, mCode, merchantId || null, network || 'MTN', txRef, customerReference || null, packageId || null,
+          resolvedTargetEsimId, packageId ? 'PENDING_PAYMENT' : 'NOT_APPLICABLE', packageId ? 'NOT_STARTED' : 'NOT_APPLICABLE']
+      );
+    }
 
     // Merchant statistics track reported volume only and do not imply payment success.
     if (merchantId) {

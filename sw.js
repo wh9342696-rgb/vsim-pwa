@@ -1,11 +1,11 @@
-const CACHE_NAME = 'vsim-pwa-v7-referral-row-fix-v2';
+const CACHE_NAME = 'vsim-pwa-v8-payment-referral-config';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
   './css/app.css?v=20260923-help-light-fix',
-  './js/api.js?v=20260930-referral-row-fix-v2',
-  './js/app-referral-row-fix.js?v=20260930-referral-row-fix-v2',
+  './js/api.js?v=20260930-payment-referral-config-v1',
+  './js/app-referral-row-fix.js?v=20260930-payment-referral-config-v1',
   './js/pwa-register.js?v=20260906-kyc-mobile',
   './icons/vsim-192.png',
   './icons/vsim-512.png'

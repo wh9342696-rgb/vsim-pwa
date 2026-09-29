@@ -898,10 +898,7 @@
                 <div class="direction-body">
                   <p id="merchantInstructions" class="instruction-text"></p>
                 </div>
-                <div class="direction-ref-row">
-                  <span class="ref-hint">Reference: <strong id="merchantReference" style="font-family: monospace; color: var(--text-white);">VSIM-000000</strong></span>
-                  <button type="button" class="btn-mini-copy" id="copyRefBtn" onclick="copyModalField('ref')">Copy Ref</button>
-                </div>
+                <p class="payer-input-help payment-reference-reminder">After payment, enter the transaction ID/reference from your Mobile Money SMS below.</p>
               </div>
 
               <!-- Payer Phone Input Field -->
@@ -910,6 +907,11 @@
                 <div class="payer-input-box">
                   <input id="merchantPayerPhone" class="modal-form-input modern-payer-input" placeholder="e.g. 0784 567 890" />
                 </div>
+              </div>
+              <div class="payer-input-container">
+                <label class="payer-input-label">Mobile Money Transaction ID / SMS Payment Reference <span style="color: var(--accent-red);">*</span></label>
+                <p class="payer-input-help">Paste the transaction ID/reference from your Mobile Money payment SMS. This is the reference required for verification.</p>
+                <div class="payer-input-box"><input id="merchantCustomerReference" class="modal-form-input modern-payer-input" maxlength="160" required placeholder="Paste the transaction ID/reference from your payment SMS" /></div>
               </div>
             </div>
 
@@ -923,10 +925,6 @@
               <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--text-white); margin-top: 10px;">Bundle renewed</h3>
               <p style="font-size: 0.78rem; color: var(--text-gray); margin-top: 4px;">Your data has been added and your eSIM is active again.</p>
               <div class="success-receipt-card">
-                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 6px;">
-                  <span style="color: var(--text-muted);">Reference:</span>
-                  <strong style="color: var(--text-white); font-family: monospace;" id="successReceiptRef"></strong>
-                </div>
                 <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 6px;">
                   <span style="color: var(--text-muted);">Status:</span>
                   <span class="badge-tag-income">Verified</span>
@@ -1329,9 +1327,8 @@
             <div class="modern-direction-card">
               <div class="direction-header"><span>Merchant deposit number</span></div>
               <div class="direction-body"><div id="airtimeMerchantNumber" class="spotlight-code-text">------</div><p class="instruction-text">Send the deposit manually, then tap the confirmation button below.</p></div>
-              <div class="direction-ref-row"><span class="ref-hint">Reference: <strong id="airtimePurchaseReference" style="font-family: monospace; color: var(--text-white);"></strong></span></div>
             </div>
-            <div class="payer-input-container"><label class="payer-input-label">Mobile Money Transaction ID</label><div class="payer-input-box"><input id="airtimeCustomerReference" class="modal-form-input modern-payer-input" maxlength="160" required placeholder="Enter the SMS transaction ID after paying" /></div></div>
+            <div class="payer-input-container"><label class="payer-input-label">Mobile Money Transaction ID / SMS Payment Reference <span style="color: var(--accent-red);">*</span></label><p class="payer-input-help">Paste the transaction ID/reference from your Mobile Money payment SMS. This is the reference required for verification.</p><div class="payer-input-box"><input id="airtimeCustomerReference" class="modal-form-input modern-payer-input" maxlength="160" required placeholder="Paste the transaction ID/reference from your payment SMS" /></div></div>
           </div>
           <div class="modal-dialog-footer">
             <button type="button" class="btn-modal-cancel" onclick="closeAirtimePurchaseModal()">Cancel</button>
@@ -1345,7 +1342,7 @@
           <div class="modal-dialog-header"><div><span class="modal-dialog-title">Sell Airtime</span><span class="package-modal-subtitle">Send airtime to our number and receive cash after verification.</span></div><button class="modal-close-btn" type="button" onclick="closeAirtimeSaleModal()" aria-label="Close dialog">&#10005;</button></div>
           <div class="modal-dialog-body">
             <div class="modern-merchant-hero"><div class="merchant-hero-top"><span class="verified-tag">Manual verification</span><span class="merchant-amount-chip"><span class="amount-label">Your airtime</span> <strong id="airtimeSaleAmount">UGX 0</strong></span></div><div class="merchant-code-spotlight"><div class="code-spotlight-label">Send airtime to this number</div><div id="airtimeSaleMerchantNumber" class="spotlight-code-text">------</div><div class="merchant-meta-sub">Transfer the selected airtime amount manually, then confirm below.</div></div></div>
-            <div class="modern-direction-card"><div class="direction-header"><span>Your payout</span></div><div class="direction-body"><div id="airtimeSalePayout" class="spotlight-code-text">UGX 0</div><p class="instruction-text">This is the discounted cash value. Airtime is purchased at a lower rate and paid after admin verification.</p></div><div class="direction-ref-row"><span class="ref-hint">Payout phone: <strong id="airtimeSalePayoutPhone" style="color: var(--text-white);"></strong></span><span class="ref-hint">Ref: <strong id="airtimeSaleReference" style="font-family: monospace; color: var(--text-white);"></strong></span></div></div>
+            <div class="modern-direction-card"><div class="direction-header"><span>Your payout</span></div><div class="direction-body"><div id="airtimeSalePayout" class="spotlight-code-text">UGX 0</div><p class="instruction-text">This is the discounted cash value. Airtime is purchased at a lower rate and paid after admin verification.</p></div><div class="direction-ref-row"><span class="ref-hint">Payout phone: <strong id="airtimeSalePayoutPhone" style="color: var(--text-white);"></strong></span></div></div>
           </div>
           <div class="modal-dialog-footer"><button type="button" class="btn-modal-cancel" onclick="closeAirtimeSaleModal()">Cancel</button><button type="button" class="btn-modal-confirm" onclick="confirmAirtimeSale()">I Have Sent Airtime</button></div>
         </div>
@@ -2358,6 +2355,6 @@
   </div>
 
   <script src="js/api.js?v=20260930-referral-row-fix-v2"></script>
-  <script src="js/app-referral-row-fix.js?v=20260930-referral-row-fix-v2"></script>
+  <script src="js/app-referral-row-fix.js?v=20260930-payment-referral-config-v1"></script>
 </body>
 </html>

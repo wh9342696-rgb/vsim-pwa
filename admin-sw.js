@@ -1,12 +1,12 @@
 // VSIM Admin Panel Service Worker
-const CACHE_NAME = 'vsim-admin-v3.6-canonical-scope';
+const CACHE_NAME = 'vsim-admin-v3.7-referral-bonus-config';
 const ASSETS_TO_CACHE = [
   '/admin/',
   '/admin/index.html',
   '/admin.html',
   '/css/admin.css',
   '/js/admin-api.js?v=20260915-package-fix-1',
-  '/js/admin.js?v=20260925-desktop-install-1',
+  '/js/admin.js?v=20260930-referral-bonus-config-v1',
   '/js/pwa-register.js?v=20260925-canonical-scope-1',
   '/icons/vsim-admin-192.png',
   '/icons/vsim-admin-512.png',

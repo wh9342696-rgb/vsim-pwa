@@ -1,11 +1,11 @@
 
-const CACHE = 'vsim-v27-referral-row-fix';
+const CACHE = 'vsim-v28-payment-referral-config';
 const ASSETS = [
   './',
   './index.html',
   './css/app.css?v=20260923-help-light-fix',
-  './js/api.js?v=20260930-referral-row-fix',
-  './js/app.js?v=20260930-referral-row-fix',
+  './js/api.js?v=20260930-payment-referral-config-v1',
+  './js/app-referral-row-fix.js?v=20260930-payment-referral-config-v1',
   './js/pwa-register.js?v=20260906-kyc-mobile',
   './icons/vsim.svg',
   './manifest.json'

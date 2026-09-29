@@ -1116,7 +1116,7 @@ function applyRoleUI() {
     settingsForm.querySelectorAll('input, select, textarea, button[type="submit"]').forEach(control => {
       const name = control.getAttribute('name') || '';
       const isProfileControl = ['admin_name', 'profile_photo'].includes(name);
-      const isSystemSettingControl = ['platform_name', 'support_email', 'maintenance_mode', 'esim_progress_enabled', 'esim_progress_percent_per_hour', 'airtime_buy_markup_percent', 'airtime_sell_payout_percent'].includes(name);
+      const isSystemSettingControl = ['platform_name', 'support_email', 'maintenance_mode', 'esim_progress_enabled', 'esim_progress_percent_per_hour', 'airtime_buy_markup_percent', 'airtime_sell_payout_percent', 'referral_bonus_amount'].includes(name);
       const isWithdrawalFeeControl = ['withdrawal_fee', 'withdrawal_settlement_fee', 'withdrawal_expiry_fee', 'withdrawal_monthly_fee', 'withdrawal_settlement_days', 'withdrawal_fee_priority'].includes(name);
       control.disabled = isSubAdmin && (isSystemSettingControl || isWithdrawalFeeControl);
       if (isSubAdmin && isProfileControl) {
@@ -1130,7 +1130,7 @@ function renderSettingsView() {
   const form = document.getElementById('adminSettingsForm');
   if (!form) return;
   const settings = AdminStore.settings || {};
-  ['platform_name', 'support_email', 'support_whatsapp', 'support_whatsapp_group', 'support_telegram', 'support_call_center', 'withdrawal_fee', 'withdrawal_settlement_fee', 'withdrawal_expiry_fee', 'withdrawal_monthly_fee', 'withdrawal_settlement_days', 'airtime_buy_markup_percent', 'airtime_sell_payout_percent', 'maintenance_mode', 'esim_progress_enabled', 'esim_progress_percent_per_hour'].forEach(key => {
+  ['platform_name', 'support_email', 'support_whatsapp', 'support_whatsapp_group', 'support_telegram', 'support_call_center', 'referral_bonus_amount', 'withdrawal_fee', 'withdrawal_settlement_fee', 'withdrawal_expiry_fee', 'withdrawal_monthly_fee', 'withdrawal_settlement_days', 'airtime_buy_markup_percent', 'airtime_sell_payout_percent', 'maintenance_mode', 'esim_progress_enabled', 'esim_progress_percent_per_hour'].forEach(key => {
     const input = form.elements[key];
     if (input && settings[key] !== undefined) input.value = settings[key];
   });
@@ -1337,6 +1337,7 @@ async function handleSettingsSubmit(event) {
         support_whatsapp_group: payload.support_whatsapp_group,
         support_telegram: payload.support_telegram,
         support_call_center: payload.support_call_center,
+        referral_bonus_amount: payload.referral_bonus_amount,
         airtime_buy_markup_percent: payload.airtime_buy_markup_percent,
         airtime_sell_payout_percent: payload.airtime_sell_payout_percent,
         maintenance_mode: payload.maintenance_mode,
@@ -1358,6 +1359,7 @@ async function handleSettingsSubmit(event) {
         support_whatsapp_group: payload.support_whatsapp_group,
         support_telegram: payload.support_telegram,
         support_call_center: payload.support_call_center,
+        referral_bonus_amount: payload.referral_bonus_amount,
         withdrawal_fee: payload.withdrawal_fee,
         withdrawal_settlement_fee: payload.withdrawal_settlement_fee,
         withdrawal_expiry_fee: payload.withdrawal_expiry_fee,
@@ -1840,13 +1842,13 @@ function renderDepositsTable() {
       ${['pending', 'payment_awaiting_verification'].includes(String(d.status).toLowerCase())
         ? isWalletPayment
           ? '<td data-label="Merchant match"><span style="font-size:0.75rem;color:var(--text-muted);">Wallet balance checked on approval</span></td>'
-          : `<td data-label="Merchant match"><div class="deposit-verification-fields"><input id="merchantReference-${d.id}" class="deposit-verification-input" type="text" placeholder="Merchant SMS ref" aria-label="Merchant SMS reference for payment ${d.id}"><input id="merchantAmount-${d.id}" class="deposit-verification-input" type="number" min="0" step="0.01" placeholder="Amount" aria-label="Verified merchant amount for payment ${d.id}"></div></td>`
+          : `<td data-label="Merchant match"><div class="deposit-verification-fields"><input id="merchantReference-${d.id}" class="deposit-verification-input" type="text" placeholder="Merchant SMS transaction ID" aria-label="Merchant SMS transaction ID for payment ${d.id}"><input id="merchantAmount-${d.id}" class="deposit-verification-input" type="number" min="0" step="0.01" placeholder="Amount" aria-label="Verified merchant amount for payment ${d.id}"></div></td>`
         : `<td data-label="Merchant match"><span style="font-size:0.75rem;color:var(--text-muted);">${d.verified_transaction_reference || '-'}</span></td>`}
       <td data-label="Purpose">${isWalletPayment ? (d.target_esim_id ? 'Wallet eSIM renewal' : 'Wallet eSIM purchase') : d.target_esim_id ? 'eSIM renewal' : d.package_id ? 'eSIM purchase' : 'Wallet payment'}</td>
       <td data-label="Network">${d.network || '-'}</td>
       <td data-label="Merchant" style="font-family: monospace; font-size: 0.74rem;">${d.merchant || '-'}</td>
       <td data-label="Amount" style="font-weight: 800; color: var(--text-white);">UGX ${Number(d.amount || 0).toLocaleString()}</td>
-      <td data-label="Customer reference" style="font-family: monospace; font-size: 0.74rem;">${reference || '-'}</td>
+      <td data-label="Mobile Money transaction ID (SMS)" style="font-family: monospace; font-size: 0.74rem;">${reference || '-'}</td>
       <td data-label="Merchant reference" style="font-family: monospace; font-size: 0.74rem; color: var(--text-muted);">${isWalletPayment ? 'Not applicable' : merchantRef || (merchantProvider ? `${merchantProvider} event` : '-')}</td>
       <td data-label="Match"><span class="status-pill ${matchClass}">${matchStatus}</span></td>
       <td data-label="Submitted" style="color: var(--text-muted);">${d.time || 'Just now'}</td>
