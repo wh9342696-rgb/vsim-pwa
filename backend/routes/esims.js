@@ -134,9 +134,9 @@ router.post('/wallet-orders', authenticateToken, async (req, res) => {
     const admins = await query("SELECT id FROM admin_users WHERE status = 'active'");
     for (const admin of admins.rows) {
       await query(
-        `INSERT INTO notifications (user_id, admin_id, title, message, category)
-         VALUES ($1, $2, $3, $4, 'wallet')`,
-        [req.user.id, admin.id, 'Wallet eSIM Request', message]
+        `INSERT INTO notifications (admin_id, title, message, category)
+         VALUES ($1, $2, $3, 'wallet')`,
+        [admin.id, 'Wallet eSIM Request', message]
       );
       await query(
         `INSERT INTO admin_notifications (admin_id, type, title, message, reference, status)
