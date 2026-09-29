@@ -24,6 +24,18 @@ function classifyEsimStatus(esim, now = Date.now()) {
   return esim.expires_at && now >= new Date(esim.expires_at).getTime() ? 'expired' : 'active';
 }
 
+function getRenewalPrice(pkg, renewalCount) {
+  const basePrice = Number(pkg.price) || 0;
+  let schedule = [];
+  try {
+    schedule = Array.isArray(pkg.renewal_schedule) ? pkg.renewal_schedule : JSON.parse(pkg.renewal_schedule || '[]');
+  } catch (error) {}
+  const scheduled = schedule[Number(renewalCount) || 0];
+  return scheduled && Number(scheduled.price) > basePrice
+    ? Number(scheduled.price)
+    : basePrice * (Number(renewalCount) > 0 ? 1.1 : 1);
+}
+
 // 1. Get All Available eSIM Packages (Filterable by region and query)
 router.get('/packages', async (req, res) => {
   try {
