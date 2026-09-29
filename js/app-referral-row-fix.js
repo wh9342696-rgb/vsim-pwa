@@ -1367,7 +1367,9 @@ function applyMerchantData(res, network) {
   if (amtElem) amtElem.textContent = `UGX ${Number(res.amount || pkgPrice).toLocaleString()}`;
   if (codeElem) codeElem.textContent = m.merchant_code;
   if (refElem) refElem.textContent = res.reference;
-  if (instElem) instElem.textContent = m.instructions || 'Send the exact amount and confirm with your PIN.';
+  const instructions = String(m.instructions || 'Send the exact amount and confirm with your PIN.')
+    .replace(/\s*->\s*Enter Reference\s+VSIM-[A-Z0-9-]+/gi, '');
+  if (instElem) instElem.textContent = instructions;
 
   if (loading) loading.style.display = 'none';
   if (errorBox) errorBox.style.display = 'none';

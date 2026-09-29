@@ -107,8 +107,8 @@ router.get('/assigned-merchant', async (req, res) => {
 
     const isMTN = String(assignedMerchant.network).toUpperCase().includes('MTN');
     const defaultInstructions = isMTN
-      ? `Dial *165*3# -> Enter Merchant Code ${assignedMerchant.merchant_code} -> Enter Amount -> Enter Reference ${refCode} -> Confirm PIN`
-      : `Dial *185*9# -> Enter Merchant ID ${assignedMerchant.merchant_code} -> Enter Amount -> Enter Reference ${refCode} -> Confirm PIN`;
+      ? `Dial *165*3# -> Enter Merchant Code ${assignedMerchant.merchant_code} -> Enter Amount -> Confirm PIN`
+      : `Dial *185*9# -> Enter Merchant ID ${assignedMerchant.merchant_code} -> Enter Amount -> Confirm PIN`;
 
     res.json({
       success: true,
