@@ -512,7 +512,14 @@ router.get('/stats', adminAuth, async (req, res) => {
        FROM wallet_transactions
        WHERE type IN ('purchase', 'bundle_purchase') AND status = 'completed'`
     );
-    const depositsTotal = await query(`SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count FROM payment_requests WHERE status = 'completed'`);
+    const depositsTotal = await query(
+      `SELECT
+         COALESCE(SUM(amount), 0) AS total,
+         COUNT(*) AS count,
+         COALESCE(SUM(amount) FILTER (WHERE created_at >= CURRENT_DATE AND created_at < CURRENT_DATE + INTERVAL '1 day'), 0) AS today,
+         COALESCE(SUM(amount) FILTER (WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)), 0) AS this_month
+       FROM payment_requests WHERE status = 'completed'`
+    );
     const pendingPayouts = await query(`SELECT COALESCE(SUM(COALESCE(requested_amount, amount)), 0) AS total, COUNT(*) AS count FROM withdrawals WHERE status = 'pending'`);
     const paidPayouts = await query(`SELECT COALESCE(SUM(COALESCE(net_amount, amount)), 0) AS total, COUNT(*) AS count FROM withdrawals WHERE status IN ('paid', 'completed') AND processed_at >= CURRENT_DATE AND processed_at < CURRENT_DATE + INTERVAL '1 day'`);
     const bridgeOnline = await query(`
@@ -583,6 +590,8 @@ router.get('/stats', adminAuth, async (req, res) => {
         totalWithdrawn: Number(paidPayouts.rows[0]?.total || 0),
         depositsTotal: Number(depositsTotal.rows[0]?.total || 0),
         depositsCount: Number(depositsTotal.rows[0]?.count || 0),
+        depositsTodayTotal: Number(depositsTotal.rows[0]?.today || 0),
+        depositsMonthTotal: Number(depositsTotal.rows[0]?.this_month || 0),
         packagesRevenue: Number(packages.rows[0]?.revenue || 0),
         packagesSold: Number(packages.rows[0]?.sold || 0),
         pendingWithdrawalsTotal: Number(pendingPayouts.rows[0]?.total || 0),

@@ -996,8 +996,8 @@ function renderDashboard() {
   if (dateElement) dateElement.textContent = new Date().toLocaleDateString();
   const depositsToday = document.getElementById('depositsTodayTotal');
   const depositsMonth = document.getElementById('depositsMonthTotal');
-  if (depositsToday) depositsToday.textContent = `UGX ${Number(metrics.depositsTotal || 0).toLocaleString()}`;
-  if (depositsMonth) depositsMonth.textContent = `UGX ${Number(metrics.depositsTotal || 0).toLocaleString()}`;
+  if (depositsToday) depositsToday.textContent = `UGX ${Number(metrics.depositsTodayTotal || 0).toLocaleString()}`;
+  if (depositsMonth) depositsMonth.textContent = `UGX ${Number(metrics.depositsMonthTotal || 0).toLocaleString()}`;
   const pendingWithdrawals = document.getElementById('pendingWithdrawalsTotal');
   const todayPaidWithdrawals = document.getElementById('todayPaidWithdrawalsTotal');
   if (pendingWithdrawals) pendingWithdrawals.textContent = `UGX ${Number(metrics.pendingWithdrawalsTotal || 0).toLocaleString()}`;
@@ -1409,17 +1409,19 @@ function renderRecentDepositsTable() {
   const tbody = document.getElementById('recentDepositsTbody');
   if (!tbody) return;
 
-  const deposits = (AdminStore.deposits || []).slice(0, 7);
+  const deposits = (AdminStore.deposits || [])
+    .filter(deposit => String(deposit.status || '').toLowerCase() === 'completed')
+    .slice(0, 7);
 
-  tbody.innerHTML = deposits.map(d => `
+  tbody.innerHTML = deposits.length ? deposits.map(d => `
     <tr>
       <td style="font-weight: 600;">${d.phone}</td>
-      <td style="font-weight: 800; color: var(--text-white);">UGX ${d.amount.toLocaleString()}</td>
+      <td style="font-weight: 800; color: var(--text-white);">UGX ${Number(d.amount || 0).toLocaleString()}</td>
       <td><span style="color: var(--text-muted); font-size: 0.74rem;">${d.merchant || '-'}</span></td>
       <td style="color: var(--text-muted);">${d.time || '-'}</td>
       <td><span class="status-pill ${d.status}">${d.status}</span></td>
     </tr>
-  `).join('');
+  `).join('') : '<tr><td colspan="5" style="text-align:center; padding:24px; color:var(--text-muted);">No completed automatic deposits yet</td></tr>';
 }
 
 // Render Recent Withdrawals Table
