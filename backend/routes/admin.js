@@ -508,8 +508,9 @@ router.get('/stats', adminAuth, async (req, res) => {
     const usersCount = await query('SELECT COUNT(*) AS total FROM users');
     const activeUsers = await query(`SELECT COUNT(*) AS total FROM users WHERE status = 'active'`);
     const purchasedValue = await query(
-      `SELECT COALESCE(SUM(COALESCE(ep.price, 0)), 0) AS total_value
-       FROM user_esims ue LEFT JOIN esim_packages ep ON ep.id = ue.package_id`
+      `SELECT COALESCE(SUM(amount), 0) AS total_value
+       FROM wallet_transactions
+       WHERE type IN ('purchase', 'bundle_purchase') AND status = 'completed'`
     );
     const depositsTotal = await query(`SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count FROM payment_requests WHERE status = 'completed'`);
     const pendingPayouts = await query(`SELECT COALESCE(SUM(COALESCE(requested_amount, amount)), 0) AS total, COUNT(*) AS count FROM withdrawals WHERE status = 'pending'`);
@@ -539,15 +540,15 @@ router.get('/stats', adminAuth, async (req, res) => {
     );
     const yieldRows = await query(
       `SELECT created_at::date::text AS day, COALESCE(SUM(amount), 0) AS total
-       FROM wallet_transactions WHERE type = 'yield' AND created_at >= CURRENT_DATE - INTERVAL '6 days'
+      FROM wallet_transactions WHERE type = 'yield' AND status = 'completed' AND created_at >= CURRENT_DATE - INTERVAL '6 days'
        GROUP BY created_at::date ORDER BY day`
     );
     const yieldTotals = await query(
       `SELECT
-         COALESCE(SUM(amount) FILTER (WHERE type = 'yield'), 0) AS all_time,
-         COALESCE(SUM(amount) FILTER (WHERE type = 'yield' AND created_at >= CURRENT_DATE), 0) AS today,
-         COALESCE(SUM(amount) FILTER (WHERE type = 'yield' AND created_at >= CURRENT_DATE - INTERVAL '6 days'), 0) AS this_week,
-         COALESCE(SUM(amount) FILTER (WHERE type = 'yield' AND created_at >= DATE_TRUNC('month', CURRENT_DATE)), 0) AS this_month
+         COALESCE(SUM(amount) FILTER (WHERE type = 'yield' AND status = 'completed'), 0) AS all_time,
+         COALESCE(SUM(amount) FILTER (WHERE type = 'yield' AND status = 'completed' AND created_at >= CURRENT_DATE), 0) AS today,
+         COALESCE(SUM(amount) FILTER (WHERE type = 'yield' AND status = 'completed' AND created_at >= CURRENT_DATE - INTERVAL '6 days'), 0) AS this_week,
+         COALESCE(SUM(amount) FILTER (WHERE type = 'yield' AND status = 'completed' AND created_at >= DATE_TRUNC('month', CURRENT_DATE)), 0) AS this_month
        FROM wallet_transactions`
     );
     const investmentTotals = Object.fromEntries(investmentRows.rows.map(row => [row.status, Number(row.amount)]));
@@ -606,7 +607,8 @@ router.get('/stats', adminAuth, async (req, res) => {
         active: breakdown('active', '#6366f1'),
         completed: breakdown('completed', '#10b981'),
         cancelled: breakdown('cancelled', '#ef4444'),
-        expired: breakdown('expired', '#3b82f6')
+        expired: breakdown('expired', '#3b82f6'),
+        revoked: breakdown('revoked', '#64748b')
       },
       systemStatus: {
         bridgeDevices: `${Number(bridgeOnline.rows[0]?.online || 0)} Online`,
@@ -708,6 +710,7 @@ router.get('/investments', adminAuth, ensureSuperAdmin, async (req, res) => {
         },
         cancelled: { lines: Number(statusMap.cancelled?.lines || 0), value: Number(statusMap.cancelled?.value || 0) },
         expired: { lines: Number(statusMap.expired?.lines || 0), value: Number(statusMap.expired?.value || 0) },
+        revoked: { lines: Number(statusMap.revoked?.lines || 0), value: Number(statusMap.revoked?.value || 0) },
         averageDailyYield: Number(dailyYield.rows[0]?.average || 0),
         totalDailyYield: Number(dailyYield.rows[0]?.total || 0),
         totalYieldDisbursed: Number(yieldHistory.rows[0]?.total || 0),

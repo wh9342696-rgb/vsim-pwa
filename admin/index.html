@@ -390,7 +390,7 @@
               </div>
             </div>
 
-            <!-- Card 2: Total Invested -->
+            <!-- Card 2: Lifetime eSIM Sales -->
             <div class="hero-metric-card sub-admin-sensitive">
               <div class="metric-icon-square green">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -399,12 +399,9 @@
                 </svg>
               </div>
               <div class="metric-body-data">
-                <div class="metric-label-title">Total Invested</div>
+                <div class="metric-label-title">Lifetime eSIM Sales Value</div>
                 <div class="metric-large-value" id="metricTotalInvested">UGX 0</div>
-                <div class="metric-trend-pill positive">
-                  <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 4 4 20 20 20"></polygon></svg>
-                  <span>+15.3% from last 7 days</span>
-                </div>
+                <div class="metric-trend-pill">Completed eSIM purchase ledger</div>
               </div>
             </div>
 
@@ -609,7 +606,7 @@
                   <div class="donut-chart-box">
                     <svg id="donutChartSvg" width="130" height="130" viewBox="0 0 130 130"></svg>
                     <div class="donut-center-label">
-                      <div class="small-tag">Total Invested</div>
+                      <div class="small-tag">Total eSIM Value</div>
                       <div class="small-tag">UGX</div>
                       <div class="amount-tag" id="investmentTotalAmount">0</div>
                     </div>
@@ -646,6 +643,13 @@
                         <span>Expired</span>
                       </div>
                       <span class="legend-item-val" id="investmentLegendExpired">UGX 0 (0.0%)</span>
+                    </div>
+                    <div class="legend-item-row">
+                      <div class="legend-dot-label">
+                        <span class="legend-color-dot" style="background: #64748b;"></span>
+                        <span>Revoked</span>
+                      </div>
+                      <span class="legend-item-val" id="investmentLegendRevoked">UGX 0 (0.0%)</span>
                     </div>
                   </div>
                 </div>
@@ -1314,6 +1318,13 @@
                 <div class="metric-label-title">Completed Maturities</div>
                 <div class="metric-large-value" id="investmentCompletedValue">UGX 0</div>
                 <div class="metric-trend-pill positive" id="investmentCompletedMeta">0 completed lines</div>
+              </div>
+            </div>
+            <div class="hero-metric-card">
+              <div class="metric-body-data">
+                <div class="metric-label-title">Revoked eSIM Value</div>
+                <div class="metric-large-value" id="investmentRevokedValue">UGX 0</div>
+                <div class="metric-trend-pill" id="investmentRevokedMeta">0 revoked lines</div>
               </div>
             </div>
             <div class="hero-metric-card">
@@ -2026,6 +2037,6 @@
 
   <!-- Script Imports -->
   <script src="/js/admin-api.js?v=20260915-package-fix-1"></script>
-  <script src="/js/admin.js?v=20260930-referral-bonus-config-v1"></script>
+  <script src="/js/admin.js?v=20260930-dashboard-revoked-metrics-v1"></script>
 </body>
 </html>

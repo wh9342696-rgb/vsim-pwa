@@ -1163,6 +1163,8 @@ function renderInvestmentsView() {
     activeMeta: `${Number(summary.active?.lines || 0).toLocaleString()} active lines`,
     completedValue: `UGX ${Number(summary.completed?.value || 0).toLocaleString()}`,
     completedMeta: `${Number(summary.completed?.lines || 0).toLocaleString()} completed lines`,
+    revokedValue: `UGX ${Number(summary.revoked?.value || 0).toLocaleString()}`,
+    revokedMeta: `${Number(summary.revoked?.lines || 0).toLocaleString()} revoked lines`,
     averageYield: `UGX ${Number(summary.averageDailyYield || 0).toLocaleString()} / Day`,
     averageMeta: `${Number(summary.totalDailyYield || 0).toLocaleString()} UGX across active lines`,
     disbursedValue: `UGX ${Number(summary.totalYieldDisbursed || 0).toLocaleString()}`,
@@ -1643,7 +1645,8 @@ function renderInvestmentDonutChart(data) {
     { label: 'Active', key: 'active', val: Number(data?.active?.percentage || 0), amount: Number(data?.active?.amount || 0), color: '#6366f1' },
     { label: 'Completed', key: 'completed', val: Number(data?.completed?.percentage || 0), amount: Number(data?.completed?.amount || 0), color: '#10b981' },
     { label: 'Cancelled', key: 'cancelled', val: Number(data?.cancelled?.percentage || 0), amount: Number(data?.cancelled?.amount || 0), color: '#ef4444' },
-    { label: 'Expired', key: 'expired', val: Number(data?.expired?.percentage || 0), amount: Number(data?.expired?.amount || 0), color: '#3b82f6' }
+    { label: 'Expired', key: 'expired', val: Number(data?.expired?.percentage || 0), amount: Number(data?.expired?.amount || 0), color: '#3b82f6' },
+    { label: 'Revoked', key: 'revoked', val: Number(data?.revoked?.percentage || 0), amount: Number(data?.revoked?.amount || 0), color: '#64748b' }
   ];
 
   const totalLabel = document.getElementById('investmentTotalAmount');
