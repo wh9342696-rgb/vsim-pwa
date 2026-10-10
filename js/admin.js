@@ -533,8 +533,8 @@ function renderMerchantsView() {
 function renderMerchantMetrics() {
   const merchants = AdminStore.merchants || [];
   const activeMerchants = merchants.filter(m => String(m.status).toLowerCase() === 'active');
-  const totalVolume = merchants.reduce((sum, m) => sum + (Number(m.total_volume) || 0), 0);
-  const totalTx = merchants.reduce((sum, m) => sum + (Number(m.total_transactions) || 0), 0);
+  const totalVolume = merchants.reduce((sum, m) => sum + (Number(m.verified_volume) || 0), 0);
+  const totalTx = merchants.reduce((sum, m) => sum + (Number(m.verified_transactions) || 0), 0);
 
   const activeCountElem = document.getElementById('merchantActiveCount');
   const totalSubElem = document.getElementById('merchantTotalSub');
@@ -583,8 +583,8 @@ function filterMerchantsTable() {
     const isMtn = String(m.network).toUpperCase().includes('MTN');
     const isAirtel = String(m.network).toUpperCase().includes('AIRTEL');
     const netBadgeClass = isMtn ? 'warning' : isAirtel ? 'rejected' : 'active';
-    const volume = Number(m.total_volume || 0);
-    const txCount = Number(m.total_transactions || 0);
+    const volume = Number(m.verified_volume || 0);
+    const txCount = Number(m.verified_transactions || 0);
 
     return `
       <tr>

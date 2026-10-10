@@ -218,7 +218,29 @@ router.post('/notifications/read-all', adminAuth, async (req, res) => {
 
 router.get('/merchants', adminAuth, ensureMerchantManager, async (req, res) => {
   try {
-    const result = await query('SELECT * FROM merchants ORDER BY priority ASC, id DESC');
+    const result = await query(
+      `SELECT m.*,
+              COALESCE(payment_metrics.verified_transactions, 0) AS verified_transactions,
+              COALESCE(payment_metrics.verified_volume, 0) AS verified_volume
+       FROM merchants m
+       LEFT JOIN (
+         SELECT merchant.id AS merchant_id,
+                COUNT(payment.id) AS verified_transactions,
+                SUM(payment.verified_amount) AS verified_volume
+         FROM merchants merchant
+         JOIN payment_requests payment
+           ON payment.assigned_merchant_id = merchant.id
+           OR (payment.assigned_merchant_id IS NULL AND payment.merchant = merchant.merchant_code)
+         WHERE payment.status = 'completed'
+           AND payment.payment_status = 'PAYMENT_VERIFIED'
+           AND COALESCE(payment.payment_method, 'mobile_money') <> 'wallet'
+           AND payment.verified_amount IS NOT NULL
+           AND ABS(payment.verified_amount - payment.amount) <= 0.01
+           AND COALESCE(payment.verified_transaction_reference, '') <> ''
+         GROUP BY merchant.id
+       ) payment_metrics ON payment_metrics.merchant_id = m.id
+       ORDER BY m.priority ASC, m.id DESC`
+    );
     res.json({ merchants: result.rows });
   } catch (err) {
     console.error('Fetch merchants error:', err);
