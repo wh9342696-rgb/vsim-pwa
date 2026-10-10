@@ -1853,7 +1853,7 @@ function renderDepositsTable() {
       <td data-label="Network">${d.network || '-'}</td>
       <td data-label="Merchant" style="font-family: monospace; font-size: 0.74rem;">${d.merchant || '-'}</td>
       <td data-label="Amount" style="font-weight: 800; color: var(--text-white);">UGX ${Number(d.amount || 0).toLocaleString()}</td>
-      <td data-label="Mobile Money transaction ID (SMS)" style="font-family: monospace; font-size: 0.74rem;">${reference || '-'}</td>
+      <td data-label="Mobile Money transaction ID (SMS)"><div style="display:flex;align-items:center;gap:6px;font-family:monospace;font-size:0.74rem;"><span>${escapeDepositReference(reference) || '-'}</span>${reference ? `<button type="button" class="btn-action-small" aria-label="Copy customer transaction reference for payment ${d.id}" onclick="copyCustomerReference(${Number(d.id)})">Copy</button>` : ''}</div></td>
       <td data-label="Merchant reference" style="font-family: monospace; font-size: 0.74rem; color: var(--text-muted);">${isWalletPayment ? 'Not applicable' : merchantRef || (merchantProvider ? `${merchantProvider} event` : '-')}</td>
       <td data-label="Match"><span class="status-pill ${matchClass}">${matchStatus}</span></td>
       <td data-label="Submitted" style="color: var(--text-muted);">${d.time || 'Just now'}</td>
@@ -1863,6 +1863,32 @@ function renderDepositsTable() {
         : `<span style="font-size:0.75rem;color:var(--text-muted);">${d.reviewed_by ? `Admin #${d.reviewed_by}` : 'Processed'}</span>`}</td>
     </tr>`;
   }).join('');
+}
+
+function escapeDepositReference(value) {
+  return String(value).replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[character]);
+}
+
+async function copyCustomerReference(id) {
+  const deposit = AdminStore.deposits.find(item => Number(item.id) === Number(id));
+  const reference = String(deposit?.customer_reference || '').trim();
+  if (!reference) {
+    showToast('No customer transaction reference is available', 'error');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(reference);
+    showToast('Customer transaction reference copied', 'success');
+  } catch (error) {
+    console.error('Customer transaction reference copy failed:', error);
+    showToast('Could not copy the customer reference. Select it and copy manually.', 'error');
+  }
 }
 
 async function processAdminDeposit(id, action) {
