@@ -5,7 +5,9 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { query } from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { awardReferralBonus, getReferralSignupBonus } from '../utils/referral-reward.js';
+import { getReferralSignupBonus } from '../utils/referral-reward.js';
+import { sanitizeUserLoginInput, signupSchema } from '../utils/auth-validation.js';
+export { sanitizeUserLoginInput, signupSchema } from '../utils/auth-validation.js';
 import {
   generateAuthenticationOptions,
   generateRegistrationOptions,
@@ -25,16 +27,16 @@ async function resolveReferralCode(value) {
   const rawValue = String(value || '').trim();
   if (!rawValue) return null;
   const tokenResult = await query(
-    'SELECT u.id, u.name, u.phone, u.referral_code FROM referral_tokens rt JOIN users u ON u.id = rt.user_id WHERE rt.token = $1',
+    "SELECT u.id, u.name, u.phone, u.referral_code FROM referral_tokens rt JOIN users u ON u.id = rt.user_id WHERE rt.token = $1 AND u.status = 'active'",
     [rawValue]
   );
   if (tokenResult.rows[0]) return tokenResult.rows[0];
   const legacyClientTokenResult = await query(
-    'SELECT u.id, u.name, u.phone, u.referral_code FROM referral_tokens rt JOIN users u ON u.id = rt.user_id WHERE LOWER(rt.token) = LOWER($1)',
+    "SELECT u.id, u.name, u.phone, u.referral_code FROM referral_tokens rt JOIN users u ON u.id = rt.user_id WHERE LOWER(rt.token) = LOWER($1) AND u.status = 'active'",
     [rawValue]
   );
   if (legacyClientTokenResult.rows[0]) return legacyClientTokenResult.rows[0];
-  const codeResult = await query('SELECT id, name, phone, referral_code FROM users WHERE UPPER(referral_code) = $1', [rawValue.toUpperCase()]);
+  const codeResult = await query("SELECT id, name, phone, referral_code FROM users WHERE UPPER(referral_code) = $1 AND status = 'active'", [rawValue.toUpperCase()]);
   return codeResult.rows[0] || null;
 }
 
@@ -44,22 +46,6 @@ function createSessionToken() {
 
 function encodeJson(value) {
   return JSON.stringify(value);
-}
-
-function sanitizePhoneInput(value) {
-  const digits = String(value ?? '').replace(/\D+/g, '');
-  if (!digits) return '';
-  if (digits.startsWith('256')) return `0${digits.slice(3)}`;
-  if (digits.startsWith('0')) return digits;
-  if (digits.length === 12 && digits.startsWith('256')) return `0${digits.slice(3)}`;
-  return digits.length === 10 ? digits : digits.slice(-10);
-}
-
-export function sanitizeUserLoginInput(value) {
-  const raw = value && typeof value === 'object' ? value : {};
-  const phone = sanitizePhoneInput(raw.phone);
-  const password = String(raw.password ?? '').replace(/[\u0000-\u001F\u007F]+/g, '').trim();
-  return { ...raw, phone, password };
 }
 
 function challengeExpiry() {
@@ -97,26 +83,6 @@ function credentialFromRow(row) {
     transports: row.transports ? JSON.parse(row.transports) : undefined
   };
 }
-
-// Zod Input Validation Schemas
-export const signupSchema = z.preprocess((value) => {
-  if (!value || typeof value !== 'object') return value;
-  const name = value.name ?? value.fullName ?? '';
-  const phone = String(value.phone ?? '').replace(/\s+/g, '').trim();
-  return {
-    ...value,
-    name,
-    phone,
-    referralCode: value.referralCode ?? value.refCode ?? '',
-    profilePhoto: value.profilePhoto ?? value.profile_photo ?? null
-  };
-}, z.object({
-  name: z.string().min(2, 'Name is required'),
-  phone: z.string().regex(/^07\d{8}$/, 'Enter a valid 10-digit phone number starting with 07'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  referralCode: z.string().optional().nullable(),
-  profilePhoto: z.string().optional().nullable()
-}));
 
 const loginSchema = z.preprocess((value) => {
   if (!value || typeof value !== 'object') return value;
@@ -162,7 +128,6 @@ router.post(['/signup', '/register'], async (req, res) => {
 
     const normalizedReferralCode = referralCode?.trim() || null;
     let referredBy = null;
-    let referrerUser = null;
     if (normalizedReferralCode) {
       const referrer = await resolveReferralCode(normalizedReferralCode);
       if (!referrer) {
@@ -171,8 +136,7 @@ router.post(['/signup', '/register'], async (req, res) => {
       if (referrer.phone === phone) {
         return res.status(400).json({ error: 'You cannot use your own referral link' });
       }
-      referrerUser = referrer;
-      referredBy = referrerUser.referral_code;
+      referredBy = referrer.referral_code;
     }
     const referralBonus = await getReferralSignupBonus(referredBy);
 
@@ -184,15 +148,6 @@ router.post(['/signup', '/register'], async (req, res) => {
 
     const userRes = await query('SELECT id, phone, name, email, initials, wallet_balance, kyc_tier, profile_photo FROM users WHERE phone = $1', [phone]);
     const user = userRes.rows[0];
-
-    if (referrerUser && referralBonus > 0) {
-      await awardReferralBonus({
-        referredUserId: user.id,
-        referrerUserId: referrerUser.id,
-        amount: referralBonus,
-        referredUserName: name
-      });
-    }
 
     if (referralBonus > 0) {
       const rewardReference = `WELCOME-${user.id}`;
@@ -256,6 +211,9 @@ router.post('/login', async (req, res) => {
     }
 
     const user = userRes.rows[0];
+    if (user.status !== 'active') {
+      return res.status(401).json({ error: 'Invalid phone or password' });
+    }
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) {
       return res.status(401).json({ error: 'Invalid phone or password' });

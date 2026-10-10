@@ -476,8 +476,8 @@ async function fetchBackendDataInternal() {
       const activeReferrals = Number(stats.activeReferrals || stats.active_referrals || 0);
       const referralCode = stats.referralCode || '';
       const affiliateLink = referralCode
-        ? `${window.location.origin}/r/${encodeURIComponent(referralCode)}`
-        : (stats.affiliateLink || `${window.location.origin}/?ref=${referralCode}`);
+        ? `${window.location.origin}/?ref=${encodeURIComponent(referralCode)}`
+        : (stats.affiliateLink || `${window.location.origin}/`);
       appState.profile.referralCode = referralCode;
       appState.profile.affiliateLink = affiliateLink;
 
@@ -1166,7 +1166,7 @@ function renderPackages(list) {
     card.innerHTML = `
       <div class="package-photo-box" style="background-image: url('${pkg.imageUrl}')">
         <div class="package-badge-top">
-          <span class="badge-tag-income">Daily Income UGX ${pkg.income.toLocaleString()}</span>
+          <span class="badge-tag-income">Revenue UGX ${pkg.income.toLocaleString()}</span>
         </div>
       </div>
       <div class="package-info-box">
@@ -1272,7 +1272,7 @@ function selectAndOpenPackage(packageId) {
   document.getElementById('pkgDetailValidity').textContent = pkg.validity;
   document.getElementById('pkgDetailData').textContent = pkg.data;
   document.getElementById('pkgDetailPrice').textContent = `UGX ${getSelectedPurchasePrice(pkg).toLocaleString()}`;
-  document.getElementById('pkgDetailIncomeTag').textContent = `Daily Income UGX ${pkg.income.toLocaleString()}`;
+  document.getElementById('pkgDetailIncomeTag').textContent = `Revenue UGX ${pkg.income.toLocaleString()}`;
   document.getElementById('pkgHeroImg').style.backgroundImage = `url('${pkg.imageUrl}')`;
 
   navigateTo('screen-package-details');
@@ -1288,7 +1288,7 @@ function goToCheckout() {
   document.getElementById('checkoutItemTitle').textContent = pkg.title;
   const subElem = document.getElementById('checkoutItemSub');
   if (subElem) subElem.textContent = `${pkg.validity} • ${pkg.data}`;
-  document.getElementById('checkoutItemInc').textContent = `Daily Income: UGX ${pkg.income.toLocaleString()}`;
+  document.getElementById('checkoutItemInc').textContent = `Revenue: UGX ${pkg.income.toLocaleString()}`;
   const purchasePrice = getSelectedPurchasePrice(pkg);
   document.getElementById('checkoutItemPrice').textContent = `UGX ${purchasePrice.toLocaleString()}`;
   document.getElementById('checkoutTotalVal').textContent = `UGX ${purchasePrice.toLocaleString()}`;
@@ -1348,12 +1348,31 @@ function startMerchantPolling(network) {
       const res = await window.VSIM_API.fetchAssignedMerchant(pkgPrice, pkgId, network);
       if (res && res.success && res.merchant) {
         stopMerchantPolling();
+        await attachPaymentOrder(res, network, pkgPrice, pkgId);
         applyMerchantData(res, network);
       }
     } catch (e) {
       // Continue polling silently in background
     }
   }, 4500);
+}
+
+async function attachPaymentOrder(res, network, packagePrice, packageId) {
+  const order = await window.VSIM_API.createPaymentOrder({
+    packageId,
+    targetEsimId: appState.targetEsimId,
+    targetEsimIccid: appState.targetEsimIccid,
+    reference: res.reference,
+    merchantId: res.merchant.id,
+    merchantCode: res.merchant.merchant_code,
+    network: res.merchant.network || network
+  });
+  const paymentOrder = order.order || {};
+  res.orderId = paymentOrder.id || null;
+  res.amount = Number(paymentOrder.amount ?? res.amount);
+  res.packageAmount = Number(paymentOrder.requested_amount ?? packagePrice);
+  res.bonusAmount = Math.max(0, res.packageAmount - res.amount);
+  return res;
 }
 
 function applyMerchantData(res, network) {
@@ -1377,15 +1396,22 @@ function applyMerchantData(res, network) {
     netElem.textContent = m.network || network;
     netElem.className = `merchant-network-tag ${String(m.network).toLowerCase().includes('mtn') ? 'mtn' : 'airtel'}`;
   }
-  if (amtElem) amtElem.textContent = `UGX ${Number(res.amount || pkgPrice).toLocaleString()}`;
+  const amountDue = Number(res.amount ?? pkgPrice);
+  const bonusAmount = Number(res.bonusAmount || 0);
+  const packageAmount = Number(res.packageAmount || pkgPrice);
+  if (amtElem) amtElem.textContent = `UGX ${amountDue.toLocaleString()}`;
   if (codeElem) codeElem.textContent = m.merchant_code;
   if (refElem) refElem.textContent = res.reference;
   const baseInstructions = String(m.instructions || 'Send the exact amount and confirm with your PIN.')
     .replace(/\s*->\s*Enter Reference\s+VSIM-[A-Z0-9-]+/gi, '')
     .trim();
-  const instructions = /SMS transaction ID/i.test(baseInstructions)
-    ? baseInstructions
-    : `${baseInstructions} -> After payment, enter the SMS transaction ID in the field below.`;
+  const bonusInstructions = bonusAmount > 0
+    ? ` Package price UGX ${packageAmount.toLocaleString()}; bonus applied UGX ${bonusAmount.toLocaleString()}; send UGX ${amountDue.toLocaleString()} exactly.`
+    : ` Send UGX ${amountDue.toLocaleString()} exactly.`;
+  const referenceInstructions = /SMS transaction ID/i.test(baseInstructions)
+    ? ''
+    : ' -> After payment, enter the SMS transaction ID in the field below.';
+  const instructions = `${baseInstructions}${bonusInstructions}${referenceInstructions}`;
   if (instElem) instElem.textContent = instructions;
 
   if (loading) loading.style.display = 'none';
@@ -1471,17 +1497,7 @@ async function fetchRealtimeMerchant(network) {
         if (!res || !res.success || !res.merchant) {
           throw new Error(res?.error || `No active ${network} merchant available`);
         }
-        const order = await window.VSIM_API.createPaymentOrder({
-          packageId: pkgId,
-          targetEsimId: appState.targetEsimId,
-          targetEsimIccid: appState.targetEsimIccid,
-          reference: res.reference,
-          merchantId: res.merchant.id,
-          merchantCode: res.merchant.merchant_code,
-          network: res.merchant.network
-        });
-        res.orderId = order.order?.id || null;
-        res.amount = order.order?.amount || res.amount;
+        await attachPaymentOrder(res, network, pkgPrice, pkgId);
         applyMerchantData(res, network);
         return;
       } catch (error) {
@@ -1800,7 +1816,7 @@ function renderMyESIMs(esims = [], type = 'active') {
         <div style="flex: 1; min-width: 0;"><div style="font-size: 0.95rem; font-weight: 700; color: var(--text-white);">${esim.title}</div><div style="font-size: 0.78rem; color: var(--text-gray);">${esim.country || ''}</div></div>
         <span class="badge-tag-${status === 'active' ? 'active' : 'income'}">${status}</span>
       </div>
-      <div style="font-size: 0.78rem; color: var(--text-gray); margin-top: 8px;"><div style="display: flex; justify-content: space-between;"><span>Activated</span><span style="color: var(--text-white); font-weight: 600;">${new Date(esim.activated_at).toLocaleDateString()}</span></div><div style="display: flex; justify-content: space-between; margin-top: 3px;"><span>Expires</span><span style="color: var(--text-white); font-weight: 600;">${new Date(esim.expires_at).toLocaleDateString()}</span></div><div style="display: flex; justify-content: space-between; margin-top: 3px;"><span>Daily Income</span><span style="color: var(--green-accent); font-weight: 700;">UGX ${Number(esim.daily_income || 0).toLocaleString()}</span></div></div>
+      <div style="font-size: 0.78rem; color: var(--text-gray); margin-top: 8px;"><div style="display: flex; justify-content: space-between;"><span>Activated</span><span style="color: var(--text-white); font-weight: 600;">${new Date(esim.activated_at).toLocaleDateString()}</span></div><div style="display: flex; justify-content: space-between; margin-top: 3px;"><span>Expires</span><span style="color: var(--text-white); font-weight: 600;">${new Date(esim.expires_at).toLocaleDateString()}</span></div><div style="display: flex; justify-content: space-between; margin-top: 3px;"><span>Revenue</span><span style="color: var(--green-accent); font-weight: 700;">UGX ${Number(esim.daily_income || 0).toLocaleString()}</span></div></div>
       <div style="margin-top: 10px;"><div style="display: flex; justify-content: space-between; font-size: 0.74rem;"><span style="color: var(--text-gray);">Data Remaining</span><span style="color: var(--text-white); font-weight: 700;">${remainingLabel} / ${esim.data_total}</span></div><div class="esim-progress-track"><div class="esim-progress-bar${animateProgress ? ' esim-progress-initial' : ''}" style="--esim-progress-width: ${remainingPercent}%; width: ${remainingPercent}%;"></div></div></div>
       ${canRenew ? `<div class="esim-bundle-empty-state"><span>${status === 'expired' ? 'This eSIM has expired. Renew it to restore data.' : 'Bundle finished. Renew this eSIM to restore data.'}</span><button class="btn-primary-purple esim-buy-bundle-button" onclick="openEsimBundleModal('${String(esim.id).replace(/'/g, '\\&#39;')}')">Renew</button></div>` : ''}
     </div>`;
@@ -2304,7 +2320,7 @@ async function handleSignup(e) {
       if (refCode) {
         await showCustomConfirm({
           title: 'Referral Linked Successfully',
-          message: `Your account is linked to this referral. You received a UGX ${referralBonus.toLocaleString()} welcome bonus. When you invite friends, they receive the welcome bonus and you earn 10% commission when they purchase an eSIM. Commission is added to your wallet automatically.`,
+          message: `Your account is linked to this referral. You received a UGX ${referralBonus.toLocaleString()} welcome bonus. When you invite friends, they receive the welcome bonus and you earn UGX 2,000 after their first Mobile Money eSIM purchase is verified and activated.`,
           confirmText: 'Continue',
           cancelText: 'Close'
         });
@@ -2812,7 +2828,7 @@ function showCustomPrompt({ title = 'Input Required', message = 'Please enter de
 function showReferralHowItWorks() {
   showCustomConfirm({
     title: 'How Referrals Work',
-    message: 'Share your affiliate link or referral code with a friend. When they create an account using your referral, they receive a UGX 5,000 welcome bonus. When they purchase an eSIM, you earn 10% commission, which is added to your wallet automatically.',
+    message: 'Share your affiliate link or referral code with a friend. When they create an account using your referral, they receive a UGX 5,000 welcome bonus. You earn a one-time UGX 2,000 commission after their first Mobile Money eSIM purchase is verified and activated.',
     confirmText: 'Got It',
     cancelText: 'Close'
   });
@@ -2824,7 +2840,7 @@ function showReferralEarnings() {
   const activeReferrals = document.getElementById('refActiveCount')?.textContent || '0';
   showCustomConfirm({
     title: 'Referral Earnings',
-    message: `Total earned: ${totalEarnings}. You have ${totalReferrals} referral${totalReferrals === '1' ? '' : 's'}, including ${activeReferrals} active. You earn 10% commission when a referred user purchases an eSIM, and completed commissions are added to your wallet automatically.`,
+    message: `Total earned: ${totalEarnings}. You have ${totalReferrals} referral${totalReferrals === '1' ? '' : 's'}, including ${activeReferrals} active. You earn one UGX 2,000 commission after each referred user’s first Mobile Money eSIM purchase is verified and activated.`,
     confirmText: 'Got It',
     cancelText: 'Close'
   });
@@ -2844,6 +2860,13 @@ function initReferralHandler() {
       const hash = window.location.hash;
       const match = hash.match(/[?&#]ref=([^&]+)/) || hash.match(/[?&#]r=([^&]+)/);
       if (match) refCode = decodeURIComponent(match[1]);
+    }
+
+    if (!refCode) {
+      const pathMatch = window.location.pathname.match(/^\/r\/([^/]+)\/?$/i);
+      if (pathMatch) {
+        try { refCode = decodeURIComponent(pathMatch[1]); } catch (error) { refCode = pathMatch[1]; }
+      }
     }
 
     if (refCode) {

@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import { query } from '../config/db.js';
+import { VERIFIED_ESIM_PAYMENT_CONDITIONS_SQL } from '../utils/verified-esim-payment.js';
 
 const EARNINGS_TIME_ZONE = 'Africa/Kampala';
 
@@ -19,7 +20,13 @@ export function startEarningsCronJob() {
       }
 
       // Fetch active user eSIMs
-      const activeLines = await query(`SELECT * FROM user_esims WHERE status = 'active'`);
+      const activeLines = await query(
+        `SELECT ue.* FROM user_esims ue
+         WHERE ue.status = 'active' AND ue.daily_income > 0 AND EXISTS (
+           SELECT 1 FROM payment_requests pr
+           WHERE ${VERIFIED_ESIM_PAYMENT_CONDITIONS_SQL}
+         )`
+      );
 
       for (const line of activeLines.rows) {
         if (line.daily_income > 0) {
@@ -27,7 +34,7 @@ export function startEarningsCronJob() {
           await query('UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2', [line.daily_income, line.user_id]);
 
           // Log transaction
-          const ref = `YIELD-${Date.now()}`;
+          const ref = `YIELD-${line.id}-${Date.now()}`;
           await query(
             `INSERT INTO wallet_transactions (user_id, type, title, amount, reference, status)
              VALUES ($1, $2, $3, $4, $5, $6)`,

@@ -16,7 +16,10 @@ export async function authenticateToken(req, res, next) {
     }
 
     try {
-      const userRecord = await import('../config/db.js').then(({ query }) => query('SELECT id, current_session_token FROM users WHERE id = $1', [decoded.id]));
+      const userRecord = await import('../config/db.js').then(({ query }) => query('SELECT id, current_session_token, status FROM users WHERE id = $1', [decoded.id]));
+      if (userRecord.rows[0]?.status !== 'active') {
+        return res.status(401).json({ error: 'Account is inactive' });
+      }
       const expectedSessionToken = userRecord.rows[0]?.current_session_token || null;
       if (!expectedSessionToken || decoded.sessionToken !== expectedSessionToken) {
         return res.status(401).json({ error: 'Session invalid. Please log in again.' });

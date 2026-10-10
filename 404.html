@@ -9,6 +9,15 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="vsim-api-base" content="https://api.vsime.uk/api/v1" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://api.vsime.uk; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests;" />
+  <base href="/" />
+  <script>
+    const legacyReferralPath = window.location.pathname.match(/^\/r\/([^/]+)\/?$/i);
+    if (legacyReferralPath) {
+      let referralCode = legacyReferralPath[1];
+      try { referralCode = decodeURIComponent(referralCode); } catch (error) {}
+      window.location.replace(`/?ref=${encodeURIComponent(referralCode)}`);
+    }
+  </script>
   <script>
     window.VSIM_API_BASE = 'https://api.vsime.uk/api/v1';
   </script>

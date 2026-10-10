@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { sanitizeUserLoginInput, signupSchema } from './auth.js';
-import { sanitizeAdminLoginInput } from './admin.js';
+import { sanitizeUserLoginInput, signupSchema } from '../utils/auth-validation.js';
+import { sanitizeAdminLoginInput } from '../utils/admin-validation.js';
 
 test('user login input is normalized before validation', () => {
   const sanitized = sanitizeUserLoginInput({

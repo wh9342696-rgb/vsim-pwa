@@ -764,6 +764,8 @@ if (databaseDriver === 'postgres') {
   try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN customer_reference TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN assigned_merchant_id INTEGER'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec("ALTER TABLE payment_requests ADD COLUMN payment_method TEXT DEFAULT 'mobile_money'"); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
+  try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN verified_transaction_reference TEXT'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
+  try { sqlite.exec('ALTER TABLE payment_requests ADD COLUMN verified_amount REAL'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   sqlite.exec(`
     DELETE FROM user_esims
     WHERE iccid IS NOT NULL
@@ -865,4 +867,3 @@ export async function closeDatabase() {
     sqlite.close();
   }
 }
-

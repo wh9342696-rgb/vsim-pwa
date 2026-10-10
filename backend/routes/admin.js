@@ -4,10 +4,15 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { statfs } from 'node:fs/promises';
 import QRCode from 'qrcode';
-import { query } from '../config/db.js';
+import { query, withTransaction } from '../config/db.js';
 import { createUniqueReference } from '../utils/reference.js';
+import { settleReferralBonusForOrder } from '../utils/referral-bonus-wallet.js';
+import { awardReferralCommissionForPurchase } from '../utils/referral-reward.js';
 import { emitDataChanged } from '../realtime.js';
 import { encryptBridgeSecret, decryptBridgeSecret, hashBridgeSecret } from '../utils/bridge-secret.js';
+import { sanitizeAdminLoginInput } from '../utils/admin-validation.js';
+export { sanitizeAdminLoginInput } from '../utils/admin-validation.js';
+import { VERIFIED_ESIM_PAYMENT_CONDITIONS_SQL } from '../utils/verified-esim-payment.js';
 import { fulfillVerifiedPurchase } from './bridge.js';
 import { getWithdrawalQuote } from './wallet.js';
 
@@ -50,13 +55,6 @@ function normalizeRenewalSchedule(value, basePrice) {
     }
     return false;
   });
-}
-
-export function sanitizeAdminLoginInput(value) {
-  const raw = value && typeof value === 'object' ? value : {};
-  const email = String(raw.email ?? '').replace(/[\u0000-\u001F\u007F]+/g, '').trim().toLowerCase();
-  const password = String(raw.password ?? '').replace(/[\u0000-\u001F\u007F]+/g, '').trim();
-  return { ...raw, email, password };
 }
 
 const adminAuth = async (req, res, next) => {
@@ -507,10 +505,25 @@ router.get('/stats', adminAuth, async (req, res) => {
     const storage = await getVpsStorageStatus();
     const usersCount = await query('SELECT COUNT(*) AS total FROM users');
     const activeUsers = await query(`SELECT COUNT(*) AS total FROM users WHERE status = 'active'`);
+    const verifiedEsimSalesQuery = `
+      SELECT pr.package_id, pr.verified_amount
+      FROM payment_requests pr
+      JOIN user_esims ue
+        ON ue.id = pr.provisioned_esim_id
+       AND ue.user_id = pr.user_id
+      WHERE ${VERIFIED_ESIM_PAYMENT_CONDITIONS_SQL}
+    `;
+    const verifiedYieldConditionSql = `EXISTS (
+      SELECT 1
+      FROM payment_requests pr
+      JOIN user_esims ue ON ue.id = pr.provisioned_esim_id AND ue.user_id = pr.user_id
+      WHERE wt.user_id = pr.user_id
+        AND wt.title = 'Daily Yield - ' || ue.title
+        AND ${VERIFIED_ESIM_PAYMENT_CONDITIONS_SQL}
+    )`;
     const purchasedValue = await query(
-      `SELECT COALESCE(SUM(amount), 0) AS total_value
-       FROM wallet_transactions
-       WHERE type IN ('purchase', 'bundle_purchase') AND status = 'completed'`
+      `SELECT COALESCE(SUM(verified_amount), 0) AS total_value
+       FROM (${verifiedEsimSalesQuery}) AS verified_esim_sales`
     );
     const depositsTotal = await query(
       `SELECT
@@ -518,45 +531,69 @@ router.get('/stats', adminAuth, async (req, res) => {
          COUNT(*) AS count,
          COALESCE(SUM(amount) FILTER (WHERE created_at >= CURRENT_DATE AND created_at < CURRENT_DATE + INTERVAL '1 day'), 0) AS today,
          COALESCE(SUM(amount) FILTER (WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)), 0) AS this_month
-       FROM payment_requests WHERE status = 'completed'`
+       FROM payment_requests
+       WHERE status = 'completed'
+         AND payment_status = 'PAYMENT_VERIFIED'
+         AND COALESCE(payment_method, 'mobile_money') <> 'wallet'
+         AND verified_amount IS NOT NULL
+         AND ABS(verified_amount - amount) <= 0.01
+         AND COALESCE(verified_transaction_reference, '') <> ''`
     );
     const pendingPayouts = await query(`SELECT COALESCE(SUM(COALESCE(requested_amount, amount)), 0) AS total, COUNT(*) AS count FROM withdrawals WHERE status = 'pending'`);
-    const paidPayouts = await query(`SELECT COALESCE(SUM(COALESCE(net_amount, amount)), 0) AS total, COUNT(*) AS count FROM withdrawals WHERE status IN ('paid', 'completed') AND processed_at >= CURRENT_DATE AND processed_at < CURRENT_DATE + INTERVAL '1 day'`);
+    const paidPayouts = await query(
+      `SELECT
+         COALESCE(SUM(COALESCE(net_amount, amount)), 0) AS total,
+         COUNT(*) AS count,
+         COALESCE(SUM(COALESCE(net_amount, amount)) FILTER (WHERE processed_at >= CURRENT_DATE AND processed_at < CURRENT_DATE + INTERVAL '1 day'), 0) AS today
+       FROM withdrawals WHERE status IN ('paid', 'completed')`
+    );
     const bridgeOnline = await query(`
       SELECT COUNT(*) AS online
       FROM bridge_devices
       WHERE status = 'active'
         AND last_heartbeat >= CURRENT_TIMESTAMP - INTERVAL '2 minutes'
     `);
-    const packages = await query(`SELECT COALESCE(SUM(revenue), 0) AS revenue, COALESCE(SUM(sold_count), 0) AS sold FROM esim_packages`);
+    const packages = await query(
+      `SELECT COALESCE(SUM(verified_amount), 0) AS revenue, COUNT(*) AS sold
+       FROM (${verifiedEsimSalesQuery}) AS verified_esim_sales`
+    );
     const topPackages = await query(
       `SELECT ep.id, ep.title, ep.price,
-              COUNT(ue.id)::int AS sold_count,
-              (COUNT(ue.id) * COALESCE(ep.price, 0)) AS revenue
+              COUNT(paid_sales.package_id)::int AS sold_count,
+              COALESCE(SUM(paid_sales.verified_amount), 0) AS revenue
        FROM esim_packages ep
-       LEFT JOIN user_esims ue ON ue.package_id = ep.id
+       LEFT JOIN (${verifiedEsimSalesQuery}) AS paid_sales ON paid_sales.package_id = ep.id
        GROUP BY ep.id, ep.title, ep.price
-      HAVING COUNT(ue.id) > 0
+      HAVING COUNT(paid_sales.package_id) > 0
        ORDER BY sold_count DESC, ep.price ASC
        LIMIT 5`
     );
     const investmentRows = await query(
       `SELECT ue.status, COALESCE(SUM(COALESCE(ep.price, 0)), 0) AS amount
        FROM user_esims ue LEFT JOIN esim_packages ep ON ep.id = ue.package_id
+       WHERE EXISTS (
+         SELECT 1 FROM payment_requests pr
+         WHERE ${VERIFIED_ESIM_PAYMENT_CONDITIONS_SQL}
+       )
        GROUP BY ue.status`
     );
     const yieldRows = await query(
-      `SELECT created_at::date::text AS day, COALESCE(SUM(amount), 0) AS total
-      FROM wallet_transactions WHERE type = 'yield' AND status = 'completed' AND created_at >= CURRENT_DATE - INTERVAL '6 days'
-       GROUP BY created_at::date ORDER BY day`
+      `SELECT wt.created_at::date::text AS day, COALESCE(SUM(wt.amount), 0) AS total
+       FROM wallet_transactions wt
+       WHERE wt.type = 'yield' AND wt.status = 'completed'
+         AND wt.created_at >= CURRENT_DATE - INTERVAL '6 days'
+         AND ${verifiedYieldConditionSql}
+       GROUP BY wt.created_at::date ORDER BY day`
     );
     const yieldTotals = await query(
       `SELECT
-         COALESCE(SUM(amount) FILTER (WHERE type = 'yield' AND status = 'completed'), 0) AS all_time,
-         COALESCE(SUM(amount) FILTER (WHERE type = 'yield' AND status = 'completed' AND created_at >= CURRENT_DATE), 0) AS today,
-         COALESCE(SUM(amount) FILTER (WHERE type = 'yield' AND status = 'completed' AND created_at >= CURRENT_DATE - INTERVAL '6 days'), 0) AS this_week,
-         COALESCE(SUM(amount) FILTER (WHERE type = 'yield' AND status = 'completed' AND created_at >= DATE_TRUNC('month', CURRENT_DATE)), 0) AS this_month
-       FROM wallet_transactions`
+         COALESCE(SUM(wt.amount), 0) AS all_time,
+         COALESCE(SUM(wt.amount) FILTER (WHERE wt.created_at >= CURRENT_DATE), 0) AS today,
+         COALESCE(SUM(wt.amount) FILTER (WHERE wt.created_at >= CURRENT_DATE - INTERVAL '6 days'), 0) AS this_week,
+         COALESCE(SUM(wt.amount) FILTER (WHERE wt.created_at >= DATE_TRUNC('month', CURRENT_DATE)), 0) AS this_month
+       FROM wallet_transactions wt
+       WHERE wt.type = 'yield' AND wt.status = 'completed'
+         AND ${verifiedYieldConditionSql}`
     );
     const investmentTotals = Object.fromEntries(investmentRows.rows.map(row => [row.status, Number(row.amount)]));
     const totalInvestment = Object.values(investmentTotals).reduce((sum, value) => sum + value, 0);
@@ -596,7 +633,7 @@ router.get('/stats', adminAuth, async (req, res) => {
         packagesSold: Number(packages.rows[0]?.sold || 0),
         pendingWithdrawalsTotal: Number(pendingPayouts.rows[0]?.total || 0),
         pendingWithdrawalsCount: Number(pendingPayouts.rows[0]?.count || 0),
-        todayPaidWithdrawalsTotal: Number(paidPayouts.rows[0]?.total || 0)
+        todayPaidWithdrawalsTotal: Number(paidPayouts.rows[0]?.today || 0)
       },
       earningsChart: {
         days: chartDays,
@@ -679,10 +716,19 @@ router.get('/investments', adminAuth, ensureSuperAdmin, async (req, res) => {
       const [activeLines, recentYields] = await Promise.all([
         query(`SELECT ue.id, ue.title, ue.status, ue.daily_income, ue.activated_at, ue.expires_at, u.name, u.phone
                FROM user_esims ue JOIN users u ON u.id = ue.user_id
-               WHERE ue.status = 'active' ORDER BY ue.daily_income DESC`),
+               WHERE ue.status = 'active' AND EXISTS (
+                 SELECT 1 FROM payment_requests pr
+                 WHERE ${VERIFIED_ESIM_PAYMENT_CONDITIONS_SQL}
+               ) ORDER BY ue.daily_income DESC`),
         query(`SELECT wt.id, wt.amount, wt.title, wt.reference, wt.created_at, u.name, u.phone
                FROM wallet_transactions wt LEFT JOIN users u ON u.id = wt.user_id
-               WHERE wt.type = 'yield' ORDER BY wt.created_at DESC LIMIT 100`)
+               WHERE wt.type = 'yield' AND EXISTS (
+                 SELECT 1 FROM payment_requests pr
+                 JOIN user_esims ue ON ue.id = pr.provisioned_esim_id AND ue.user_id = pr.user_id
+                 WHERE wt.user_id = pr.user_id
+                   AND wt.title = 'Daily Yield - ' || ue.title
+                   AND ${VERIFIED_ESIM_PAYMENT_CONDITIONS_SQL}
+               ) ORDER BY wt.created_at DESC LIMIT 100`)
       ]);
       res.json({ activeLines: activeLines.rows, recentYields: recentYields.rows });
     } catch (err) {
@@ -697,12 +743,26 @@ router.get('/investments', adminAuth, ensureSuperAdmin, async (req, res) => {
                 COALESCE(SUM(COALESCE(ue.daily_income, 0)), 0) AS daily_yield
          FROM user_esims ue
          LEFT JOIN esim_packages ep ON ep.id = ue.package_id
+         WHERE EXISTS (
+           SELECT 1 FROM payment_requests pr
+           WHERE ${VERIFIED_ESIM_PAYMENT_CONDITIONS_SQL}
+         )
          GROUP BY ue.status`
       ),
-      query(`SELECT COALESCE(AVG(daily_income), 0) AS average, COALESCE(SUM(daily_income), 0) AS total
-             FROM user_esims WHERE status = 'active'`),
-      query(`SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS entries
-             FROM wallet_transactions WHERE type = 'yield' AND status = 'completed'`)
+      query(`SELECT COALESCE(AVG(ue.daily_income), 0) AS average, COALESCE(SUM(ue.daily_income), 0) AS total
+             FROM user_esims ue WHERE ue.status = 'active' AND EXISTS (
+               SELECT 1 FROM payment_requests pr
+               WHERE ${VERIFIED_ESIM_PAYMENT_CONDITIONS_SQL}
+             )`),
+      query(`SELECT COALESCE(SUM(wt.amount), 0) AS total, COUNT(*) AS entries
+             FROM wallet_transactions wt WHERE wt.type = 'yield' AND wt.status = 'completed'
+               AND EXISTS (
+                 SELECT 1 FROM payment_requests pr
+                 JOIN user_esims ue ON ue.id = pr.provisioned_esim_id AND ue.user_id = pr.user_id
+                 WHERE wt.user_id = pr.user_id
+                   AND wt.title = 'Daily Yield - ' || ue.title
+                   AND ${VERIFIED_ESIM_PAYMENT_CONDITIONS_SQL}
+               )`)
     ]);
 
     const statusMap = Object.fromEntries(byStatus.rows.map(row => [String(row.status).toLowerCase(), row]));
@@ -898,6 +958,7 @@ router.post('/deposits/:id/action', adminAuth, ensureSuperAdmin, async (req, res
 
     if (action === 'reject') {
       await query('UPDATE payment_requests SET payment_status = \'REJECTED\', order_status = CASE WHEN package_id IS NULL THEN order_status ELSE \'PAYMENT_REJECTED\' END WHERE id = $1', [payment.id]);
+      await settleReferralBonusForOrder(payment.id, true);
       if (payment.user_id) await query('INSERT INTO notifications (user_id, title, message, category) VALUES ($1, $2, $3, \'wallet\')', [payment.user_id, 'Payment Rejected', `Your payment request ${payment.reference} was rejected.`,]);
       return res.json({ message: 'Payment rejected', status: 'rejected' });
     }
@@ -988,6 +1049,13 @@ router.post('/deposits/:id/action', adminAuth, ensureSuperAdmin, async (req, res
 
     try {
       const fulfillment = await fulfillVerifiedPurchase(payment);
+      if (fulfillment.fulfilled && payment.package_id && !payment.target_esim_id) {
+        try {
+          await awardReferralCommissionForPurchase(payment.id);
+        } catch (commissionError) {
+          console.error('Referral commission award failed:', commissionError);
+        }
+      }
       if (!fulfillment.fulfilled && payment.user_id) {
         const txReference = `PAYMENT-${payment.id}`;
         const existingCredit = await query('SELECT id FROM wallet_transactions WHERE reference = $1', [txReference]);
@@ -997,10 +1065,12 @@ router.post('/deposits/:id/action', adminAuth, ensureSuperAdmin, async (req, res
         }
         await query('UPDATE payment_requests SET status = \'completed\', payment_status = \'PAYMENT_VERIFIED\', order_status = \'PAYMENT_RECORDED\' WHERE id = $1', [payment.id]);
       }
+      await settleReferralBonusForOrder(payment.id);
       await query('INSERT INTO system_logs (action, details, level, time_ago) VALUES ($1, $2, \'success\', \'Just now\')', ['payment_approved', `Payment #${payment.id} approved by admin #${req.admin.id}`]);
       return res.json({ message: 'Payment approved and fulfillment completed', status: 'completed' });
     } catch (error) {
       await query('UPDATE payment_requests SET status = \'failed\', payment_status = \'FULFILLMENT_FAILED\', rejection_reason = $2 WHERE id = $1', [payment.id, String(error.message || 'Fulfillment failed').slice(0, 500)]);
+      await settleReferralBonusForOrder(payment.id, true);
       console.error('Manual payment fulfillment error:', error);
       return res.status(500).json({ error: 'Payment was verified but fulfillment failed. Review the payment before retrying.' });
     }
@@ -1237,15 +1307,27 @@ router.post('/users/:id/adjust-balance', adminAuth, ensureSuperAdmin, async (req
     const delta = parseFloat(amount);
     if (isNaN(delta) || delta <= 0) return res.status(400).json({ error: 'Invalid adjustment amount' });
     const op = type === 'debit' ? -delta : delta;
-    await query('UPDATE users SET wallet_balance = MAX(0, wallet_balance + $1) WHERE id = $2', [op, id]);
-    const updated = await query('SELECT id, name, phone, wallet_balance FROM users WHERE id = $1', [id]);
-    await query(
-      `INSERT INTO wallet_transactions (user_id, type, title, amount, reference, status)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [id, type === 'debit' ? 'admin_debit' : 'admin_credit', reason, delta, `ADM-ADJ-${Date.now()}`, 'completed']
-    );
-    res.json({ message: 'User balance updated successfully', user: updated.rows[0] });
+    const updated = await withTransaction(async txQuery => {
+      const result = await txQuery(
+        `UPDATE users
+         SET wallet_balance = CASE WHEN wallet_balance + $1 < 0 THEN 0 ELSE wallet_balance + $1 END
+         WHERE id = $2
+         RETURNING id, name, phone, wallet_balance`,
+        [op, id]
+      );
+      if (!result.rows.length) return null;
+
+      await txQuery(
+        `INSERT INTO wallet_transactions (user_id, type, title, amount, reference, status)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [id, type === 'debit' ? 'admin_debit' : 'admin_credit', reason, delta, `ADM-ADJ-${Date.now()}`, 'completed']
+      );
+      return result.rows[0];
+    });
+    if (!updated) return res.status(404).json({ error: 'User not found' });
+    res.json({ message: 'User balance updated successfully', user: updated });
   } catch (err) {
+    console.error('Admin balance adjustment error:', err);
     res.status(500).json({ error: 'Failed to adjust user balance' });
   }
 });
@@ -1577,7 +1659,13 @@ router.post('/notifications/broadcast', adminAuth, async (req, res) => {
 // 9. Manual Yield Settlement Trigger
 router.post('/settle-now', adminAuth, async (req, res) => {
   try {
-    const activeLines = await query(`SELECT * FROM user_esims WHERE status = 'active'`);
+    const activeLines = await query(
+      `SELECT ue.* FROM user_esims ue
+       WHERE ue.status = 'active' AND ue.daily_income > 0 AND EXISTS (
+         SELECT 1 FROM payment_requests pr
+         WHERE ${VERIFIED_ESIM_PAYMENT_CONDITIONS_SQL}
+       )`
+    );
     let settledCount = 0;
 
     for (const line of activeLines.rows) {

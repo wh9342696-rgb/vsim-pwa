@@ -37,6 +37,22 @@ function formatDataValue(amountGb, unit) {
 }
 
 export async function fulfillVerifiedPurchase(payment) {
+  const currentPayment = await query(
+    'SELECT status, provisioning_status, provisioned_esim_id FROM payment_requests WHERE id = $1',
+    [payment.id]
+  );
+  const savedPayment = currentPayment.rows[0] || payment;
+  if (savedPayment.provisioned_esim_id || savedPayment.provisioning_status === 'COMPLETED') {
+    await query(
+      `UPDATE payment_requests
+       SET status = 'completed', payment_status = 'PAYMENT_VERIFIED', order_status = CASE WHEN package_id IS NULL THEN order_status ELSE 'ESIM_READY' END,
+           provisioning_status = CASE WHEN package_id IS NULL THEN provisioning_status ELSE 'COMPLETED' END
+       WHERE id = $1`,
+      [payment.id]
+    );
+    return { fulfilled: Boolean(savedPayment.provisioned_esim_id), provisionedEsimId: savedPayment.provisioned_esim_id || null };
+  }
+
   if (!payment.package_id || !payment.user_id) {
     await query(
       `UPDATE payment_requests
@@ -75,14 +91,17 @@ export async function fulfillVerifiedPurchase(payment) {
        WHERE id = $8 AND user_id = $9`,
       [pkg.id, pkg.title, renewedTotal, renewedRemaining, pkg.income || 0, Number(pkg.progress_percent_per_hour) || 0.42, expiresAt, payment.target_esim_id, payment.user_id]
     );
+    await query('UPDATE payment_requests SET provisioned_esim_id = $1 WHERE id = $2', [payment.target_esim_id, payment.id]);
   } else {
     let iccid = createIccid();
     while ((await query('SELECT id FROM user_esims WHERE iccid = $1', [iccid])).rows.length) iccid = createIccid();
-    await query(
+    const provisioned = await query(
       `INSERT INTO user_esims (user_id, package_id, title, country, iccid, status, data_total, data_remaining, daily_income, progress_percent_per_hour, expires_at)
-      VALUES ($1, $2, $3, $4, $5, 'active', $6, $6, $7, $8, $9)`,
+      VALUES ($1, $2, $3, $4, $5, 'active', $6, $6, $7, $8, $9)
+      RETURNING id`,
       [payment.user_id, pkg.id, pkg.title, pkg.country || 'Global', iccid, pkg.data_quota || '10 GB', pkg.income || 0, Number(pkg.progress_percent_per_hour) || 0.42, expiresAt]
     );
+    await query('UPDATE payment_requests SET provisioned_esim_id = $1 WHERE id = $2', [provisioned.rows[0]?.id || null, payment.id]);
   }
 
   await query(

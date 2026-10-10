@@ -31,7 +31,22 @@ export async function getWithdrawalQuote(userId, requestedAmount, { requireBalan
   const [settingsRes, userRes, esimRes] = await Promise.all([
     query("SELECT key, value FROM system_settings WHERE key LIKE 'withdrawal_%'"),
     userId ? query('SELECT wallet_balance, kyc_tier FROM users WHERE id = $1', [userId]) : Promise.resolve({ rows: [] }),
-    userId ? query("SELECT expires_at, activated_at FROM user_esims WHERE user_id = $1 AND status = 'active' ORDER BY expires_at ASC NULLS LAST LIMIT 1", [userId]) : Promise.resolve({ rows: [] })
+    userId ? query(
+      `SELECT ue.expires_at, ue.activated_at
+       FROM user_esims ue
+       WHERE ue.user_id = $1 AND ue.status = 'active'
+         AND EXISTS (
+           SELECT 1 FROM payment_requests pr
+           WHERE pr.user_id = ue.user_id
+             AND pr.provisioned_esim_id = ue.id
+             AND pr.status = 'completed'
+             AND pr.payment_status IN ('PAYMENT_VERIFIED', 'WALLET_APPROVED')
+             AND pr.order_status = 'ESIM_READY'
+             AND pr.provisioning_status = 'COMPLETED'
+         )
+       ORDER BY ue.expires_at ASC NULLS LAST LIMIT 1`,
+      [userId]
+    ) : Promise.resolve({ rows: [] })
   ]);
   const settings = Object.fromEntries(settingsRes.rows.map(row => [row.key, row.value]));
   const balance = Number(userRes.rows[0]?.wallet_balance || 0);

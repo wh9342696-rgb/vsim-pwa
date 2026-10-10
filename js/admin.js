@@ -1410,18 +1410,23 @@ function renderRecentDepositsTable() {
   if (!tbody) return;
 
   const deposits = (AdminStore.deposits || [])
-    .filter(deposit => String(deposit.status || '').toLowerCase() === 'completed')
+    .filter(deposit => String(deposit.status || '').toLowerCase() === 'completed'
+      && String(deposit.payment_status || '').toUpperCase() === 'PAYMENT_VERIFIED'
+      && deposit.verified_amount !== null
+      && deposit.verified_amount !== undefined
+      && Math.abs(Number(deposit.verified_amount) - Number(deposit.amount)) <= 0.01
+      && String(deposit.verified_transaction_reference || '').trim() !== '')
     .slice(0, 7);
 
   tbody.innerHTML = deposits.length ? deposits.map(d => `
     <tr>
       <td style="font-weight: 600;">${d.phone}</td>
-      <td style="font-weight: 800; color: var(--text-white);">UGX ${Number(d.amount || 0).toLocaleString()}</td>
+      <td style="font-weight: 800; color: var(--text-white);">UGX ${Number(d.verified_amount).toLocaleString()}</td>
       <td><span style="color: var(--text-muted); font-size: 0.74rem;">${d.merchant || '-'}</span></td>
       <td style="color: var(--text-muted);">${d.time || '-'}</td>
       <td><span class="status-pill ${d.status}">${d.status}</span></td>
     </tr>
-  `).join('') : '<tr><td colspan="5" style="text-align:center; padding:24px; color:var(--text-muted);">No completed automatic deposits yet</td></tr>';
+  `).join('') : '<tr><td colspan="5" style="text-align:center; padding:24px; color:var(--text-muted);">No verified deposits yet</td></tr>';
 }
 
 // Render Recent Withdrawals Table

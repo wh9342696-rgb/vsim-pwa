@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { query } from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateBody } from '../middleware/validate.js';
+import { calculateReferralBonusApplication, getAvailableReferralBonus, reserveReferralBonusForOrder, settleReferralBonusForOrder } from '../utils/referral-bonus-wallet.js';
 
 const router = express.Router();
 const merchantCursors = new Map();
@@ -159,18 +160,20 @@ router.post('/orders', authenticateToken, async (req, res) => {
     try { schedule = Array.isArray(pkg.renewal_schedule) ? pkg.renewal_schedule : JSON.parse(pkg.renewal_schedule || '[]'); } catch (error) {}
     const scheduled = schedule[renewalCount];
     const basePrice = Number(pkg.price) || 0;
-    const amount = resolvedTargetEsimId && scheduled && Number(scheduled.price) > basePrice
+    const totalAmount = resolvedTargetEsimId && scheduled && Number(scheduled.price) > basePrice
       ? Number(scheduled.price)
       : basePrice * (resolvedTargetEsimId && renewalCount > 0 ? 1.1 : 1);
+    const availableBonus = await getAvailableReferralBonus(req.user.id);
+    const { bonusAmount, amountDue } = calculateReferralBonusApplication(totalAmount, availableBonus);
     const normalizedReference = String(reference).trim();
     const existing = await query('SELECT * FROM payment_requests WHERE reference = $1 AND user_id = $2', [normalizedReference, req.user.id]);
     if (existing.rows.length) return res.json({ success: true, order: existing.rows[0] });
 
     const inserted = await query(
       `INSERT INTO payment_requests
-       (user_id, phone, amount, merchant, assigned_merchant_id, network, reference, package_id, target_esim_id, status, payment_status, order_status, provisioning_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'ORDER_CREATED', 'ORDER_CREATED', $10, 'NOT_STARTED')`,
-      [req.user.id, req.user.phone, amount, merchantCode || 'VSIM-M001', merchantId || null, String(network || 'MTN').toUpperCase(), normalizedReference, pkg.id, resolvedTargetEsimId, resolvedTargetEsimId ? 'RENEWAL_PENDING_PAYMENT' : 'PENDING_PAYMENT']
+       (user_id, phone, requested_amount, amount, merchant, assigned_merchant_id, network, reference, package_id, target_esim_id, status, payment_status, order_status, provisioning_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'ORDER_CREATED', 'ORDER_CREATED', $11, 'NOT_STARTED')`,
+      [req.user.id, req.user.phone, totalAmount, amountDue, merchantCode || 'VSIM-M001', merchantId || null, String(network || 'MTN').toUpperCase(), normalizedReference, pkg.id, resolvedTargetEsimId, resolvedTargetEsimId ? 'RENEWAL_PENDING_PAYMENT' : 'PENDING_PAYMENT']
     );
     res.status(201).json({ success: true, order: inserted.rows[0] });
   } catch (err) {
@@ -196,8 +199,8 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
     const mCode = merchantCode || 'VSIM-M001';
 
     const existingPayment = orderId
-      ? await query('SELECT id, user_id, package_id, target_esim_id, amount, status, created_at, customer_reference FROM payment_requests WHERE id = $1', [orderId])
-      : await query('SELECT id, user_id, package_id, target_esim_id, amount, status, created_at, customer_reference FROM payment_requests WHERE reference = $1', [txRef]);
+      ? await query('SELECT id, user_id, package_id, target_esim_id, amount, requested_amount, status, created_at, customer_reference FROM payment_requests WHERE id = $1', [orderId])
+      : await query('SELECT id, user_id, package_id, target_esim_id, amount, requested_amount, status, created_at, customer_reference FROM payment_requests WHERE reference = $1', [txRef]);
     let existingOrder = null;
     if (existingPayment.rows.length) {
       const existing = existingPayment.rows[0];
@@ -286,12 +289,22 @@ router.post('/confirm-deposit', validateBody(confirmDepositSchema), async (req, 
           error: 'This Mobile Money transaction ID has already been submitted for another order.'
         });
       }
-      await query(
-        `UPDATE payment_requests
-         SET phone = $1, customer_reference = $2, status = 'PAYMENT_AWAITING_VERIFICATION', payment_status = 'PAYMENT_AWAITING_VERIFICATION', order_status = $3, provisioning_status = 'NOT_STARTED'
-         WHERE id = $4`,
-        [payerPhone, customerReference, packageId ? 'PENDING_PAYMENT' : 'NOT_APPLICABLE', existingOrder.id]
-      );
+      const bonusAmount = Math.max(0, Number(existingOrder.requested_amount || existingOrder.amount) - Number(existingOrder.amount));
+      if (bonusAmount > 0) {
+        const reserved = await reserveReferralBonusForOrder(existingOrder.user_id, existingOrder.id, bonusAmount);
+        if (!reserved) return res.status(409).json({ success: false, error: 'Your bonus balance changed. Restart checkout and try again.' });
+      }
+      try {
+        await query(
+          `UPDATE payment_requests
+           SET phone = $1, customer_reference = $2, status = 'PAYMENT_AWAITING_VERIFICATION', payment_status = 'PAYMENT_AWAITING_VERIFICATION', order_status = $3, provisioning_status = 'NOT_STARTED'
+           WHERE id = $4`,
+          [payerPhone, customerReference, packageId ? 'PENDING_PAYMENT' : 'NOT_APPLICABLE', existingOrder.id]
+        );
+      } catch (error) {
+        if (bonusAmount > 0) await settleReferralBonusForOrder(existingOrder.id, true);
+        throw error;
+      }
     } else {
       await query(
         `INSERT INTO payment_requests (user_id, phone, amount, merchant, assigned_merchant_id, network, reference, customer_reference, package_id, target_esim_id, status, payment_status, order_status, provisioning_status)

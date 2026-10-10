@@ -197,16 +197,10 @@ app.get('/api/v1/realtime', (req, res) => {
   }
 });
 
-// Route for direct /admin URL - serve admin.html
+// Keep the manifest start URL and service-worker scope on one canonical entry.
 // MUST come BEFORE static middleware to prevent 404
 app.get('/admin', (req, res) => {
-  const adminPath = path.join(frontendPublicDir, 'admin.html');
-  res.sendFile(adminPath, (err) => {
-    if (err) {
-      console.error('[ROUTE /admin] Error sending admin.html:', err.message);
-      res.status(404).json({ error: 'admin.html not found', path: adminPath });
-    }
-  });
+  res.redirect(308, '/admin/');
 });
 
 // Route for short referral links (/r/VSIM123456 -> /?ref=VSIM123456)
