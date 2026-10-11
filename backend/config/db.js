@@ -92,7 +92,6 @@ async function initializePostgresSchema() {
       merchant_code TEXT NOT NULL,
       network TEXT NOT NULL DEFAULT 'MTN',
       account_name TEXT,
-      phone TEXT,
       instructions TEXT,
       status TEXT NOT NULL DEFAULT 'inactive',
       priority INTEGER NOT NULL DEFAULT 10,
@@ -147,34 +146,6 @@ async function initializePostgresSchema() {
       network TEXT DEFAULT 'MTN',
       reference TEXT,
       status TEXT DEFAULT 'completed',
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`,
-    `CREATE TABLE IF NOT EXISTS airtime_purchase_requests (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER REFERENCES users(id),
-      phone TEXT NOT NULL,
-      network TEXT NOT NULL,
-      airtime_amount NUMERIC(12,2) NOT NULL,
-      payment_amount NUMERIC(12,2) NOT NULL,
-      merchant_number TEXT NOT NULL,
-      reference TEXT UNIQUE NOT NULL,
-      status TEXT DEFAULT 'pending',
-      processed_by INTEGER REFERENCES admin_users(id),
-      processed_at TIMESTAMP,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )`,
-    `CREATE TABLE IF NOT EXISTS airtime_sale_requests (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER REFERENCES users(id),
-      payout_phone TEXT NOT NULL,
-      network TEXT NOT NULL,
-      airtime_amount NUMERIC(12,2) NOT NULL,
-      payout_amount NUMERIC(12,2) NOT NULL,
-      merchant_number TEXT NOT NULL,
-      reference TEXT UNIQUE NOT NULL,
-      status TEXT DEFAULT 'pending',
-      processed_by INTEGER REFERENCES admin_users(id),
-      processed_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`,
     `CREATE TABLE IF NOT EXISTS withdrawals (
@@ -269,6 +240,22 @@ async function initializePostgresSchema() {
     await pool.query(statement);
   }
 
+  await pool.query(`DELETE FROM wallet_transactions
+    WHERE type IN ('airtime_buy', 'airtime_sell')
+       OR LOWER(title) LIKE '%airtime%'
+       OR reference ILIKE 'AIR-%'`);
+  await pool.query(`DELETE FROM admin_notifications
+    WHERE type ILIKE '%airtime%'
+       OR title ILIKE '%airtime%'
+       OR reference ILIKE 'AIR-%'`);
+  await pool.query(`DELETE FROM notifications
+    WHERE title ILIKE '%airtime%' OR message ILIKE '%airtime%'`);
+  await pool.query(`DELETE FROM system_logs
+    WHERE action ILIKE '%airtime%' OR details ILIKE '%airtime%'`);
+  await pool.query("DELETE FROM system_settings WHERE key ILIKE '%airtime%'");
+  await pool.query('DROP TABLE IF EXISTS airtime_purchase_requests, airtime_sale_requests');
+  await pool.query('ALTER TABLE merchants DROP COLUMN IF EXISTS phone');
+
   await pool.query(`INSERT INTO system_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING`, ['referral_bonus_amount', '5000']);
 
   await pool.query('ALTER TABLE esim_packages ADD COLUMN IF NOT EXISTS progress_percent_per_hour NUMERIC(8,4) DEFAULT 0.42');
@@ -314,15 +301,6 @@ async function initializePostgresSchema() {
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP');
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS verified_by INTEGER REFERENCES admin_users(id)');
   await pool.query('ALTER TABLE payment_requests ADD COLUMN IF NOT EXISTS admin_notes TEXT');
-  await pool.query('ALTER TABLE airtime_purchase_requests ADD COLUMN IF NOT EXISTS customer_reference TEXT');
-  await pool.query('ALTER TABLE airtime_purchase_requests ADD COLUMN IF NOT EXISTS verified_transaction_reference TEXT');
-  await pool.query('ALTER TABLE airtime_purchase_requests ADD COLUMN IF NOT EXISTS verified_amount NUMERIC(12,2)');
-  await pool.query('ALTER TABLE airtime_purchase_requests ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP');
-  await pool.query('ALTER TABLE airtime_purchase_requests ADD COLUMN IF NOT EXISTS verified_by INTEGER REFERENCES admin_users(id)');
-  await pool.query('ALTER TABLE airtime_sale_requests ADD COLUMN IF NOT EXISTS verified_transaction_reference TEXT');
-  await pool.query('ALTER TABLE airtime_sale_requests ADD COLUMN IF NOT EXISTS verified_amount NUMERIC(12,2)');
-  await pool.query('ALTER TABLE airtime_sale_requests ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP');
-  await pool.query('ALTER TABLE airtime_sale_requests ADD COLUMN IF NOT EXISTS verified_by INTEGER REFERENCES admin_users(id)');
   await pool.query(`
     DELETE FROM user_esims older
     USING user_esims newer
@@ -359,13 +337,13 @@ async function initializePostgresSchema() {
   const merchantCount = await pool.query('SELECT COUNT(*) AS total FROM merchants');
   if (Number(merchantCount.rows[0]?.total || 0) === 0) {
     await pool.query(
-      `INSERT INTO merchants (name, merchant_code, network, account_name, phone, instructions, priority, status)
+      `INSERT INTO merchants (name, merchant_code, network, account_name, instructions, priority, status)
        VALUES 
-       ($1, $2, $3, $4, $5, $6, $7, $8),
-       ($9, $10, $11, $12, $13, $14, $15, $16)`,
+       ($1, $2, $3, $4, $5, $6, $7),
+       ($8, $9, $10, $11, $12, $13, $14)`,
       [
-        'VSIM MTN Merchant Line 1', '552109', 'MTN', 'VSIM TELECOM SERVICES UG', '+256 784 567 890', 'Dial *165*3# -> Select Enter Merchant Code -> Enter 552109 -> Enter Amount -> Enter Reference -> Confirm with PIN', 1, 'active',
-        'VSIM Airtel Pay Digital 1', '771024', 'AIRTEL', 'VSIM CONNECT AIRTEL UG', '+256 702 345 678', 'Dial *185*9# -> Select Pay Merchant -> Enter Merchant ID 771024 -> Enter Amount -> Enter Reference -> Confirm with PIN', 2, 'active'
+        'VSIM MTN Merchant Line 1', '552109', 'MTN', 'VSIM TELECOM SERVICES UG', 'Dial *165*3# -> Select Enter Merchant Code -> Enter 552109 -> Enter Amount -> Enter Reference -> Confirm with PIN', 1, 'active',
+        'VSIM Airtel Pay Digital 1', '771024', 'AIRTEL', 'VSIM CONNECT AIRTEL UG', 'Dial *185*9# -> Select Pay Merchant -> Enter Merchant ID 771024 -> Enter Amount -> Enter Reference -> Confirm with PIN', 2, 'active'
       ]
     );
   }
@@ -551,7 +529,6 @@ if (databaseDriver === 'postgres') {
       merchant_code TEXT NOT NULL,
       network TEXT NOT NULL DEFAULT 'MTN',
       account_name TEXT,
-      phone TEXT,
       instructions TEXT,
       status TEXT NOT NULL DEFAULT 'inactive',
       priority INTEGER NOT NULL DEFAULT 10,
@@ -613,36 +590,6 @@ if (databaseDriver === 'postgres') {
       network TEXT DEFAULT 'MTN',
       reference TEXT,
       status TEXT DEFAULT 'completed',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS airtime_purchase_requests (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER,
-      phone TEXT NOT NULL,
-      network TEXT NOT NULL,
-      airtime_amount REAL NOT NULL,
-      payment_amount REAL NOT NULL,
-      merchant_number TEXT NOT NULL,
-      reference TEXT UNIQUE NOT NULL,
-      status TEXT DEFAULT 'pending',
-      processed_by INTEGER,
-      processed_at DATETIME,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS airtime_sale_requests (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER,
-      payout_phone TEXT NOT NULL,
-      network TEXT NOT NULL,
-      airtime_amount REAL NOT NULL,
-      payout_amount REAL NOT NULL,
-      merchant_number TEXT NOT NULL,
-      reference TEXT UNIQUE NOT NULL,
-      status TEXT DEFAULT 'pending',
-      processed_by INTEGER,
-      processed_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -749,6 +696,28 @@ if (databaseDriver === 'postgres') {
     sqlite.prepare("INSERT INTO system_settings (key, value) VALUES (?, ?)").run('referral_bonus_amount', '5000');
   }
 
+  sqlite.exec(`DELETE FROM wallet_transactions
+    WHERE type IN ('airtime_buy', 'airtime_sell')
+       OR LOWER(title) LIKE '%airtime%'
+       OR reference LIKE 'AIR-%'`);
+  sqlite.exec(`DELETE FROM notifications
+    WHERE LOWER(title) LIKE '%airtime%' OR LOWER(message) LIKE '%airtime%'`);
+  sqlite.exec(`DELETE FROM system_logs
+    WHERE LOWER(action) LIKE '%airtime%' OR LOWER(details) LIKE '%airtime%'`);
+  sqlite.exec("DELETE FROM system_settings WHERE LOWER(key) LIKE '%airtime%'");
+  const adminNotificationTable = sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'admin_notifications'").get();
+  if (adminNotificationTable) {
+    sqlite.exec(`DELETE FROM admin_notifications
+      WHERE LOWER(type) LIKE '%airtime%'
+         OR LOWER(title) LIKE '%airtime%'
+         OR reference LIKE 'AIR-%'`);
+  }
+  sqlite.exec('DROP TABLE IF EXISTS airtime_purchase_requests; DROP TABLE IF EXISTS airtime_sale_requests;');
+  const merchantColumns = sqlite.prepare('PRAGMA table_info(merchants)').all();
+  if (merchantColumns.some(column => column.name === 'phone')) {
+    sqlite.exec('ALTER TABLE merchants DROP COLUMN phone');
+  }
+
   try { sqlite.exec('ALTER TABLE admin_users ADD COLUMN can_manage_merchants INTEGER DEFAULT 0'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE esim_packages ADD COLUMN progress_percent_per_hour REAL DEFAULT 0.42'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
   try { sqlite.exec('ALTER TABLE esim_packages ADD COLUMN commission_percent REAL DEFAULT 10'); } catch (error) { if (!String(error.message).includes('duplicate column')) throw error; }
@@ -803,15 +772,15 @@ if (databaseDriver === 'postgres') {
     const merchantCountRow = sqlite.prepare('SELECT COUNT(*) AS total FROM merchants').get();
     if (!merchantCountRow || merchantCountRow.total === 0) {
       const insertMerchant = sqlite.prepare(`
-        INSERT INTO merchants (name, merchant_code, network, account_name, phone, instructions, priority, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO merchants (name, merchant_code, network, account_name, instructions, priority, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       insertMerchant.run(
-        'VSIM MTN Merchant Line 1', '552109', 'MTN', 'VSIM TELECOM SERVICES UG', '+256 784 567 890',
+        'VSIM MTN Merchant Line 1', '552109', 'MTN', 'VSIM TELECOM SERVICES UG',
         'Dial *165*3# -> Select Enter Merchant Code -> Enter 552109 -> Enter Amount -> Enter Reference -> Confirm with PIN', 1, 'active'
       );
       insertMerchant.run(
-        'VSIM Airtel Pay Digital 1', '771024', 'AIRTEL', 'VSIM CONNECT AIRTEL UG', '+256 702 345 678',
+        'VSIM Airtel Pay Digital 1', '771024', 'AIRTEL', 'VSIM CONNECT AIRTEL UG',
         'Dial *185*9# -> Select Pay Merchant -> Enter Merchant ID 771024 -> Enter Amount -> Enter Reference -> Confirm with PIN', 2, 'active'
       );
     }

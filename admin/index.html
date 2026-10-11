@@ -138,19 +138,6 @@
           <span class="nav-badge-count">3</span>
         </a>
 
-        <a class="nav-menu-link" data-view="view-airtime-purchases" onclick="navigateToView('view-airtime-purchases')">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 7h16M4 12h16M4 17h10"></path><circle cx="18" cy="17" r="3"></circle>
-          </svg>
-          <span>Airtime Orders</span>
-        </a>
-        <a class="nav-menu-link" data-view="view-airtime-sales" onclick="navigateToView('view-airtime-sales')">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-          </svg>
-          <span>Airtime Sales</span>
-        </a>
-
         <a class="nav-menu-link" data-view="view-packages" title="eSIM Packages" data-tooltip="eSIM Packages" onclick="navigateToView('view-packages')">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="5" y="2" width="14" height="20" rx="2"></rect>
@@ -1101,24 +1088,6 @@
           </div>
         </section>
 
-        <section class="admin-view-screen" id="view-airtime-purchases">
-          <div class="dashboard-greeting-bar">
-            <div><h2 class="dashboard-greeting-title">Airtime Purchase Requests</h2><p class="dashboard-greeting-sub">Review deposits and manually deliver approved airtime orders.</p></div>
-          </div>
-          <div class="dashboard-widget-card"><div class="widget-card-body" style="padding: 0;"><div class="table-responsive-wrapper"><table class="admin-data-table">
-            <thead><tr><th>ID</th><th>Recipient</th><th>Network</th><th>Airtime</th><th>Deposit Due</th><th>Merchant</th><th>Mobile Money Transaction ID (SMS)</th><th>Status</th><th>Action</th></tr></thead>
-            <tbody id="airtimePurchasesTbody"></tbody>
-          </table></div></div></div>
-        </section>
-
-        <section class="admin-view-screen" id="view-airtime-sales">
-          <div class="dashboard-greeting-bar"><div><h2 class="dashboard-greeting-title">Airtime Sale Requests</h2><p class="dashboard-greeting-sub">Verify incoming airtime, then send the discounted payout to the customer.</p></div></div>
-          <div class="dashboard-widget-card"><div class="widget-card-body" style="padding: 0;"><div class="table-responsive-wrapper"><table class="admin-data-table">
-            <thead><tr><th>ID</th><th>Payout Phone</th><th>Network</th><th>Airtime Received</th><th>Payout Due</th><th>Send Airtime To</th><th>Status</th><th>Action</th></tr></thead>
-            <tbody id="airtimeSalesTbody"></tbody>
-          </table></div></div></div>
-        </section>
-
         <section class="admin-view-screen" id="view-referrals">
           <div class="dashboard-greeting-bar">
             <div><h2 class="dashboard-greeting-title">Referrals & Affiliates</h2><p class="dashboard-greeting-sub">Track unique referral links, referred users, and commissions paid into wallets.</p></div>
@@ -1248,7 +1217,7 @@
                       <th>Merchant Name</th>
                       <th>Network</th>
                       <th>Merchant Code</th>
-                      <th>Account Name / Phone</th>
+                      <th>Account Name</th>
                       <th>Verified Payments</th>
                       <th>Verified Volume</th>
                       <th>Status</th>
@@ -1457,8 +1426,6 @@
                   <div id="withdrawalFeeAccessNote" class="settings-access-note settings-full-width">Only the Super Admin can change withdrawal fee rules.</div>
                   <div class="settings-simulator settings-full-width"><div class="settings-simulator-heading"><strong>Fee simulator</strong><span>Test the active rule before saving changes.</span></div><div id="withdrawalFeePreviewForm" class="settings-simulator-row"><div class="modal-form-group"><label>Requested amount (UGX)</label><input id="withdrawalPreviewAmount" name="amount" type="number" min="5000" step="1" class="modal-form-input" value="10000" required /></div><button class="btn-secondary" type="button" onclick="handleWithdrawalFeePreview(document.getElementById('withdrawalFeePreviewForm'))">Preview</button></div><div id="withdrawalFeePreviewResult" class="settings-access-note"></div></div>
                 </div>
-                <div class="modal-form-group"><label>Airtime Buy Markup (%)</label><input name="airtime_buy_markup_percent" type="number" class="modal-form-input" min="0" max="100" step="0.01" value="0" /></div>
-                <div class="modal-form-group"><label>Airtime Sell Payout (%)</label><input name="airtime_sell_payout_percent" type="number" class="modal-form-input" min="0" max="100" step="0.01" value="90" /></div>
                 <div class="modal-form-group"><label>Maintenance Mode</label><select name="maintenance_mode" class="modal-form-input"><option value="false">Disabled</option><option value="true">Enabled</option></select></div>
                 <div class="package-section-divider settings-section-divider"><span>eSIM data progress</span></div>
                 <div class="modal-form-group"><label>Daily Progress Simulation</label><select name="esim_progress_enabled" class="modal-form-input"><option value="true">Enabled</option><option value="false">Disabled</option></select></div>
@@ -1825,10 +1792,7 @@
                 <label for="merchantAccountInput">Account Name (Beneficiary)</label>
                 <input id="merchantAccountInput" class="modal-form-input" placeholder="e.g. VSIM TELECOM SERVICES" />
               </div>
-              <div class="modal-form-group">
-                <label for="merchantPhoneInput">Airtime Receiving Phone Number</label>
-                <input id="merchantPhoneInput" class="modal-form-input" type="tel" placeholder="e.g. +256 784 567 890" />
-              </div>
+
             </div>
             <div class="package-field-grid">
               <div class="modal-form-group">
@@ -1855,65 +1819,6 @@
         </form>
       </div>
     </div>
-
-    <div class="modal-overlay-backdrop" id="airtimeNumberModalOverlay">
-      <div class="modal-dialog-box package-modal-dialog">
-        <div class="modal-dialog-header">
-          <div class="package-modal-heading">
-            <div class="package-modal-icon">TEL</div>
-            <div>
-              <span class="modal-dialog-title">Set Airtime Receiving Number</span>
-              <span class="package-modal-subtitle" id="airtimeNumberMerchantName">Merchant</span>
-            </div>
-          </div>
-          <button class="modal-close-btn" type="button" onclick="closeAirtimeNumberModal()" aria-label="Close dialog">X</button>
-        </div>
-        <form id="airtimeNumberForm" onsubmit="saveAirtimeNumber(event)">
-          <div class="modal-dialog-body">
-            <input type="hidden" id="airtimeNumberMerchantId" />
-            <div class="modal-form-group">
-              <label for="airtimeNumberInput">Airtime receiving phone number</label>
-              <input id="airtimeNumberInput" class="modal-form-input" type="tel" inputmode="tel" placeholder="e.g. +256 784 567 890" required />
-            </div>
-          </div>
-          <div class="modal-dialog-footer">
-            <button type="button" class="btn-secondary" onclick="closeAirtimeNumberModal()">Cancel</button>
-            <button type="submit" class="btn-primary">Save Number</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <div class="modal-overlay-backdrop" id="renewalPricingModalOverlay">
-      <div class="modal-dialog-box package-modal-dialog">
-        <div class="modal-dialog-header">
-          <div class="package-modal-heading">
-            <div class="package-modal-icon">UGX</div>
-            <div>
-              <span class="modal-dialog-title">Edit renewal pricing</span>
-              <span class="package-modal-subtitle" id="renewalPricingPackageTitle">Bundle renewal schedule</span>
-            </div>
-          </div>
-          <button class="modal-close-btn" type="button" onclick="closeRenewalPricingModal()" aria-label="Close modal">✕</button>
-        </div>
-        <form onsubmit="handleRenewalPricingSubmit(event)">
-          <div class="modal-dialog-body">
-            <div class="renewal-schedule-intro">Adjust the price charged each time this bundle is renewed. Every renewal price must be higher than the original bundle price.</div>
-            <input type="hidden" id="renewalPricingPackageId" />
-            <div id="editRenewalScheduleRows" class="renewal-schedule-rows"></div>
-            <button type="button" class="btn-secondary renewal-add-row" onclick="addEditRenewalScheduleRow()">+ Add renewal price</button>
-          </div>
-          <div class="modal-dialog-footer">
-            <span class="package-footer-note">Changes apply to future renewals.</span>
-            <div class="package-footer-actions">
-              <button type="button" class="btn-secondary" onclick="closeRenewalPricingModal()">Cancel</button>
-              <button type="submit" class="btn-primary">Save renewal prices</button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
-
 
     <!-- Modal 3: Adjust User Balance -->
     <div class="modal-overlay-backdrop" id="userBalanceModalOverlay">

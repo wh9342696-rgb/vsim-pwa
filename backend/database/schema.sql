@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS payment_requests (
   user_id INTEGER NOT NULL,
   phone TEXT,
   amount REAL NOT NULL,
-  type TEXT, -- topup, esim_purchase, airtime_buy
+  type TEXT, -- topup, esim_purchase
   method TEXT, -- momo, wallet, card
   merchant TEXT,
   assigned_merchant_id INTEGER,

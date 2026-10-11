@@ -11,7 +11,6 @@ import { fileURLToPath } from 'url';
 import authRoutes from './routes/auth.js';
 import esimRoutes from './routes/esims.js';
 import walletRoutes from './routes/wallet.js';
-import airtimeRoutes from './routes/airtime.js';
 import referralRoutes from './routes/referrals.js';
 import notificationRoutes from './routes/notifications.js';
 import paymentRoutes from './routes/payments.js';
@@ -224,7 +223,6 @@ const apiRoutes = [
   ['/auth', authRoutes],
   ['/esims', esimRoutes],
   ['/wallet', walletRoutes],
-  ['/airtime', airtimeRoutes],
   ['/referrals', referralRoutes],
   ['/notifications', notificationRoutes],
   ['/payments', paymentRoutes],

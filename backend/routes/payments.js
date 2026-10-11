@@ -125,7 +125,6 @@ router.get('/assigned-merchant', async (req, res) => {
         merchant_code: assignedMerchant.merchant_code,
         network: (assignedMerchant.network || 'MTN').toUpperCase(),
         account_name: assignedMerchant.account_name || assignedMerchant.name,
-        phone: assignedMerchant.phone || '+256 700 000 000',
         instructions
       },
       reference: refCode,
@@ -443,4 +442,3 @@ router.post('/bridge-confirm', async (req, res) => {
 });
 
 export default router;
-

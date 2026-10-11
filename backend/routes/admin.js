@@ -250,20 +250,19 @@ router.get('/merchants', adminAuth, ensureMerchantManager, async (req, res) => {
 
 router.post('/merchants', adminAuth, ensureMerchantEditor, async (req, res) => {
   try {
-    const { name, merchant_code, network = 'MTN', account_name, phone, instructions, priority = 10, status = 'active' } = req.body || {};
+    const { name, merchant_code, network = 'MTN', account_name, instructions, priority = 10, status = 'active' } = req.body || {};
     if (!name || !merchant_code) {
       return res.status(400).json({ error: 'Merchant name and merchant code are required' });
     }
     
     const insertRes = await query(
-      `INSERT INTO merchants (name, merchant_code, network, account_name, phone, instructions, priority, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      `INSERT INTO merchants (name, merchant_code, network, account_name, instructions, priority, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [
         String(name).trim(),
         String(merchant_code).trim(),
         String(network).trim().toUpperCase(),
         account_name ? String(account_name).trim() : null,
-        phone ? String(phone).trim() : null,
         instructions ? String(instructions).trim() : null,
         Number(priority) || 10,
         status === 'active' ? 'active' : 'inactive'
@@ -290,7 +289,7 @@ router.post('/merchants', adminAuth, ensureMerchantEditor, async (req, res) => {
 router.put('/merchants/:id', adminAuth, ensureMerchantEditor, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, merchant_code, network, account_name, phone, instructions, priority, status } = req.body || {};
+    const { name, merchant_code, network, account_name, instructions, priority, status } = req.body || {};
     
     const existing = await query('SELECT * FROM merchants WHERE id = $1', [id]);
     if (!existing.rows.length) {
@@ -300,14 +299,13 @@ router.put('/merchants/:id', adminAuth, ensureMerchantEditor, async (req, res) =
     const current = existing.rows[0];
     await query(
       `UPDATE merchants 
-       SET name = $1, merchant_code = $2, network = $3, account_name = $4, phone = $5, instructions = $6, priority = $7, status = $8
-       WHERE id = $9`,
+       SET name = $1, merchant_code = $2, network = $3, account_name = $4, instructions = $5, priority = $6, status = $7
+       WHERE id = $8`,
       [
         name !== undefined ? String(name).trim() : current.name,
         merchant_code !== undefined ? String(merchant_code).trim() : current.merchant_code,
         network !== undefined ? String(network).trim().toUpperCase() : current.network,
         account_name !== undefined ? (account_name ? String(account_name).trim() : null) : current.account_name,
-        phone !== undefined ? (phone ? String(phone).trim() : null) : current.phone,
         instructions !== undefined ? (instructions ? String(instructions).trim() : null) : current.instructions,
         priority !== undefined ? (Number(priority) || 10) : current.priority,
         status !== undefined ? (status === 'active' ? 'active' : 'inactive') : current.status,
@@ -815,19 +813,20 @@ router.get('/investments', adminAuth, ensureSuperAdmin, async (req, res) => {
 });
 
 router.get('/settings', adminAuth, async (req, res) => {
-  const result = await query('SELECT key, value FROM system_settings ORDER BY key');
+  const result = await query("SELECT key, value FROM system_settings WHERE key NOT ILIKE '%airtime%' ORDER BY key");
   const settings = Object.fromEntries(result.rows.map(row => [row.key, row.value]));
   res.json({ canManageWithdrawalFee: req.admin.role === 'super_admin' || Boolean(req.admin.can_manage_withdrawal_fee), settings: {
     esim_progress_enabled: settings.esim_progress_enabled ?? 'true',
     esim_progress_percent_per_hour: settings.esim_progress_percent_per_hour ?? String((Number(settings.esim_progress_percent_per_day) || 10) / 24),
-    airtime_buy_markup_percent: settings.airtime_buy_markup_percent ?? '0',
-    airtime_sell_payout_percent: settings.airtime_sell_payout_percent ?? '90',
     ...settings
   } });
 });
 
 router.put('/settings', adminAuth, ensureSuperAdmin, async (req, res) => {
   const entries = Object.entries(req.body || {});
+  if (entries.some(([key]) => key.toLowerCase().includes('airtime'))) {
+    return res.status(400).json({ error: 'Airtime settings are no longer supported' });
+  }
   if (Object.hasOwn(req.body || {}, 'referral_bonus_amount')) {
     const amount = Number(req.body.referral_bonus_amount);
     if (!Number.isSafeInteger(amount) || amount < 0) {
@@ -1149,76 +1148,6 @@ router.get('/withdrawals', adminAuth, async (req, res) => {
     res.json({ withdrawals: result.rows });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch withdrawals' });
-  }
-});
-
-router.get('/airtime-purchases', adminAuth, async (req, res) => {
-  try {
-    const result = await query('SELECT * FROM airtime_purchase_requests ORDER BY created_at DESC LIMIT 100');
-    res.json({ requests: result.rows });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch airtime purchases' });
-  }
-});
-
-router.get('/airtime-sales', adminAuth, async (req, res) => {
-  try {
-    const result = await query('SELECT * FROM airtime_sale_requests ORDER BY created_at DESC LIMIT 100');
-    res.json({ requests: result.rows });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch airtime sales' });
-  }
-});
-
-router.post('/airtime-sales/:id/action', adminAuth, async (req, res) => {
-  try {
-    const { action, merchantReference, merchantAmount } = req.body || {};
-    const current = await query('SELECT * FROM airtime_sale_requests WHERE id = $1', [req.params.id]);
-    const request = current.rows[0];
-    if (!request) return res.status(404).json({ error: 'Airtime sale not found' });
-    if (request.status !== 'pending') return res.status(409).json({ error: 'Airtime sale already processed' });
-    const status = action === 'reject' ? 'rejected' : action === 'approve' ? 'approved' : null;
-    if (!status) return res.status(400).json({ error: 'Choose approve or reject' });
-    if (status === 'approved' && (!String(merchantReference || '').trim() || !Number.isFinite(Number(merchantAmount)) || Math.abs(Number(merchantAmount) - Number(request.airtime_amount)) > 0.01)) {
-      return res.status(400).json({ error: 'Enter the merchant transaction reference and verify the exact airtime amount' });
-    }
-    const claimed = await query('UPDATE airtime_sale_requests SET status = $1, processed_by = $2, processed_at = CURRENT_TIMESTAMP WHERE id = $3 AND status = \'pending\' RETURNING id', [status, req.admin.id, request.id]);
-    if (!claimed.rows.length) return res.status(409).json({ error: 'Airtime sale was already processed' });
-    if (status === 'approved') {
-      await query(`UPDATE airtime_sale_requests SET verified_transaction_reference = $1, verified_amount = $2, verified_at = CURRENT_TIMESTAMP, verified_by = $3 WHERE id = $4`, [String(merchantReference).trim(), Number(merchantAmount), req.admin.id, request.id]);
-    }
-    if (status === 'approved') {
-      const existingCredit = await query('SELECT id FROM wallet_transactions WHERE reference = $1 AND type = \'airtime_sell\' AND status = \'completed\'', [request.reference]);
-      if (!existingCredit.rows.length) await query('UPDATE users SET wallet_balance = wallet_balance + $1 WHERE id = $2', [request.payout_amount, request.user_id]);
-    }
-    await query('UPDATE wallet_transactions SET status = $1 WHERE user_id = $2 AND reference = $3 AND type = $4', [status === 'approved' ? 'completed' : 'rejected', request.user_id, request.reference, 'airtime_sell']);
-    res.json({ message: `Airtime sale marked as ${status}`, request: { ...request, status } });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to process airtime sale' });
-  }
-});
-
-router.post('/airtime-purchases/:id/action', adminAuth, async (req, res) => {
-  try {
-    const { action, merchantReference, merchantAmount } = req.body || {};
-    const current = await query('SELECT * FROM airtime_purchase_requests WHERE id = $1', [req.params.id]);
-    const request = current.rows[0];
-    if (!request) return res.status(404).json({ error: 'Airtime purchase not found' });
-    if (request.status !== 'pending') return res.status(409).json({ error: 'Airtime purchase already processed' });
-    const status = action === 'reject' ? 'rejected' : action === 'approve' ? 'approved' : null;
-    if (!status) return res.status(400).json({ error: 'Choose approve or reject' });
-    if (status === 'approved' && (!String(merchantReference || '').trim() || !Number.isFinite(Number(merchantAmount)) || Math.abs(Number(merchantAmount) - Number(request.payment_amount)) > 0.01)) {
-      return res.status(400).json({ error: 'Enter the merchant transaction reference and verify the exact payment amount' });
-    }
-    const claimed = await query('UPDATE airtime_purchase_requests SET status = $1, processed_by = $2, processed_at = CURRENT_TIMESTAMP WHERE id = $3 AND status = \'pending\' RETURNING id', [status, req.admin.id, request.id]);
-    if (!claimed.rows.length) return res.status(409).json({ error: 'Airtime purchase was already processed' });
-    if (status === 'approved') {
-      await query(`UPDATE airtime_purchase_requests SET verified_transaction_reference = $1, verified_amount = $2, verified_at = CURRENT_TIMESTAMP, verified_by = $3 WHERE id = $4`, [String(merchantReference).trim(), Number(merchantAmount), req.admin.id, request.id]);
-    }
-    await query('UPDATE wallet_transactions SET status = $1 WHERE user_id = $2 AND reference = $3 AND type = $4', [status, request.user_id, request.reference, 'airtime_buy']);
-    res.json({ message: `Airtime purchase marked as ${status}`, request: { ...request, status } });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to process airtime purchase' });
   }
 });
 

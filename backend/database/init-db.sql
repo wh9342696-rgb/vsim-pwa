@@ -54,7 +54,6 @@ CREATE TABLE IF NOT EXISTS merchants (
   merchant_code TEXT NOT NULL,
   network TEXT NOT NULL DEFAULT 'MTN',
   account_name TEXT,
-  phone TEXT,
   instructions TEXT,
   status TEXT NOT NULL DEFAULT 'inactive',
   priority INTEGER NOT NULL DEFAULT 10,

@@ -1,12 +1,12 @@
 // VSIM Admin Panel Service Worker
-const CACHE_NAME = 'vsim-admin-v3.14-verified-merchant-metrics';
+const CACHE_NAME = 'vsim-admin-v3.15-no-airtime';
 const ASSETS_TO_CACHE = [
   '/admin/',
   '/admin/index.html',
   '/admin.html',
   '/css/admin.css',
   '/js/admin-api.js?v=20260915-package-fix-1',
-  '/js/admin.js?v=20261010-verified-merchant-metrics-v1',
+  '/js/admin.js?v=20261011-no-airtime-v1',
   '/js/pwa-register.js?v=20260925-canonical-scope-1',
   '/icons/vsim-admin-192.png',
   '/icons/vsim-admin-512.png',

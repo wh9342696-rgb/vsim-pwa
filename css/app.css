@@ -2449,49 +2449,6 @@ html, body {
 }
 
 /* ==========================================================================
-   AIRTIME HUB CARDS
-   ========================================================================== */
-
-.airtime-selection-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: 18px;
-  padding: 18px 16px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 14px;
-  cursor: pointer;
-  box-shadow: var(--card-shadow);
-}
-
-.airtime-selection-card:active {
-  transform: scale(0.98);
-}
-
-.airtime-icon-circle {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.airtime-icon-circle.blue {
-  background: rgba(59, 130, 246, 0.18);
-  color: #60A5FA;
-  border: 1px solid rgba(59, 130, 246, 0.35);
-}
-
-.airtime-icon-circle.orange {
-  background: rgba(249, 115, 22, 0.18);
-  color: #FB923C;
-  border: 1px solid rgba(249, 115, 22, 0.35);
-}
-
-/* ==========================================================================
    PROFILE & MENU ITEMS
    ========================================================================== */
 

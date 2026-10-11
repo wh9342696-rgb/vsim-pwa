@@ -11,8 +11,6 @@ const AdminStore = {
   stats: null,
   deposits: [],
   withdrawals: [],
-  airtimePurchases: [],
-  airtimeSales: [],
   packages: [],
   merchants: [],
   bridgeDevices: [],
@@ -360,8 +358,6 @@ async function loadAllData() {
       AdminAPI.getStats(),
       isSubAdmin ? Promise.resolve(null) : AdminAPI.getDeposits(),
       AdminAPI.getWithdrawals(),
-      AdminAPI.getAirtimePurchases(),
-      AdminAPI.getAirtimeSales(),
       AdminAPI.getPackages(),
       (isSubAdmin && !AdminStore.admin.can_manage_merchants) ? Promise.resolve(null) : AdminAPI.getMerchants(),
       AdminAPI.getBridgeDevices(),
@@ -378,13 +374,11 @@ async function loadAllData() {
       isSubAdmin ? Promise.resolve(null) : AdminAPI.getEarnings()
     ];
     if (AdminStore.admin.role === 'super_admin') requests.push(AdminAPI.getAdmins());
-    const [statsRes, depRes, withRes, airtimeRes, salesRes, pkgRes, merchantsRes, bridgeRes, bridgeEventsRes, logsRes, usersRes, referralRes, transactionRes, ticketRes, kycRes, settingsRes, notificationsRes, investmentsRes, earningsRes, adminsRes] = await Promise.allSettled(requests).then(results => results.map(result => result.status === 'fulfilled' ? result.value : null));
+    const [statsRes, depRes, withRes, pkgRes, merchantsRes, bridgeRes, bridgeEventsRes, logsRes, usersRes, referralRes, transactionRes, ticketRes, kycRes, settingsRes, notificationsRes, investmentsRes, earningsRes, adminsRes] = await Promise.allSettled(requests).then(results => results.map(result => result.status === 'fulfilled' ? result.value : null));
 
     AdminStore.stats = statsRes || null;
     AdminStore.deposits = depRes?.deposits || [];
     AdminStore.withdrawals = withRes?.withdrawals || [];
-    AdminStore.airtimePurchases = airtimeRes?.requests || [];
-    AdminStore.airtimeSales = salesRes?.requests || [];
     AdminStore.packages = pkgRes?.packages || [];
     AdminStore.merchants = merchantsRes?.merchants || [];
     const devices = Array.isArray(bridgeRes?.devices)
@@ -408,8 +402,6 @@ async function loadAllData() {
     applyRoleUI();
     renderSettingsView();
     renderAdminNotifications();
-    renderAirtimePurchases();
-    renderAirtimeSales();
     renderReferralReport();
     renderTransactionLedger();
     renderSupportTickets();
@@ -432,25 +424,6 @@ async function loadAllData() {
   } catch (err) {
     console.error('Error loading admin data:', err);
   }
-}
-
-function renderAirtimePurchases() {
-  const tbody = document.getElementById('airtimePurchasesTbody');
-  if (!tbody) return;
-  tbody.innerHTML = (AdminStore.airtimePurchases || []).map(request => `<tr><td>${request.id}</td><td>${request.phone}</td><td>${request.network}</td><td>UGX ${Number(request.airtime_amount).toLocaleString()}</td><td>UGX ${Number(request.payment_amount).toLocaleString()}</td><td>${request.merchant_number}</td><td style="font-family:monospace; font-size:0.75rem;">${request.customer_reference || '-'}</td>${request.status === 'pending' ? `<td><div class="deposit-verification-fields"><input id="airtimePurchaseRef-${request.id}" class="deposit-verification-input" type="text" placeholder="Merchant SMS ref" aria-label="Merchant SMS reference for airtime purchase ${request.id}"><input id="airtimePurchaseAmount-${request.id}" class="deposit-verification-input" type="number" min="0" step="0.01" placeholder="Amount" aria-label="Verified merchant amount for airtime purchase ${request.id}"></div></td>` : `<td>${request.verified_transaction_reference || '-'}</td>`}<td><span class="status-pill ${request.status}">${request.status}</span></td><td>${request.status === 'pending' ? `<button class="btn-action-small pay" onclick="processAirtimePurchase(${request.id}, 'approve')">Approve</button> <button class="btn-action-small" onclick="processAirtimePurchase(${request.id}, 'reject')">Reject</button>` : 'Processed'}</td></tr>`).join('') || '<tr><td colspan="10">No airtime purchase requests</td></tr>';
-}
-
-function renderAirtimeSales() {
-  const tbody = document.getElementById('airtimeSalesTbody');
-  if (!tbody) return;
-  tbody.innerHTML = (AdminStore.airtimeSales || []).map(request => `<tr><td>${request.id}</td><td>${request.payout_phone}</td><td>${request.network}</td><td>UGX ${Number(request.airtime_amount).toLocaleString()}</td><td>UGX ${Number(request.payout_amount).toLocaleString()}</td><td>${request.merchant_number}</td>${request.status === 'pending' ? `<td><div class="deposit-verification-fields"><input id="airtimeSaleRef-${request.id}" class="deposit-verification-input" type="text" placeholder="Merchant SMS ref" aria-label="Merchant SMS reference for airtime sale ${request.id}"><input id="airtimeSaleAmount-${request.id}" class="deposit-verification-input" type="number" min="0" step="0.01" placeholder="Airtime amount" aria-label="Verified merchant airtime amount for sale ${request.id}"></div></td>` : `<td>${request.verified_transaction_reference || '-'}</td>`}<td><span class="status-pill ${request.status}">${request.status}</span></td><td>${request.status === 'pending' ? `<button class="btn-action-small pay" onclick="processAirtimeSale(${request.id}, 'approve')">Approve payout</button> <button class="btn-action-small" onclick="processAirtimeSale(${request.id}, 'reject')">Reject</button>` : 'Processed'}</td></tr>`).join('') || '<tr><td colspan="9">No airtime sale requests</td></tr>';
-}
-
-async function processAirtimeSale(id, action) {
-  const merchantReference = document.getElementById(`airtimeSaleRef-${id}`)?.value.trim() || '';
-  const merchantAmount = document.getElementById(`airtimeSaleAmount-${id}`)?.value.trim() || '';
-  if (action === 'approve' && (!merchantReference || !merchantAmount)) return showToast('Enter the merchant reference and verified airtime amount first.', 'error');
-  try { await AdminAPI.processAirtimeSale(id, action, merchantReference, merchantAmount); showToast(`Airtime sale ${action}d`, 'success'); await loadAllData(); } catch (error) { showToast(error.message || 'Could not update airtime sale', 'error'); }
 }
 
 function renderReferralReport() {
@@ -514,14 +487,6 @@ function renderTransactionLedger() {
 
 window.filterAdminTransactions = renderTransactionLedger;
 
-async function processAirtimePurchase(id, action) {
-  const merchantReference = document.getElementById(`airtimePurchaseRef-${id}`)?.value.trim() || '';
-  const merchantAmount = document.getElementById(`airtimePurchaseAmount-${id}`)?.value.trim() || '';
-  if (action === 'approve' && (!merchantReference || !merchantAmount)) return showToast('Enter the merchant reference and verified payment amount first.', 'error');
-  try { await AdminAPI.processAirtimePurchase(id, action, merchantReference, merchantAmount); showToast(`Airtime request ${action}d`, 'success'); await loadAllData(); } catch (error) { showToast(error.message || 'Could not update airtime request', 'error'); }
-}
-
-// ============================================================================
 // MOBILE MONEY MERCHANTS MANAGEMENT
 // ============================================================================
 
@@ -569,8 +534,7 @@ function filterMerchantsTable() {
     list = list.filter(m => 
       String(m.name || '').toLowerCase().includes(q) ||
       String(m.merchant_code || '').toLowerCase().includes(q) ||
-      String(m.account_name || '').toLowerCase().includes(q) ||
-      String(m.phone || '').includes(q)
+      String(m.account_name || '').toLowerCase().includes(q)
     );
   }
 
@@ -609,7 +573,6 @@ function filterMerchantsTable() {
         </td>
         <td>
           <div style="font-weight: 600; color: var(--text-white); font-size: 0.82rem;">${m.account_name || '-'}</div>
-          <div style="color: var(--text-muted); font-size: 0.74rem;">${m.phone || '-'}</div>
         </td>
         <td style="font-weight: 700; color: var(--text-white);">${txCount.toLocaleString()}</td>
         <td style="font-weight: 800; color: var(--accent-green);">UGX ${volume.toLocaleString()}</td>
@@ -621,7 +584,6 @@ function filterMerchantsTable() {
         <td>
           <div style="display: flex; gap: 6px;">
             <button class="btn-action-small view" onclick="openMerchantModal(${m.id})">Edit</button>
-            <button class="btn-action-small pay" onclick="openAirtimeNumberModal(${m.id})">${m.phone ? 'Edit Airtime Number' : 'Provision Airtime Number'}</button>
             <button class="btn-action-small ${m.status === 'active' ? 'pending' : 'pay'}" onclick="toggleMerchantStatus(${m.id}, '${m.status === 'active' ? 'inactive' : 'active'}')">
               ${m.status === 'active' ? 'Disable' : 'Enable'}
             </button>
@@ -650,7 +612,6 @@ function openMerchantModal(merchantId = null) {
       document.getElementById('merchantNetworkInput').value = (m.network || 'MTN').toUpperCase();
       document.getElementById('merchantCodeInput').value = m.merchant_code || '';
       document.getElementById('merchantAccountInput').value = m.account_name || '';
-      document.getElementById('merchantPhoneInput').value = m.phone || '';
       document.getElementById('merchantPriorityInput').value = m.priority || 10;
       document.getElementById('merchantStatusInput').value = m.status || 'active';
       document.getElementById('merchantInstructionsInput').value = m.instructions || '';
@@ -673,34 +634,6 @@ function closeMerchantModal() {
   if (form) form.reset();
 }
 
-function openAirtimeNumberModal(merchantId) {
-  const merchant = (AdminStore.merchants || []).find(item => item.id === merchantId);
-  if (!merchant) return;
-  document.getElementById('airtimeNumberMerchantId').value = merchant.id;
-  document.getElementById('airtimeNumberMerchantName').textContent = merchant.name || 'Merchant';
-  document.getElementById('airtimeNumberInput').value = merchant.phone || '';
-  document.getElementById('airtimeNumberModalOverlay').classList.add('open');
-}
-
-function closeAirtimeNumberModal() {
-  document.getElementById('airtimeNumberModalOverlay')?.classList.remove('open');
-}
-
-async function saveAirtimeNumber(event) {
-  event.preventDefault();
-  const merchantId = document.getElementById('airtimeNumberMerchantId').value;
-  const phone = document.getElementById('airtimeNumberInput').value.trim();
-  if (!phone) return;
-  try {
-    await AdminAPI.updateMerchant(merchantId, { phone });
-    closeAirtimeNumberModal();
-    showToast('Airtime receiving number saved', 'success');
-    await loadAllData();
-  } catch (error) {
-    showToast(error.message || 'Could not save Airtime number', 'error');
-  }
-}
-
 async function handleMerchantSubmit(event) {
   event.preventDefault();
   const editId = document.getElementById('merchantEditId')?.value;
@@ -708,7 +641,6 @@ async function handleMerchantSubmit(event) {
   const network = document.getElementById('merchantNetworkInput').value;
   const merchant_code = document.getElementById('merchantCodeInput').value.trim();
   const account_name = document.getElementById('merchantAccountInput').value.trim();
-  const phone = document.getElementById('merchantPhoneInput').value.trim();
   const priority = parseInt(document.getElementById('merchantPriorityInput').value) || 10;
   const status = document.getElementById('merchantStatusInput').value;
   const instructions = document.getElementById('merchantInstructionsInput').value.trim();
@@ -718,7 +650,7 @@ async function handleMerchantSubmit(event) {
     return;
   }
 
-  const payload = { name, network, merchant_code, account_name, phone, priority, status, instructions };
+  const payload = { name, network, merchant_code, account_name, priority, status, instructions };
 
   try {
     if (editId) {
@@ -839,7 +771,7 @@ async function reviewKyc(id, action) {
 // VIEW NAVIGATION ROUTING
 // ============================================================================
 function navigateToView(viewId) {
-  const allowedSubAdminViews = new Set(['view-dashboard', 'view-users', 'view-withdrawals', 'view-airtime-purchases', 'view-airtime-sales', 'view-packages', 'view-tickets', 'view-notifications', 'view-settings']);
+  const allowedSubAdminViews = new Set(['view-dashboard', 'view-users', 'view-withdrawals', 'view-packages', 'view-tickets', 'view-notifications', 'view-settings']);
   if (AdminStore.admin?.can_manage_merchants) allowedSubAdminViews.add('view-merchants');
   if (AdminStore.admin?.role === 'sub_admin' && !allowedSubAdminViews.has(viewId)) {
     viewId = 'view-dashboard';
@@ -867,8 +799,6 @@ function navigateToView(viewId) {
     'view-kyc': 'KYC Reviews',
     'view-deposits': 'Deposits (Automatic)',
     'view-withdrawals': 'Withdrawals (Payouts)',
-    'view-airtime-sales': 'Airtime Sale Requests',
-    'view-airtime-purchases': 'Airtime Purchase Requests',
     'view-packages': 'eSIM Packages',
       'view-merchants': 'Mobile Money Merchants',
     'view-investments': 'Investments',
@@ -888,8 +818,6 @@ function navigateToView(viewId) {
     'view-kyc': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"></path><path d="m8 12 2.5 2.5L16 9"></path></svg>',
     'view-deposits': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5"></path><path d="m5 12 7-7 7 7"></path></svg>',
     'view-withdrawals': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"></path><path d="m19 12-7 7-7-7"></path></svg>',
-    'view-airtime-sales': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>',
-    'view-airtime-purchases': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"></path><circle cx="18" cy="17" r="3"></circle></svg>',
     'view-packages': '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"></rect><path d="M12 18h.01"></path></svg>',
     'view-merchants': '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 10h18M7 15h3"></path></svg>',
     'view-investments': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m2 17 6-6 5 5L22 7"></path><path d="M16 7h6v6"></path></svg>',
@@ -934,10 +862,8 @@ function renderActiveView(viewId) {
   if (viewId === 'view-kyc')         renderKycTable();
   if (viewId === 'view-deposits')    renderDepositsTable();
   if (viewId === 'view-withdrawals') renderWithdrawalsTable();
-  if (viewId === 'view-airtime-sales') renderAirtimeSales();
   if (viewId === 'view-earnings') renderEarningsView();
   if (viewId === 'view-tickets') renderSupportTickets();
-  if (viewId === 'view-airtime-purchases') renderAirtimePurchases();
   if (viewId === 'view-packages') {
     const title = document.querySelector('#view-packages .dashboard-greeting-title');
     const subtitle = document.querySelector('#view-packages .dashboard-greeting-sub');
@@ -1093,7 +1019,7 @@ function applyRoleUI() {
   const sidebarRole = document.getElementById('sidebarAdminRole');
   if (sidebarName) sidebarName.textContent = AdminStore.admin?.name || 'Admin';
   if (sidebarRole) sidebarRole.textContent = 'Online';
-  const allowedSubAdminViews = ['view-dashboard', 'view-users', 'view-withdrawals', 'view-airtime-purchases', 'view-airtime-sales', 'view-packages', 'view-tickets', 'view-notifications', 'view-settings'];
+  const allowedSubAdminViews = ['view-dashboard', 'view-users', 'view-withdrawals', 'view-packages', 'view-tickets', 'view-notifications', 'view-settings'];
   document.querySelectorAll('.nav-menu-link, .mobile-drawer-btn').forEach(link => {
     link.style.display = '';
     const view = link.getAttribute('data-view') || (link.getAttribute('onclick') || '').match(/view-[a-z-]+/)?.[0];
@@ -1116,7 +1042,7 @@ function applyRoleUI() {
     settingsForm.querySelectorAll('input, select, textarea, button[type="submit"]').forEach(control => {
       const name = control.getAttribute('name') || '';
       const isProfileControl = ['admin_name', 'profile_photo'].includes(name);
-      const isSystemSettingControl = ['platform_name', 'support_email', 'maintenance_mode', 'esim_progress_enabled', 'esim_progress_percent_per_hour', 'airtime_buy_markup_percent', 'airtime_sell_payout_percent', 'referral_bonus_amount'].includes(name);
+      const isSystemSettingControl = ['platform_name', 'support_email', 'maintenance_mode', 'esim_progress_enabled', 'esim_progress_percent_per_hour', 'referral_bonus_amount'].includes(name);
       const isWithdrawalFeeControl = ['withdrawal_fee', 'withdrawal_settlement_fee', 'withdrawal_expiry_fee', 'withdrawal_monthly_fee', 'withdrawal_settlement_days', 'withdrawal_fee_priority'].includes(name);
       control.disabled = isSubAdmin && (isSystemSettingControl || isWithdrawalFeeControl);
       if (isSubAdmin && isProfileControl) {
@@ -1130,7 +1056,7 @@ function renderSettingsView() {
   const form = document.getElementById('adminSettingsForm');
   if (!form) return;
   const settings = AdminStore.settings || {};
-  ['platform_name', 'support_email', 'support_whatsapp', 'support_whatsapp_group', 'support_telegram', 'support_call_center', 'referral_bonus_amount', 'withdrawal_fee', 'withdrawal_settlement_fee', 'withdrawal_expiry_fee', 'withdrawal_monthly_fee', 'withdrawal_settlement_days', 'airtime_buy_markup_percent', 'airtime_sell_payout_percent', 'maintenance_mode', 'esim_progress_enabled', 'esim_progress_percent_per_hour'].forEach(key => {
+  ['platform_name', 'support_email', 'support_whatsapp', 'support_whatsapp_group', 'support_telegram', 'support_call_center', 'referral_bonus_amount', 'withdrawal_fee', 'withdrawal_settlement_fee', 'withdrawal_expiry_fee', 'withdrawal_monthly_fee', 'withdrawal_settlement_days', 'maintenance_mode', 'esim_progress_enabled', 'esim_progress_percent_per_hour'].forEach(key => {
     const input = form.elements[key];
     if (input && settings[key] !== undefined) input.value = settings[key];
   });
@@ -1340,8 +1266,6 @@ async function handleSettingsSubmit(event) {
         support_telegram: payload.support_telegram,
         support_call_center: payload.support_call_center,
         referral_bonus_amount: payload.referral_bonus_amount,
-        airtime_buy_markup_percent: payload.airtime_buy_markup_percent,
-        airtime_sell_payout_percent: payload.airtime_sell_payout_percent,
         maintenance_mode: payload.maintenance_mode,
         esim_progress_enabled: payload.esim_progress_enabled,
         esim_progress_percent_per_hour: payload.esim_progress_percent_per_hour
@@ -1368,8 +1292,6 @@ async function handleSettingsSubmit(event) {
         withdrawal_monthly_fee: payload.withdrawal_monthly_fee,
         withdrawal_settlement_days: payload.withdrawal_settlement_days,
         withdrawal_fee_priority: [1, 2, 3, 4].map(index => payload[`withdrawal_priority_${index}`]).join(','),
-        airtime_buy_markup_percent: payload.airtime_buy_markup_percent,
-        airtime_sell_payout_percent: payload.airtime_sell_payout_percent,
         maintenance_mode: payload.maintenance_mode,
         esim_progress_enabled: payload.esim_progress_enabled,
         esim_progress_percent_per_hour: payload.esim_progress_percent_per_hour

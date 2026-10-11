@@ -810,7 +810,7 @@ function renderRecentActivity(transactions = []) {
     container.innerHTML = recentTransactions.map(tx => {
       const status = String(tx.status || 'completed').toLowerCase();
       const isPending = ['pending', 'awaiting', 'payment_awaiting_verification'].includes(status);
-      const isIn = ['topup', 'credit', 'daily_income', 'referral_bonus', 'referral', 'yield', 'welcome_bonus', 'airtime_sell'].includes((tx.type || '').toLowerCase());
+      const isIn = ['topup', 'credit', 'daily_income', 'referral_bonus', 'referral', 'yield', 'welcome_bonus'].includes((tx.type || '').toLowerCase());
       const amount = Number(tx.amount || 0);
       const sign = isPending ? '' : isIn ? '+' : '-';
       const label = tx.title || tx.type || 'Wallet Update';
@@ -2070,106 +2070,6 @@ async function execWithdraw() {
   } catch (err) {
     showToast(err.message || 'Withdrawal failed', 'error');
   }
-}
-
-// ============================================================================
-// AIRTIME OPERATIONS
-// ============================================================================
-
-async function execBuyAirtime() {
-  const amount = parseFloat(document.getElementById('buyAirVal').value) || 5000;
-  const phone = document.querySelector('#screen-buy-airtime input[type="tel"]')?.value.trim() || '';
-  const network = document.querySelector('#screen-buy-airtime .network-select-card.selected span:last-child')?.textContent.trim() || 'MTN';
-  if (!phone) { showToast('Enter the number that should receive the airtime', 'error'); return; }
-
-  if (!window.VSIM_API || !window.VSIM_API.getToken()) {
-    showToast('Please log in to buy airtime', 'error');
-    return;
-  }
-  try {
-    const details = await window.VSIM_API.prepareAirtimePurchase(amount, phone, network);
-    openAirtimePurchaseModal(details);
-  } catch (err) {
-    showToast(err.message || 'Airtime purchase failed', 'error');
-  }
-}
-
-function openAirtimePurchaseModal(details) {
-  const modal = document.getElementById('airtimePurchaseModal');
-  if (!modal) return;
-  const customerReferenceInput = document.getElementById('airtimeCustomerReference');
-  if (customerReferenceInput) customerReferenceInput.value = '';
-  modal.dataset.request = JSON.stringify(details);
-  document.getElementById('airtimePurchaseAmount').textContent = `UGX ${Number(details.airtimeAmount).toLocaleString()}`;
-  document.getElementById('airtimeDepositAmount').textContent = `UGX ${Number(details.paymentAmount).toLocaleString()}`;
-  document.getElementById('airtimeMerchantNumber').textContent = details.merchantNumber;
-  document.getElementById('airtimePurchaseMerchant').textContent = details.merchant?.name || 'Merchant';
-  document.getElementById('airtimePurchaseInstructions').textContent = details.merchant?.instructions || 'Use the payment code above, then confirm your deposit.';
-  modal.classList.add('open');
-}
-
-function closeAirtimePurchaseModal() { document.getElementById('airtimePurchaseModal')?.classList.remove('open'); }
-
-async function confirmAirtimePurchase() {
-  const modal = document.getElementById('airtimePurchaseModal');
-  const details = JSON.parse(modal?.dataset.request || '{}');
-  const customerReference = document.getElementById('airtimeCustomerReference')?.value.trim() || '';
-  if (!customerReference) {
-    showToast('Enter the Mobile Money transaction ID from your payment message', 'error');
-    return;
-  }
-  details.customerReference = customerReference;
-  try {
-    const result = await window.VSIM_API.confirmAirtimePurchase(details);
-    closeAirtimePurchaseModal();
-    await fetchBackendData();
-    showToast(result.message || 'Airtime request submitted for approval', 'success');
-    navigateTo('screen-airtime');
-  } catch (error) { showToast(error.message || 'Could not submit airtime purchase', 'error'); }
-}
-
-async function execSellAirtime() {
-  const amount = parseFloat(document.getElementById('sellAirVal').value) || 10000;
-  const payoutPhone = document.querySelector('#screen-sell-airtime input[type="tel"]')?.value.trim() || '';
-  const network = document.querySelector('#screen-sell-airtime .network-select-card.selected span:last-child')?.textContent.trim() || 'MTN';
-  if (!payoutPhone) { showToast('Enter the phone number to receive your payout', 'error'); return; }
-
-  if (!window.VSIM_API || !window.VSIM_API.getToken()) {
-    showToast('Please log in to sell airtime', 'error');
-    return;
-  }
-  try {
-    const details = await window.VSIM_API.prepareAirtimeSale(amount, payoutPhone, network);
-    openAirtimeSaleModal(details);
-  } catch (err) {
-    showToast(err.message || 'Airtime sale failed', 'error');
-  }
-}
-
-function openAirtimeSaleModal(details) {
-  const modal = document.getElementById('airtimeSaleModal');
-  if (!modal) return;
-  modal.dataset.request = JSON.stringify(details);
-  document.getElementById('airtimeSaleAmount').textContent = `UGX ${Number(details.airtimeAmount).toLocaleString()}`;
-  document.getElementById('airtimeSalePayout').textContent = `UGX ${Number(details.payoutAmount).toLocaleString()}`;
-  document.getElementById('airtimeSaleMerchant').textContent = details.merchantNumber;
-  document.getElementById('airtimeSaleInstructions').textContent = details.merchant?.instructions || 'Use the merchant code above, then confirm your transfer.';
-  document.getElementById('airtimeSalePayoutPhone').textContent = details.payoutPhone;
-  modal.classList.add('open');
-}
-
-function closeAirtimeSaleModal() { document.getElementById('airtimeSaleModal')?.classList.remove('open'); }
-
-async function confirmAirtimeSale() {
-  const modal = document.getElementById('airtimeSaleModal');
-  const details = JSON.parse(modal?.dataset.request || '{}');
-  try {
-    const result = await window.VSIM_API.confirmAirtimeSale(details);
-    closeAirtimeSaleModal();
-    await fetchBackendData();
-    showToast(result.message || 'Airtime sale submitted for review', 'success');
-    navigateTo('screen-airtime');
-  } catch (error) { showToast(error.message || 'Could not submit airtime sale', 'error'); }
 }
 
 // ============================================================================

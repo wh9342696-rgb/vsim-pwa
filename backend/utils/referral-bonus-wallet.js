@@ -8,7 +8,7 @@ export async function getAvailableReferralBonus(userId, queryFn = query) {
       `SELECT
          COALESCE(SUM(CASE WHEN type IN ('referral', 'welcome_bonus') AND status = 'completed' THEN amount ELSE 0 END), 0) AS earned,
          COALESCE(SUM(CASE
-           WHEN type IN ('esim_bonus_spend', 'purchase', 'bundle_purchase', 'airtime_buy', 'withdrawal')
+           WHEN type IN ('esim_bonus_spend', 'purchase', 'bundle_purchase', 'withdrawal')
              AND status IN ('pending', 'completed') THEN amount
            ELSE 0
          END), 0) AS spent

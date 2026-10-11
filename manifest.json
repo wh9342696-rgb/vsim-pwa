@@ -10,7 +10,7 @@
   "display_override": ["standalone", "minimal-ui"],
   "prefer_related_applications": false,
   "launch_handler": { "client_mode": "navigate-existing" },
-  "description": "Your standalone VSIM wallet, eSIM, airtime, and mobile money companion.",
+  "description": "Your standalone VSIM wallet, eSIM, and mobile money companion.",
   "categories": ["finance", "utilities"],
   "background_color": "#080B11",
   "theme_color": "#080B11",

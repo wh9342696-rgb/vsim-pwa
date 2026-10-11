@@ -222,37 +222,6 @@ const VSIM_API = {
     return await this.request('/wallet/transactions');
   },
 
-  // 4. Airtime Trading API
-  async buyAirtime(amount, phone, network) {
-    return await this.request('/airtime/buy', {
-      method: 'POST',
-      body: JSON.stringify({ amount, phone, network })
-    });
-  },
-
-  async prepareAirtimePurchase(amount, phone, network) {
-    return await this.request('/airtime/request-buy', { method: 'POST', body: JSON.stringify({ amount, phone, network }) });
-  },
-
-  async confirmAirtimePurchase(payload) {
-    return await this.request('/airtime/confirm-buy', { method: 'POST', body: JSON.stringify(payload) });
-  },
-
-  async prepareAirtimeSale(amount, payoutPhone, network) {
-    return await this.request('/airtime/request-sell', { method: 'POST', body: JSON.stringify({ amount, payoutPhone, network }) });
-  },
-
-  async confirmAirtimeSale(payload) {
-    return await this.request('/airtime/confirm-sell', { method: 'POST', body: JSON.stringify(payload) });
-  },
-
-  async sellAirtime(amount, phone, network) {
-    return await this.request('/airtime/sell', {
-      method: 'POST',
-      body: JSON.stringify({ amount, phone, network })
-    });
-  },
-
   // 5. Referrals & Affiliate API
   async fetchReferralStats() {
     return await this.request('/referrals/stats');

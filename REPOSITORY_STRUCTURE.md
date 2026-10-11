@@ -44,7 +44,7 @@ https://api.vsime.uk/api/v1
 
 ### Frontend API (`frontend/js/api.js`)
 - **Base URL**: `https://api.vsime.uk/api/v1`
-- **Routes**: `/auth`, `/esims`, `/wallet`, `/airtime`, `/referrals`, etc.
+- **Routes**: `/auth`, `/esims`, `/wallet`, `/referrals`, etc.
 
 ### Admin API (`admin/js/admin-api.js`)
 - **Base URL**: `https://api.vsime.uk/api/v1/admin`
