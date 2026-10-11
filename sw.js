@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vsim-pwa-v17-no-airtime';
+const CACHE_NAME = 'vsim-pwa-v18-no-airtime';
 const APP_SHELL = [
   './',
   './index.html',
