@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vsim-pwa-v20-whatsapp-help-label';
+const CACHE_NAME = 'vsim-pwa-v21-wallet-quick-action';
 const APP_SHELL = [
   './',
   './index.html',
