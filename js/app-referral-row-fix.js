@@ -637,6 +637,7 @@ function renderSupportContacts() {
       key: 'whatsappGroup',
       cardId: 'supportWhatsAppGroupCard',
       valueId: 'supportWhatsAppGroupValue',
+      displayText: 'Tap to join our WhatsApp group',
       emptyText: 'Currently unavailable',
       getHref: value => value.startsWith('http') ? value : `https://${value}`
     },
@@ -669,7 +670,7 @@ function renderSupportContacts() {
     const valueElement = document.getElementById(channel.valueId);
     if (!card || !valueElement) return;
 
-    valueElement.textContent = value || channel.emptyText;
+    valueElement.textContent = value ? (channel.displayText || value) : channel.emptyText;
     card.classList.toggle('support-channel-inactive', !value);
     card.setAttribute('aria-disabled', String(!value));
     if (value) {
