@@ -1,5 +1,5 @@
 // VSIM Admin Panel Service Worker
-const CACHE_NAME = 'vsim-admin-v3.16-no-airtime';
+const CACHE_NAME = 'vsim-admin-v3.17-paste-enabled';
 const ASSETS_TO_CACHE = [
   '/admin/',
   '/admin/index.html',
