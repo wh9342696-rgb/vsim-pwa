@@ -617,6 +617,14 @@ function dismissEsimEarningReminder(event) {
 }
 
 function renderSupportContacts() {
+  const configuredWhatsApp = String(supportContacts.whatsapp || '').trim();
+  const configuredWhatsAppGroup = String(supportContacts.whatsappGroup || '').trim();
+  const legacyWhatsAppGroup = /^https?:\/\/chat\.whatsapp\.com\//i.test(configuredWhatsApp);
+  const contacts = {
+    ...supportContacts,
+    whatsapp: legacyWhatsAppGroup ? '' : configuredWhatsApp,
+    whatsappGroup: configuredWhatsAppGroup || (legacyWhatsAppGroup ? configuredWhatsApp : '')
+  };
   const channels = [
     {
       key: 'whatsapp',
@@ -656,7 +664,7 @@ function renderSupportContacts() {
   ];
 
   channels.forEach(channel => {
-    const value = String(supportContacts[channel.key] || '').trim();
+    const value = String(contacts[channel.key] || '').trim();
     const card = document.getElementById(channel.cardId);
     const valueElement = document.getElementById(channel.valueId);
     if (!card || !valueElement) return;

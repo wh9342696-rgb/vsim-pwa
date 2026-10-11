@@ -1,12 +1,12 @@
 // VSIM Admin Panel Service Worker
-const CACHE_NAME = 'vsim-admin-v3.17-paste-enabled';
+const CACHE_NAME = 'vsim-admin-v3.18-whatsapp-help';
 const ASSETS_TO_CACHE = [
   '/admin/',
   '/admin/index.html',
   '/admin.html',
   '/css/admin.css',
   '/js/admin-api.js?v=20261011-no-airtime-v2',
-  '/js/admin.js?v=20261011-no-airtime-v2',
+  '/js/admin.js?v=20261011-whatsapp-help-v1',
   '/js/pwa-register.js?v=20260925-canonical-scope-1',
   '/icons/vsim-admin-192.png',
   '/icons/vsim-admin-512.png',

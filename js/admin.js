@@ -1056,9 +1056,16 @@ function renderSettingsView() {
   const form = document.getElementById('adminSettingsForm');
   if (!form) return;
   const settings = AdminStore.settings || {};
+  const whatsappSetting = String(settings.support_whatsapp || '').trim();
+  const isLegacyWhatsAppGroup = /^https?:\/\/chat\.whatsapp\.com\//i.test(whatsappSetting);
+  const supportSettings = {
+    ...settings,
+    support_whatsapp: isLegacyWhatsAppGroup ? '' : settings.support_whatsapp,
+    support_whatsapp_group: settings.support_whatsapp_group || (isLegacyWhatsAppGroup ? whatsappSetting : '')
+  };
   ['platform_name', 'support_email', 'support_whatsapp', 'support_whatsapp_group', 'support_telegram', 'support_call_center', 'referral_bonus_amount', 'withdrawal_fee', 'withdrawal_settlement_fee', 'withdrawal_expiry_fee', 'withdrawal_monthly_fee', 'withdrawal_settlement_days', 'maintenance_mode', 'esim_progress_enabled', 'esim_progress_percent_per_hour'].forEach(key => {
     const input = form.elements[key];
-    if (input && settings[key] !== undefined) input.value = settings[key];
+    if (input && supportSettings[key] !== undefined) input.value = supportSettings[key];
   });
   const identity = document.getElementById('settingsAdminIdentity');
   if (identity && AdminStore.admin) identity.textContent = AdminStore.admin.name;
